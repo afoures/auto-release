@@ -1,21 +1,24 @@
 {
-  "name": "tsdown-starter",
-  "version": "0.0.0",
-  "description": "A starter for creating a TypeScript package.",
+  "name": "auto-release",
+  "version": "0.1.0",
+  "description": "A changesets-inspired release management tool for monorepos",
   "type": "module",
   "license": "MIT",
-  "homepage": "https://github.com/author/library#readme",
+  "homepage": "https://github.com/author/auto-release#readme",
   "bugs": {
-    "url": "https://github.com/author/library/issues"
+    "url": "https://github.com/author/auto-release/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/author/library.git"
+    "url": "git+https://github.com/author/auto-release.git"
   },
   "author": "Author Name <author.name@mail.com>",
   "files": [
     "dist"
   ],
+  "bin": {
+    "auto-release": "./dist/cli.mjs"
+  },
   "main": "./dist/index.mjs",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.mts",
@@ -36,5 +39,9 @@
     "tsdown": "^0.16.4",
     "typescript": "^5.9.3",
     "vitest": "^4.0.9"
-  }
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "packageManager": "pnpm@8.15.9+sha512.499434c9d8fdd1a2794ebf4552b3b25c0a633abcee5bb15e7b5de90f32f47b513aca98cd5cfd001c31f0db454bc3804edccd578501e4ca293a6816166bbd9f81"
 }
