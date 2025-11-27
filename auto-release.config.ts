@@ -1,5 +1,5 @@
-import { define_config } from "./src/index.js";
-import { semver } from "./src/versioning/semver.js";
+import { define_config } from "./dist/index.mjs";
+import { semver } from "./dist/versioning/semver.mjs";
 
 /**
  * Example configuration for the auto-release package itself
