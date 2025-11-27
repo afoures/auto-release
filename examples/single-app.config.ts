@@ -1,4 +1,5 @@
-import { define_config } from '../src/index.js'
+import { define_config } from "../src/index.js";
+import { semver } from "../src/versioning/semver.js";
 
 /**
  * Example configuration for a single-app repository
@@ -6,23 +7,20 @@ import { define_config } from '../src/index.js'
 export default define_config({
   apps: [
     {
-      name: 'my-app',
-      packages: ['packages/my-app'],
-      versioning: {
-        strategy: 'semver',
-        change_types: ['major', 'minor', 'patch', 'none'],
-      },
+      name: "my-app",
+      packages: ["packages/my-app"],
+      versioning: semver(),
       changelog: {
-        path: 'CHANGELOG.md',
+        path: "CHANGELOG.md",
       },
       deploy: {
-        command: 'npm publish',
+        command: "npm publish",
       },
     },
   ],
-  changes_dir: '.changes',
-  default_changelog_dir: 'changelogs',
+  changes_dir: ".changes",
+  default_changelog_dir: "changelogs",
   git: {
-    tag_template: 'v${version}',
+    tag_template: "v${version}",
   },
-})
+});

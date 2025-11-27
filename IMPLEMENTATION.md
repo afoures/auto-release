@@ -32,8 +32,8 @@ All 14 planned tasks have been completed:
 ### 3. Versioning Strategies ✅
 
 **Files Created:**
-- `src/strategies/semver.ts` - Semantic versioning implementation
-- `src/strategies/calver.ts` - Calendar versioning implementation
+- `src/versioning/semver.ts` - Semantic versioning implementation
+- `src/versioning/calver.ts` - Calendar versioning implementation
 
 **Semver:**
 - Supports major, minor, patch, none
@@ -160,7 +160,7 @@ All 14 planned tasks have been completed:
 
 **Test Files Created:**
 - `tests/index.test.ts` - Public API tests
-- `tests/strategies.test.ts` - Strategy tests (29 tests)
+- `tests/versioning.test.ts` - Strategy tests (29 tests)
 - `tests/changes.test.ts` - Change file parsing tests
 - `tests/config.test.ts` - Config tests
 - `tests/changelog.test.ts` - Changelog generation tests

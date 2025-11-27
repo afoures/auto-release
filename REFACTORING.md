@@ -13,8 +13,8 @@ Following the AGENT.md naming conventions:
 
 ### Core Source Files (21 files)
 1. `src/types.ts` - All interface properties and types
-2. `src/strategies/semver.ts` - `semver_strategy`, all functions
-3. `src/strategies/calver.ts` - `calver_strategy`, all functions
+2. `src/versioning/semver.ts` - `semver_strategy`, all functions
+3. `src/versioning/calver.ts` - `calver_strategy`, all functions
 4. `src/config.ts` - `define_config`, `load_config`, `validate_config`, etc.
 5. `src/changes.ts` - `parse_change_filename`, `discover_changes`, etc.
 6. `src/packages.ts` - `resolve_packages`, `get_current_version`, `write_version`, etc.
@@ -32,7 +32,7 @@ Following the AGENT.md naming conventions:
 
 ### Test Files (5 files)
 18. `tests/index.test.ts` - `define_config`, `semver_strategy`, etc.
-19. `tests/strategies.test.ts` - `semver_strategy`, `calver_strategy`, all properties
+19. `tests/versioning.test.ts` - `semver_strategy`, `calver_strategy`, all properties
 20. `tests/changes.test.ts` - `parse_change_filename`, `parse_change_markdown`
 21. `tests/config.test.ts` - `define_config`, `semver_strategy`
 22. `tests/changelog.test.ts` - `generate_changelog_section`, all properties

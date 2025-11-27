@@ -1,4 +1,4 @@
-import type { AutoReleaseConfig, VersionStrategy, ResolvedChange } from '../types.js'
+import type { AutoReleaseConfig, ResolvedChange } from '../types.js'
 import { get_current_version } from '../packages.js'
 import { discover_all_changes } from '../changes.js'
 import { create_logger } from '../utils/logger.js'
@@ -45,12 +45,12 @@ export async function preview(options: PreviewOptions): Promise<PreviewResult[]>
     }
 
     const current_version = await get_current_version(app, cwd)
-    const strategy = app.versioning.strategy as VersionStrategy
+    const strategy = app.versioning
 
     const next_version = strategy.bump({
       current_version,
       changes,
-      now: new Date(),
+      time: { now: () => new Date() },
     })
 
     results.push({

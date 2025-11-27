@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import type { AutoReleaseConfig, VersionStrategy } from '../types.js'
+import type { AutoReleaseConfig } from '../types.js'
 import { prompt, select, multiline } from '../utils/prompts.js'
 import { create_logger } from '../utils/logger.js'
 
@@ -34,14 +34,8 @@ export async function change(options: ChangeOptions): Promise<string> {
     throw new Error(`App "${app_name}" not found in config`)
   }
 
-  // Get valid change types for this app
-  const strategy =
-    typeof app.versioning.strategy === 'string'
-      ? null
-      : (app.versioning.strategy as VersionStrategy)
-  const valid_types = strategy
-    ? Array.from(strategy.change_types)
-    : Array.from(app.versioning.change_types)
+  // Get valid change types from the versioning strategy
+  const valid_types = Array.from(app.versioning.change_types)
 
   // Determine change type
   let change_type = options.type

@@ -1,13 +1,6 @@
 import { pathToFileURL } from 'node:url'
 import { resolve } from 'node:path'
-import type { AutoReleaseConfig, VersionStrategy } from './types.js'
-import { semver_strategy } from './strategies/semver.js'
-import { calver_strategy } from './strategies/calver.js'
-
-const BUILTIN_STRATEGIES: Record<string, VersionStrategy> = {
-  semver: semver_strategy,
-  calver: calver_strategy,
-}
+import type { AutoReleaseConfig } from './types.js'
 
 /**
  * Helper function for users to define their config
@@ -79,12 +72,12 @@ function validate_config(config: AutoReleaseConfig): void {
       throw new Error(`App "${app.name}" must have a "versioning" config`)
     }
 
-    if (!app.versioning.strategy) {
-      throw new Error(`App "${app.name}" must have a "versioning.strategy"`)
+    if (typeof app.versioning.bump !== 'function') {
+      throw new Error(`App "${app.name}" versioning must have a "bump" function. Did you forget to call the strategy function?`)
     }
 
     if (!app.versioning.change_types || !Array.isArray(app.versioning.change_types)) {
-      throw new Error(`App "${app.name}" must have "versioning.change_types" array`)
+      throw new Error(`App "${app.name}" versioning must have a "change_types" array`)
     }
   }
 }
@@ -94,49 +87,11 @@ function validate_config(config: AutoReleaseConfig): void {
  */
 function normalize_config(config: AutoReleaseConfig): AutoReleaseConfig {
   const normalized: AutoReleaseConfig = {
-    apps: config.apps.map((app) => ({
-      ...app,
-      versioning: {
-        ...app.versioning,
-        strategy: resolve_strategy(
-          app.versioning.strategy,
-          config.version_strategies
-        ),
-      },
-    })),
+    apps: config.apps,
     changes_dir: config.changes_dir || '.changes',
     default_changelog_dir: config.default_changelog_dir || 'changelogs',
-    version_strategies: config.version_strategies,
     git: config.git || { tag_template: '${appName}@${version}' },
   }
 
   return Object.freeze(normalized)
-}
-
-/**
- * Resolve strategy from string ID or strategy object
- */
-function resolve_strategy(
-  strategy: string | VersionStrategy,
-  custom_strategies?: Record<string, VersionStrategy>
-): VersionStrategy {
-  if (typeof strategy === 'object') {
-    return strategy
-  }
-
-  // Check builtin strategies
-  if (BUILTIN_STRATEGIES[strategy]) {
-    return BUILTIN_STRATEGIES[strategy]
-  }
-
-  // Check custom strategies
-  if (custom_strategies && custom_strategies[strategy]) {
-    return custom_strategies[strategy]
-  }
-
-  throw new Error(
-    `Unknown version strategy: ${strategy}. Available: ${Object.keys(
-      BUILTIN_STRATEGIES
-    ).join(', ')}`
-  )
 }
