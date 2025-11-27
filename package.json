@@ -23,7 +23,18 @@
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.mts",
   "exports": {
-    ".": "./dist/index.mjs",
+    ".": {
+      "import": "./dist/index.mjs",
+      "types": "./dist/index.d.mts"
+    },
+    "./versioning/semver": {
+      "import": "./dist/versioning/semver.mjs",
+      "types": "./dist/versioning/semver.d.mts"
+    },
+    "./versioning/calver": {
+      "import": "./dist/versioning/calver.mjs",
+      "types": "./dist/versioning/calver.d.mts"
+    },
     "./package.json": "./package.json"
   },
   "scripts": {

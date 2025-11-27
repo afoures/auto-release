@@ -60,12 +60,12 @@ export async function release(options: ReleaseOptions): Promise<void> {
     }
 
     const current_version = await get_current_version(app, cwd);
-    const strategy = app.versioning.strategy as VersionStrategy;
+    const strategy = app.versioning;
 
     const next_version = strategy.bump({
       current_version,
       changes,
-      now: new Date(),
+      time: { now: () => new Date() },
     });
 
     const changelog_path = get_changelog_path(

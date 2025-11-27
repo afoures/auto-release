@@ -19,7 +19,3 @@ export type {
 
 // Export config helper
 export { define_config } from './config.js'
-
-// Export built-in strategies
-export { semver_strategy } from './strategies/semver.js'
-export { calver_strategy } from './strategies/calver.js'

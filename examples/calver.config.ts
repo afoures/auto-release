@@ -1,4 +1,5 @@
-import { define_config, calver_strategy } from "../src/index.js";
+import { define_config } from "../src/index.js";
+import { calver } from "../src/versioning/calver.js";
 
 /**
  * Example configuration using calver versioning
@@ -8,10 +9,7 @@ export default define_config({
     {
       name: "api",
       packages: ["packages/api"],
-      versioning: {
-        strategy: calver_strategy,
-        change_types: ["feature", "fix", "none"],
-      },
+      versioning: calver(),
       deploy: {
         command:
           "docker build -t myapi:${version} . && docker push myapi:${version}",

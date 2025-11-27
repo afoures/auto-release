@@ -121,18 +121,12 @@ export async function discover_all_changes(
   const changes_map = new Map<string, ResolvedChange[]>()
 
   for (const app of apps) {
-    const strategy =
-      typeof app.versioning.strategy === 'string'
-        ? null
-        : app.versioning.strategy
-    const valid_change_types = strategy
-      ? strategy.change_types
-      : app.versioning.change_types
+    const valid_change_types = app.versioning.change_types
 
     const changes = await discover_changes(
       app.name,
       changes_dir,
-      valid_change_types as readonly string[]
+      valid_change_types
     )
     changes_map.set(app.name, changes)
   }

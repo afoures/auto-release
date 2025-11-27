@@ -1,4 +1,5 @@
 import { define_config } from "./src/index.js";
+import { semver } from "./src/versioning/semver.js";
 
 /**
  * Example configuration for the auto-release package itself
@@ -10,10 +11,7 @@ export default define_config({
     {
       name: "auto-release",
       packages: ["."],
-      versioning: {
-        strategy: "semver",
-        change_types: ["major", "minor", "patch", "none"],
-      },
+      versioning: semver(),
       changelog: {
         path: "CHANGELOG.md",
       },

@@ -14,17 +14,14 @@ export interface ResolvedChange {
 }
 
 /**
- * Version strategy interface for parsing, formatting, and bumping versions
+ * Version strategy interface for determining version bumps
  */
 export interface VersionStrategy {
-  id: string;
   change_types: readonly string[];
-  parse(version: string): unknown;
-  format(parsed: unknown): string;
   bump(options: {
     current_version: string;
     changes: ResolvedChange[];
-    now: Date;
+    time: { now: () => Date };
   }): string;
 }
 
@@ -66,12 +63,9 @@ export interface ChangelogConfig {
 }
 
 /**
- * Versioning configuration for an app
+ * Versioning configuration for an app - just the strategy
  */
-export interface VersioningConfig {
-  strategy: string | VersionStrategy;
-  change_types: readonly string[];
-}
+export type VersioningConfig = VersionStrategy;
 
 /**
  * App configuration
@@ -98,7 +92,6 @@ export interface AutoReleaseConfig {
   apps: AppConfig[];
   changes_dir?: string;
   default_changelog_dir?: string;
-  version_strategies?: Record<string, VersionStrategy>;
   git?: GitConfig;
 }
 
