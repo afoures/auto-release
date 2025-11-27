@@ -36,10 +36,14 @@ export const change = command({
     // Determine app
     let app_name = values.app;
     if (!app_name) {
-      app_name = await select(
-        "Select app:",
-        config.apps.map((a) => a.name)
-      );
+      if (config.apps.length === 1) {
+        app_name = config.apps[0].name;
+      } else {
+        app_name = await select(
+          "Select app:",
+          config.apps.map((a) => a.name)
+        );
+      }
     }
 
     const app = config.apps.find((a) => a.name === app_name);
