@@ -53,13 +53,13 @@ export default define_config({
 auto-release record
 ```
 
-3. Preview the next release:
+3. Preview what would be released (dry-run):
 
 ```bash
-auto-release preview
+auto-release prepare-release --dry-run
 ```
 
-4. Release your changes:
+4. Prepare release PRs:
 
 ```bash
 auto-release release
@@ -321,25 +321,30 @@ Options:
 - `--description <text>`: Detailed description
 - `--config <path>`: Custom config file path
 
-### `preview`
+### `prepare-release`
 
-Preview what would be released:
+Create or update release PRs from change files:
 
 ```bash
-# All apps
-auto-release preview
+# Create/update release PRs
+auto-release prepare-release
 
-# Specific app
-auto-release preview --app web-app
+# Preview what would be released (dry-run)
+auto-release prepare-release --dry-run
+
+# Specific app only
+auto-release prepare-release --app web-app
 ```
 
-Shows:
+When using `--dry-run`, shows:
 - Apps with pending changes
 - Current → next version
-- List of changes with types and file paths
+- Release branch name
+- Detailed list of changes with types, titles, and file paths
 
 Options:
 - `--app <name>`: Filter by app name
+- `--dry-run`: Show what would be done without making changes
 - `--config <path>`: Custom config file path
 
 ### `release`
@@ -465,11 +470,8 @@ git push --tags
 
 4. **On main branch**, when ready to release:
    ```bash
-   auto-release preview  # Review what will be released
-   auto-release release  # Update versions and changelogs
-   git add .
-   git commit -m "chore: release"
-   git push
+   auto-release prepare-release --dry-run  # Review what will be released
+   auto-release prepare-release  # Create/update release PRs
    ```
 
 5. **Deploy** (usually in CI after release commit):
@@ -505,12 +507,12 @@ jobs:
       - run: pnpm auto-release check
       
       # Preview what would be released
-      - run: pnpm auto-release preview
+      - run: pnpm auto-release prepare-release --dry-run
       
       # Check if there are changes to release
       - id: check-changes
         run: |
-          if pnpm auto-release preview | grep -q "No pending changes"; then
+          if pnpm auto-release prepare-release --dry-run | grep -q "No pending changes"; then
             echo "has_changes=false" >> $GITHUB_OUTPUT
           else
             echo "has_changes=true" >> $GITHUB_OUTPUT
@@ -570,16 +572,10 @@ Unlike traditional Changesets:
 You can also use `auto-release` programmatically:
 
 ```typescript
-import { load_config, preview, release } from 'auto-release'
+import { load_config } from 'auto-release'
 
 const config = await load_config()
-const results = await preview({ config })
-
-for (const result of results) {
-  console.log(`${result.app_name}: ${result.current_version} → ${result.next_version}`)
-}
-
-await release({ config, yes: true })
+// Use config to build custom workflows
 ```
 
 ## License

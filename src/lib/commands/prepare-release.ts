@@ -119,11 +119,24 @@ export const prepare_release = create_command({
       logger.info(`📦 ${rel.app.name}`);
       logger.info(`  Version: ${rel.current_version} → ${rel.next_version}`);
       logger.info(`  Branch: ${rel.release_branch}`);
-      logger.info(`  Changes: ${rel.changes.length} file(s)\n`);
+      logger.info(`  Changes: ${rel.changes.length} file(s)`);
+      
+      // Show detailed change information
+      if (rel.changes.length > 0) {
+        logger.info("");
+        for (const change of rel.changes) {
+          const relative_path = relative(cwd, change.file_path);
+          logger.info(`    [${change.type}] ${change.title}`);
+          logger.info(`      ${relative_path}`);
+        }
+        logger.info("");
+      } else {
+        logger.info("");
+      }
     }
 
     if (dry_run) {
-      logger.info("Dry run - no changes will be made");
+      logger.info("✨ Dry run - no changes will be made");
       return {
         status: "success" as const,
         message: "Dry run completed - no changes were made",

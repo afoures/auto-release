@@ -23,9 +23,8 @@
 - **CLI Commands**
   - `check`: Validate configuration, packages, and change files
   - `record`: Record new changes interactively or via CLI
-  - `preview`: Preview next release without making changes
-  - `release`: Update versions, generate changelogs, and consume changes
-  - `deploy`: Run deployment commands/handlers and create git tags
+  - `prepare-release`: Create or update release PRs (with enhanced `--dry-run` showing detailed changes)
+  - `publish-release`: Publish releases and create git tags
 
 - **Change File Management**
   - Markdown-based change files with validation
