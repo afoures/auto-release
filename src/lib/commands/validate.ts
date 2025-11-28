@@ -54,8 +54,13 @@ export const validate = create_command({
       }
     }
 
-    return valid
-      ? { ok: true as const }
-      : { ok: false as const, errors, warnings };
+    if (valid) {
+      return { status: "success" as const, message: "All validations passed!" };
+    } else {
+      return {
+        status: "error" as const,
+        error: errors.join("; "),
+      };
+    }
   },
 });

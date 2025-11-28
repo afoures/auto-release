@@ -36,10 +36,18 @@ export const prepare_release = create_command({
     const release_branch_prefix = config.git.release_branch_prefix || "release";
 
     // Discover all changes
-    const changes_map = await discover_all_changes(
-      config.apps,
-      config.changes_dir!
-    );
+    let changes_map: Map<string, any>;
+    try {
+      changes_map = await discover_all_changes(
+        config.apps,
+        config.changes_dir!
+      );
+    } catch (error: any) {
+      return {
+        status: "error" as const,
+        error: `Failed to discover changes: ${error.message}`,
+      };
+    }
 
     // Filter apps if specified
     const target_apps = app_filter
@@ -47,7 +55,10 @@ export const prepare_release = create_command({
       : config.apps;
 
     if (app_filter && target_apps.length === 0) {
-      throw new Error(`App "${app_filter}" not found in config`);
+      return {
+        status: "error" as const,
+        error: `App "${app_filter}" not found in config`,
+      };
     }
 
     // Process each app with pending changes
@@ -66,30 +77,40 @@ export const prepare_release = create_command({
         continue;
       }
 
-      const current_version = await get_current_version(app, cwd);
-      const strategy = app.versioning;
+      try {
+        const current_version = await get_current_version(app, cwd);
+        const strategy = app.versioning;
 
-      const next_version = strategy.bump({
-        current_version,
-        changes,
-        time: { now: () => new Date() },
-      });
+        const next_version = strategy.bump({
+          current_version,
+          changes,
+          time: { now: () => new Date() },
+        });
 
-      // Determine release branch name
-      const release_branch = `${release_branch_prefix}/${app.name}`;
+        // Determine release branch name
+        const release_branch = `${release_branch_prefix}/${app.name}`;
 
-      releases.push({
-        app,
-        current_version,
-        next_version,
-        changes,
-        release_branch,
-      });
+        releases.push({
+          app,
+          current_version,
+          next_version,
+          changes,
+          release_branch,
+        });
+      } catch (error: any) {
+        return {
+          status: "error" as const,
+          error: `Failed to get version for ${app.name}: ${error.message}`,
+        };
+      }
     }
 
     if (releases.length === 0) {
       logger.info("No pending changes to release");
-      return { ok: true as const };
+      return {
+        status: "success" as const,
+        message: "No pending changes to release",
+      };
     }
 
     // Display plan
@@ -103,14 +124,27 @@ export const prepare_release = create_command({
 
     if (dry_run) {
       logger.info("Dry run - no changes will be made");
-      return { ok: true as const };
+      return {
+        status: "success" as const,
+        message: "Dry run completed - no changes were made",
+      };
     }
 
     // Get default branch (only needed for actual operations, not dry-run)
-    const default_branch = await provider.get_default_branch();
-    const default_branch_sha = await provider.get_branch_sha(default_branch);
+    let default_branch: string;
+    let default_branch_sha: string;
+    try {
+      default_branch = await provider.get_default_branch();
+      default_branch_sha = await provider.get_branch_sha(default_branch);
+    } catch (error: any) {
+      return {
+        status: "error" as const,
+        error: `Failed to get default branch: ${error.message}`,
+      };
+    }
 
     // Process each release
+    const errors: string[] = [];
     for (const rel of releases) {
       logger.info(`\nPreparing release for ${rel.app.name}...`);
 
@@ -128,11 +162,16 @@ export const prepare_release = create_command({
             default_branch
           );
           if (!content) {
-            throw new Error(
+            errors.push(
               `Could not read ${relative_path} from ${default_branch}`
             );
+            continue;
           }
           package_files.push({ path: relative_path, content });
+        }
+
+        if (errors.length > 0) {
+          continue;
         }
 
         // Read current changelog
@@ -147,12 +186,17 @@ export const prepare_release = create_command({
 
         // Update package.json files
         for (const pkg_file of package_files) {
-          const package_json = JSON.parse(pkg_file.content);
-          package_json.version = rel.next_version;
-          file_changes.push({
-            path: pkg_file.path,
-            content: JSON.stringify(package_json, null, 2) + "\n",
-          });
+          try {
+            const package_json = JSON.parse(pkg_file.content);
+            package_json.version = rel.next_version;
+            file_changes.push({
+              path: pkg_file.path,
+              content: JSON.stringify(package_json, null, 2) + "\n",
+            });
+          } catch (error: any) {
+            errors.push(`Failed to parse ${pkg_file.path}: ${error.message}`);
+            continue;
+          }
         }
 
         // Update changelog
@@ -222,14 +266,23 @@ export const prepare_release = create_command({
           logger.success(`Created PR #${pr.number}: ${pr.url}`);
         }
       } catch (error: any) {
-        logger.error(
+        errors.push(
           `Failed to prepare release for ${rel.app.name}: ${error.message}`
         );
-        throw error;
       }
     }
 
+    if (errors.length > 0) {
+      return {
+        status: "error" as const,
+        error: errors.join("; "),
+      };
+    }
+
     logger.success("\n✨ Release PRs prepared!");
-    return { ok: true as const };
+    return {
+      status: "success" as const,
+      message: "Release PRs prepared successfully",
+    };
   },
 });

@@ -1,6 +1,6 @@
 import { define_config } from "./dist/index.mjs";
-import { semver } from "./dist/versioning/semver.mjs";
-import { github } from "./dist/git/github.mjs";
+import { semver } from "./dist/semantic-versioning.mjs";
+import { github } from "./dist/github-provider.mjs";
 
 /**
  * Example configuration for the auto-release package itself

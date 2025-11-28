@@ -1,5 +1,6 @@
 import { parseArgs } from "node:util";
 import type { ParseArgsOptionDescriptor } from "node:util";
+import { log, cancel } from "@clack/prompts";
 import { load_config } from "./config.js";
 import type { AutoReleaseConfig } from "./types.js";
 
@@ -11,7 +12,7 @@ export interface Option extends ParseArgsOptionDescriptor {
 }
 
 type convert_to_values<args extends Record<string, Option>> = {
-  [K in keyof args]: args[K]["type"] extends "string"
+  [K in keyof args]?: args[K]["type"] extends "string"
     ? string
     : args[K]["type"] extends "boolean"
     ? boolean
@@ -46,8 +47,7 @@ export interface Command<
     values: convert_to_values<args>;
     config: AutoReleaseConfig;
   }) => Promise<
-    | { ok: true; warnings?: string[] }
-    | { ok: false; errors?: string[]; warnings?: string[] }
+    { status: "success"; message?: string } | { status: "error"; error: string }
   >;
 }
 
@@ -249,20 +249,29 @@ export function create_cli(options: CreateCliOptions) {
       process.exit(0);
     }
 
+    // Load config
+    let config: AutoReleaseConfig;
     try {
-      // Load config
-      const config = await load_config(values.config || default_config_path);
-
-      // Execute command
-      const result = await command.run({ values: values as any, config });
-
-      // Handle exit code based on result
-      if (!result.ok) {
-        process.exit(1);
-      }
+      config = await load_config(values.config || default_config_path);
     } catch (error: any) {
-      console.error(`Error: ${error.message}`);
+      log.error(`Failed to load config: ${error.message}`);
+      cancel("Config loading failed");
       process.exit(1);
+    }
+
+    // Execute command
+    const result = await command.run({ values: values as any, config });
+
+    // Handle exit code based on result
+    if (result.status === "error") {
+      log.error(result.error);
+      cancel("Command failed");
+      process.exit(1);
+    }
+
+    if (result.status === "success") {
+      // Success - command completed successfully
+      // Message is already displayed by the command if needed
     }
   };
 }
