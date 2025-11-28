@@ -17,7 +17,7 @@
     "package.json"
   ],
   "bin": {
-    "auto-release": "./dist/auto-release.mjs"
+    "auto-release": "./dist/bin.mjs"
   },
   "main": "./dist/index.mjs",
   "module": "./dist/index.mjs",
@@ -28,20 +28,20 @@
       "types": "./dist/index.d.mts"
     },
     "./versioning/semver": {
-      "import": "./dist/versioning/semver.mjs",
-      "types": "./dist/versioning/semver.d.mts"
+      "import": "./dist/semantic-versioning.mjs",
+      "types": "./dist/semantic-versioning.d.mts"
     },
     "./versioning/calver": {
-      "import": "./dist/versioning/calver.mjs",
-      "types": "./dist/versioning/calver.d.mts"
+      "import": "./dist/calendar-versioning.mjs",
+      "types": "./dist/calendar-versioning.d.mts"
     },
     "./git/github": {
-      "import": "./dist/git/github.mjs",
-      "types": "./dist/git/github.d.mts"
+      "import": "./dist/github-provider.mjs",
+      "types": "./dist/github-provider.d.mts"
     },
     "./git/gitlab": {
-      "import": "./dist/git/gitlab.mjs",
-      "types": "./dist/git/gitlab.d.mts"
+      "import": "./dist/gitlab-provider.mjs",
+      "types": "./dist/gitlab-provider.d.mts"
     },
     "./package.json": "./package.json"
   },

@@ -1,5 +1,5 @@
 import { define_config } from "../src/index.js";
-import { semver } from "../src/versioning/semver.js";
+import { semver } from "../src/semantic-versioning.js";
 
 /**
  * Example configuration for a single-app repository

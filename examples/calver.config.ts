@@ -1,5 +1,5 @@
 import { define_config } from "../src/index.js";
-import { calver } from "../src/versioning/calver.js";
+import { calver } from "../src/calendar-versioning.js";
 
 /**
  * Example configuration using calver versioning

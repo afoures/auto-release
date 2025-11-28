@@ -2,30 +2,18 @@
  * Core types for auto-release
  */
 
-import type { GitProvider as ProviderGitProvider } from "./providers/types.js";
+import type { GitProvider } from "./providers/types.js";
+import type { VersioningStrategy } from "./versioning/types.js";
 
 /**
- * A resolved change file with parsed metadata
+ * Git provider interface (re-exported from providers for use in GitConfig)
  */
-export interface ResolvedChange {
-  app_name: string;
-  type: string;
-  title: string;
-  body?: string;
-  file_path: string;
-}
+export type { GitProvider };
 
 /**
- * Version strategy interface for determining version bumps
+ * Versioning configuration for an app - just the strategy
  */
-export interface VersionStrategy {
-  change_types: readonly string[];
-  bump(options: {
-    current_version: string;
-    changes: ResolvedChange[];
-    time: { now: () => Date };
-  }): string;
-}
+export type { VersioningStrategy };
 
 /**
  * Deploy configuration for an app
@@ -65,25 +53,15 @@ export interface ChangelogConfig {
 }
 
 /**
- * Versioning configuration for an app - just the strategy
- */
-export type VersioningConfig = VersionStrategy;
-
-/**
  * App configuration
  */
 export interface AppConfig {
   name: string;
   packages: string[];
-  versioning: VersioningConfig;
+  versioning: VersioningStrategy;
   changelog: ChangelogConfig;
   deploy?: DeployConfig;
 }
-
-/**
- * Git provider interface (re-exported from providers for use in GitConfig)
- */
-export type GitProvider = ProviderGitProvider;
 
 /**
  * Git configuration

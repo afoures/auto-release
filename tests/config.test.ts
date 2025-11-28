@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { define_config } from "../src/config.js";
-import { semver } from "../src/versioning/semver.js";
+import { define_config } from "../src/lib/config.js";
+import { semver } from "../src/semantic-versioning.js";
 
 describe("define_config", () => {
   it("should return config as-is", () => {
