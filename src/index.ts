@@ -15,7 +15,7 @@ export type {
   ResolvedChange,
   ValidationResult,
   Logger,
-} from './types.js'
+} from "./types.js";
 
 // Export config helper
-export { define_config } from './config.js'
+export { define_config } from "./config.js";

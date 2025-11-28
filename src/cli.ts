@@ -70,11 +70,8 @@ export function generate_help(
 ): string {
   const options: Array<{ name: string; description: string }> = [];
 
-  // Add help option (always present)
-  options.push({
-    name: "--help".padEnd(20),
-    description: "Show help",
-  });
+  // Build option names first to calculate max length
+  const option_names: string[] = ["--help"];
 
   // Sort options: config first, then alphabetically
   const sortedKeys = Object.keys(schema).sort((a, b) => {
@@ -88,16 +85,37 @@ export function generate_help(
     const optionName = key.length === 1 ? `-${key}` : `--${key}`;
     const typeHint = option.type === "string" ? " <value>" : "";
     const displayName = `${optionName}${typeHint}`;
+    option_names.push(displayName);
+  }
+
+  // Calculate max option name length for proper alignment
+  const max_option_length = Math.max(
+    ...option_names.map((name) => name.length)
+  );
+
+  // Add help option (always present)
+  options.push({
+    name: "--help",
+    description: "Show help",
+  });
+
+  for (const key of sortedKeys) {
+    const option = schema[key];
+    const optionName = key.length === 1 ? `-${key}` : `--${key}`;
+    const typeHint = option.type === "string" ? " <value>" : "";
+    const displayName = `${optionName}${typeHint}`;
     const desc = option.description || "";
 
     options.push({
-      name: displayName.padEnd(20),
+      name: displayName,
       description: desc,
     });
   }
 
   const optionsText = options
-    .map((opt) => `  ${opt.name}    ${opt.description}`)
+    .map(
+      (opt) => `  ${opt.name.padEnd(max_option_length + 2)}${opt.description}`
+    )
     .join("\n");
 
   return `
@@ -146,8 +164,16 @@ function show_help(
   command?: Command<any>
 ) {
   if (!command) {
+    // Calculate max command name length for proper alignment
+    const max_command_length = Math.max(
+      ...Object.values(commands).map((cmd) => cmd.name.length)
+    );
+
     const command_list = Object.values(commands)
-      .map((cmd) => `  ${cmd.name.padEnd(12)} ${cmd.description}`)
+      .map(
+        (cmd) =>
+          `  ${cmd.name.padEnd(max_command_length + 2)}${cmd.description}`
+      )
       .join("\n");
 
     console.log(`
