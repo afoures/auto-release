@@ -68,7 +68,7 @@ export const preview = create_command({
         const next_version = strategy.bump({
           current_version,
           changes,
-          time: { now: () => new Date() },
+          date: new Date(),
         });
 
         results.push({

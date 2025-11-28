@@ -1,6 +1,11 @@
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
-import type { AppConfig, ResolvedChange, VersionStrategy } from "./types.js";
+import type {
+  AppConfig,
+  ResolvedChange,
+  VersioningStrategy,
+  ChangelogFormatter,
+} from "./types.js";
 
 /**
  * Get changelog path for an app
@@ -20,6 +25,42 @@ function format_date(date: Date): string {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+/**
+ * Default changelog formatter
+ */
+export const default_changelog_formatter: ChangelogFormatter = {
+  template: ({ app_name }) => {
+    return [
+      `# \`${app_name}\` CHANGELOG`,
+      "",
+      "All notable changes to this project will be documented in this file.",
+      "",
+    ];
+  },
+  release: ({ version, date, changes }) => {
+    const formatted_date = format_date(date);
+    const lines: string[] = [`## ${version} (${formatted_date})`, ""];
+
+    for (const change of changes) {
+      lines.push(`- ${change.title}`);
+      if (change.body) {
+        lines.push("");
+        lines.push(change.body);
+      }
+      lines.push("");
+    }
+
+    return lines;
+  },
+};
+
+/**
+ * Get the formatter for an app, falling back to default
+ */
+function get_formatter(app: AppConfig): ChangelogFormatter {
+  return app.changelog.formatter || default_changelog_formatter;
 }
 
 /**
@@ -72,18 +113,30 @@ export function generate_changelog_section(options: {
   next_version: string;
   date: Date;
   changes: ResolvedChange[];
-  strategy: VersionStrategy;
+  strategy: VersioningStrategy;
 }): string {
-  const { next_version, date, changes, strategy } = options;
-  const formatted_date = format_date(date);
+  const { app, next_version, date, changes } = options;
+  const formatter = get_formatter(app);
 
+  // Use formatter if available
+  if (formatter.release) {
+    const lines = formatter.release({
+      version: next_version,
+      date,
+      changes,
+    });
+    return lines.join("\n") + "\n";
+  }
+
+  // Fallback to old format if no formatter
+  const formatted_date = format_date(date);
   let section = `## ${next_version} – ${formatted_date}\n\n`;
 
   // Group changes by type
   const grouped = group_changes_by_type(changes);
 
   // Order types according to strategy's change_types order
-  const ordered_types = strategy.change_types.filter((type) =>
+  const ordered_types = options.strategy.change_types.filter((type) =>
     grouped.has(type)
   );
 
@@ -110,9 +163,10 @@ export function generate_updated_changelog(options: {
   next_version: string;
   date: Date;
   changes: ResolvedChange[];
-  strategy: VersionStrategy;
+  strategy: VersioningStrategy;
 }): string {
   const { existing_content, app } = options;
+  const formatter = get_formatter(app);
 
   // Generate new section
   const new_section = generate_changelog_section(options);
@@ -121,8 +175,13 @@ export function generate_updated_changelog(options: {
   let new_content: string;
 
   if (!existing_content || existing_content.trim() === "") {
-    // New changelog file
-    new_content = `# ${app.name}\n\n${new_section}\n`;
+    // New changelog file - use template formatter if available
+    if (formatter.template) {
+      const template_lines = formatter.template({ app_name: app.name });
+      new_content = template_lines.join("\n") + "\n\n" + new_section;
+    } else {
+      new_content = `# ${app.name}\n\n${new_section}\n`;
+    }
   } else {
     // Existing changelog - insert after title or at beginning
     const lines = existing_content.split("\n");
@@ -155,7 +214,7 @@ export async function write_changelog(options: {
   next_version: string;
   date: Date;
   changes: ResolvedChange[];
-  strategy: VersionStrategy;
+  strategy: VersioningStrategy;
   changelog_path: string;
 }): Promise<void> {
   const { changelog_path } = options;

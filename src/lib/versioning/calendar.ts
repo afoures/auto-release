@@ -34,16 +34,15 @@ export function calver(): VersioningStrategy {
   return {
     change_types: ["feature", "fix", "none"] as const,
 
-    bump({ current_version, changes, time }): string {
+    bump({ current_version, changes, date }): string {
       // If no changes, return current version
       if (changes.length === 0) {
         return current_version;
       }
 
       const parsed = parse(current_version);
-      const now = time.now();
-      const current_year = now.getFullYear();
-      const current_month = now.getMonth() + 1; // 0-indexed
+      const current_year = date.getFullYear();
+      const current_month = date.getMonth() + 1; // 0-indexed
 
       // If current year/month matches, increment micro; otherwise reset to 0
       if (parsed.year === current_year && parsed.month === current_month) {
