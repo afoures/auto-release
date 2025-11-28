@@ -48,9 +48,8 @@ auto-release/
 │   ├── commands/
 │   │   ├── check.ts          # Check command
 │   │   ├── record.ts         # Record command
-│   │   ├── preview.ts        # Preview command
-│   │   ├── release.ts        # Release command
-│   │   └── deploy.ts         # Deploy command
+│   │   ├── prepare-release.ts # Prepare release command
+│   │   └── publish-release.ts # Publish release command
 │   └── utils/
 │       ├── logger.ts         # Logging utilities
 │       ├── exec.ts           # Command execution
