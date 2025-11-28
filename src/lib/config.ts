@@ -46,13 +46,7 @@ export async function load_config(
  */
 function validate_config(config: AutoReleaseConfig): void {
   if (!config.git) {
-    throw new Error('Config must have a "git" object');
-  }
-
-  if (!config.git.provider) {
-    throw new Error(
-      'Config "git" must have a "provider". Use github() or gitlab() from "auto-release/providers"'
-    );
+    throw new Error('Config must have a "git" provider. Use github() or gitlab() from "auto-release/providers"');
   }
 
   if (!config.apps || !Array.isArray(config.apps)) {
@@ -110,23 +104,14 @@ function validate_config(config: AutoReleaseConfig): void {
  */
 function normalize_config(config: AutoReleaseConfig): NormalizedConfig {
   if (!config.git) {
-    throw new Error('Config must have a "git" object with a "provider"');
-  }
-
-  if (!config.git.provider) {
-    throw new Error(
-      'Config "git" must have a "provider" (use github() or gitlab())'
-    );
+    throw new Error('Config must have a "git" provider (use github() or gitlab())');
   }
 
   const normalized: NormalizedConfig = {
     apps: config.apps,
     changes_dir: config.changes_dir || ".changes",
-    git: {
-      provider: config.git.provider,
-      tag_template: config.git.tag_template || "${appName}@${version}",
-      release_branch_prefix: config.git.release_branch_prefix || "release",
-    },
+    release_branch_prefix: config.release_branch_prefix || "release",
+    git: config.git,
   };
 
   return Object.freeze(normalized);
