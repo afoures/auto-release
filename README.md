@@ -279,12 +279,12 @@ This adds a comprehensive user profile page with the following features:
 
 ## Commands
 
-### `validate`
+### `check`
 
 Validate configuration, packages, and change files:
 
 ```bash
-auto-release validate
+auto-release check
 ```
 
 Options:
@@ -502,7 +502,7 @@ jobs:
       - run: pnpm install
       
       # Validate on every push
-      - run: pnpm auto-release validate
+      - run: pnpm auto-release check
       
       # Preview what would be released
       - run: pnpm auto-release preview

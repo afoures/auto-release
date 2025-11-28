@@ -46,7 +46,7 @@ auto-release/
 │   │   ├── semver.ts         # Semver strategy
 │   │   └── calver.ts         # Calver strategy
 │   ├── commands/
-│   │   ├── validate.ts       # Validate command
+│   │   ├── check.ts          # Check command
 │   │   ├── record.ts         # Record command
 │   │   ├── preview.ts        # Preview command
 │   │   ├── release.ts        # Release command

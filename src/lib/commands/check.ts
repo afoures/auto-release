@@ -3,8 +3,8 @@ import { discover_all_changes } from "../changes.js";
 import { create_logger } from "../utils/logger.js";
 import { create_command } from "../cli.js";
 
-export const validate = create_command({
-  name: "validate",
+export const check = create_command({
+  name: "check",
   description: "Validate configuration, packages, and change files",
   schema: {
     config: {
@@ -64,3 +64,4 @@ export const validate = create_command({
     }
   },
 });
+

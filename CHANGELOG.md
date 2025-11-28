@@ -21,7 +21,7 @@
   - Custom strategy support with pluggable interface
 
 - **CLI Commands**
-  - `validate`: Validate configuration, packages, and change files
+  - `check`: Validate configuration, packages, and change files
   - `record`: Record new changes interactively or via CLI
   - `preview`: Preview next release without making changes
   - `release`: Update versions, generate changelogs, and consume changes
