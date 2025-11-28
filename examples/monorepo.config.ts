@@ -30,7 +30,6 @@ export default define_config({
     },
   ],
   changes_dir: ".changes",
-  default_changelog_dir: "changelogs",
   git: {
     tag_template: "${appName}@${version}",
   },
