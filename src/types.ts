@@ -78,7 +78,6 @@ export interface AppConfig {
   versioning: VersioningConfig;
   changelog: ChangelogConfig;
   deploy?: DeployConfig;
-  release_branch?: string; // Override release branch name, default: "{prefix}/{app_name}"
 }
 
 /**
