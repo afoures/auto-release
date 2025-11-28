@@ -1,6 +1,6 @@
 import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
-import type { AutoReleaseConfig } from "./types.js";
+import type { AutoReleaseConfig, NormalizedConfig } from "./types.js";
 
 /**
  * Helper function for users to define their config
@@ -15,7 +15,7 @@ export function define_config(config: AutoReleaseConfig): AutoReleaseConfig {
 export async function load_config(
   config_path: string = "auto-release.config.ts",
   cwd: string = process.cwd()
-): Promise<AutoReleaseConfig> {
+): Promise<NormalizedConfig> {
   const resolved_path = resolve(cwd, config_path);
   const file_url = pathToFileURL(resolved_path).href;
 
@@ -108,16 +108,18 @@ function validate_config(config: AutoReleaseConfig): void {
 /**
  * Normalize and freeze config for internal use
  */
-function normalize_config(config: AutoReleaseConfig): AutoReleaseConfig {
+function normalize_config(config: AutoReleaseConfig): NormalizedConfig {
   if (!config.git) {
     throw new Error('Config must have a "git" object with a "provider"');
   }
 
   if (!config.git.provider) {
-    throw new Error('Config "git" must have a "provider" (use github() or gitlab())');
+    throw new Error(
+      'Config "git" must have a "provider" (use github() or gitlab())'
+    );
   }
 
-  const normalized: AutoReleaseConfig = {
+  const normalized: NormalizedConfig = {
     apps: config.apps,
     changes_dir: config.changes_dir || ".changes",
     git: {

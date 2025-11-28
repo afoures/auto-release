@@ -1,4 +1,4 @@
-import type { AppConfig, ResolvedChange, VersionStrategy } from "./types.js";
+import type { AppConfig, ResolvedChange, VersioningStrategy } from "./types.js";
 import { generate_changelog_section } from "./changelog.js";
 
 /**
@@ -9,7 +9,7 @@ export function generate_release_notes(options: {
   current_version: string;
   next_version: string;
   changes: ResolvedChange[];
-  strategy: VersionStrategy;
+  strategy: VersioningStrategy;
 }): string {
   const { app, current_version, next_version, changes } = options;
 
@@ -65,9 +65,8 @@ export function generate_release_body(options: {
   next_version: string;
   date: Date;
   changes: ResolvedChange[];
-  strategy: VersionStrategy;
+  strategy: VersioningStrategy;
 }): string {
   // Use the changelog section format for releases
   return generate_changelog_section(options);
 }
-

@@ -3,17 +3,9 @@
  */
 
 import type { GitProvider } from "./providers/types.js";
-import type { VersioningStrategy } from "./versioning/types.js";
+import type { VersioningStrategy, ResolvedChange } from "./versioning/types.js";
 
-/**
- * Git provider interface (re-exported from providers for use in GitConfig)
- */
-export type { GitProvider };
-
-/**
- * Versioning configuration for an app - just the strategy
- */
-export type { VersioningStrategy };
+export type { GitProvider, VersioningStrategy, ResolvedChange };
 
 /**
  * Deploy configuration for an app
@@ -45,11 +37,21 @@ export interface Logger {
   success(message: string): void;
 }
 
+export interface ChangelogFormatter {
+  template?: (args: { app_name: string }) => Array<string>;
+  release?: (args: {
+    version: string;
+    date: Date;
+    changes: Array<ResolvedChange>;
+  }) => Array<string>;
+}
+
 /**
  * Changelog configuration for an app
  */
 export interface ChangelogConfig {
   path: string;
+  formatter?: ChangelogFormatter;
 }
 
 /**
@@ -80,6 +82,12 @@ export interface AutoReleaseConfig {
   changes_dir?: string;
   git: GitConfig; // Now required
 }
+
+export type NormalizedConfig = {
+  apps: AppConfig[];
+  changes_dir: string;
+  git: Required<GitConfig>;
+};
 
 /**
  * Validation result

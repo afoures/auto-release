@@ -84,7 +84,7 @@ export const prepare_release = create_command({
         const next_version = strategy.bump({
           current_version,
           changes,
-          time: { now: () => new Date() },
+          date: new Date(),
         });
 
         // Determine release branch name

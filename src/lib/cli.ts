@@ -2,7 +2,7 @@ import { parseArgs } from "node:util";
 import type { ParseArgsOptionDescriptor } from "node:util";
 import { log, cancel } from "@clack/prompts";
 import { load_config } from "./config.js";
-import type { AutoReleaseConfig } from "./types.js";
+import type { NormalizedConfig } from "./types.js";
 
 /**
  * Extended option schema with description for help generation
@@ -45,7 +45,7 @@ export interface Command<
    */
   run: (args: {
     values: convert_to_values<args>;
-    config: AutoReleaseConfig;
+    config: NormalizedConfig;
   }) => Promise<
     { status: "success"; message?: string } | { status: "error"; error: string }
   >;
@@ -250,7 +250,7 @@ export function create_cli(options: CreateCliOptions) {
     }
 
     // Load config
-    let config: AutoReleaseConfig;
+    let config;
     try {
       config = await load_config(values.config || default_config_path);
     } catch (error: any) {

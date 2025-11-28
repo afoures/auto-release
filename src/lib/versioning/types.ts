@@ -17,6 +17,6 @@ export interface VersioningStrategy {
   bump(options: {
     current_version: string;
     changes: ResolvedChange[];
-    time: { now: () => Date };
+    date: Date;
   }): string;
 }
