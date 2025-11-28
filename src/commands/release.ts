@@ -3,7 +3,7 @@ import { get_current_version, write_version } from "../packages.js";
 import { discover_all_changes } from "../changes.js";
 import { write_changelog, get_changelog_path } from "../changelog.js";
 import { create_logger } from "../utils/logger.js";
-import { confirm } from "../utils/prompts.js";
+import { confirm, isCancel } from "@clack/prompts";
 import { command } from "./types.js";
 
 export const release = command({
@@ -113,8 +113,11 @@ export const release = command({
 
     // Confirm
     if (!yes) {
-      const confirmed = await confirm("Proceed with release?", false);
-      if (!confirmed) {
+      const confirmed = await confirm({
+        message: "Proceed with release?",
+        initialValue: false,
+      });
+      if (isCancel(confirmed) || !confirmed) {
         logger.info("Release cancelled");
         return { ok: true as const };
       }
