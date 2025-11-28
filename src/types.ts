@@ -59,7 +59,7 @@ export interface Logger {
  * Changelog configuration for an app
  */
 export interface ChangelogConfig {
-  path?: string;
+  path: string;
 }
 
 /**
@@ -74,7 +74,7 @@ export interface AppConfig {
   name: string;
   packages: string[];
   versioning: VersioningConfig;
-  changelog?: ChangelogConfig;
+  changelog: ChangelogConfig;
   deploy?: DeployConfig;
 }
 
@@ -91,7 +91,6 @@ export interface GitConfig {
 export interface AutoReleaseConfig {
   apps: AppConfig[];
   changes_dir?: string;
-  default_changelog_dir?: string;
   git?: GitConfig;
 }
 

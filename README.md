@@ -96,9 +96,9 @@ export default define_config({
         change_types: ['major', 'minor', 'patch', 'none'],
       },
       
-      // Optional: Changelog configuration
+      // Required: Changelog configuration
       changelog: {
-        path: 'apps/web/CHANGELOG.md', // defaults to ${defaultChangelogDir}/${appName}.md
+        path: 'apps/web/CHANGELOG.md',
       },
       
       // Optional: Deployment configuration
@@ -115,9 +115,6 @@ export default define_config({
   
   // Optional: Directory for change files (default: '.changes')
   changes_dir: '.changes',
-  
-  // Optional: Default directory for changelogs (default: 'changelogs')
-  default_changelog_dir: 'changelogs',
   
   // Optional: Custom version strategies
   version_strategies: {
@@ -140,7 +137,7 @@ Each app in the `apps` array represents a releasable unit:
   - All packages must have the same version
   - Versions will be updated together on release
 - **`versioning`**: Version strategy and allowed change types
-- **`changelog`**: Optional changelog path (defaults to `${defaultChangelogDir}/${appName}.md`)
+- **`changelog`**: Required changelog configuration with path
 - **`deploy`**: Optional deployment configuration
 
 ### Versioning Strategies

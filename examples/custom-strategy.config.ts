@@ -38,6 +38,9 @@ export default define_config({
       name: "custom-app",
       packages: ["packages/custom"],
       versioning: custom_version(),
+      changelog: {
+        path: "CHANGELOG.md",
+      },
     },
   ],
   changes_dir: ".changes",

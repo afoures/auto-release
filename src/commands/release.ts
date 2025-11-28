@@ -75,11 +75,7 @@ export const release = create_command({
         time: { now: () => new Date() },
       });
 
-      const changelog_path = get_changelog_path(
-        app,
-        config.default_changelog_dir!,
-        cwd
-      );
+      const changelog_path = get_changelog_path(app, cwd);
 
       releases.push({
         app,

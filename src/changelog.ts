@@ -7,13 +7,9 @@ import type { AppConfig, ResolvedChange, VersionStrategy } from './types.js'
  */
 export function get_changelog_path(
   app: AppConfig,
-  default_changelog_dir: string,
   cwd: string = process.cwd()
 ): string {
-  if (app.changelog?.path) {
-    return resolve(cwd, app.changelog.path)
-  }
-  return resolve(cwd, default_changelog_dir, `${app.name}.md`)
+  return resolve(cwd, app.changelog.path)
 }
 
 /**
