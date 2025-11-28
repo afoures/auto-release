@@ -10,8 +10,12 @@ describe("define_config", () => {
           name: "my-app",
           packages: ["packages/app"],
           versioning: semver(),
+          changelog: {
+            path: "CHANGELOG.md",
+          },
         },
       ],
+      git: {} as any,
     });
 
     expect(config.apps).toHaveLength(1);
@@ -30,8 +34,12 @@ describe("define_config", () => {
           name: "my-app",
           packages: ["packages/app"],
           versioning: custom_strategy,
+          changelog: {
+            path: "CHANGELOG.md",
+          },
         },
       ],
+      git: {} as any,
     });
 
     expect(config.apps[0].versioning.change_types).toEqual([

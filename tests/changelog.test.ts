@@ -9,6 +9,9 @@ describe("generate_changelog_section", () => {
     name: "test-app",
     packages: ["packages/test"],
     versioning: strategy,
+    changelog: {
+      path: "CHANGELOG.md",
+    },
   };
 
   it("should generate changelog section with grouped changes", () => {
@@ -42,12 +45,9 @@ describe("generate_changelog_section", () => {
       strategy,
     });
 
-    expect(section).toContain("## 2.0.0 – 2025-11-26");
-    expect(section).toContain("### Major");
+    expect(section).toContain("## 2.0.0 (2025-11-26)");
     expect(section).toContain("- Breaking API change");
-    expect(section).toContain("### Minor");
     expect(section).toContain("- Add new feature");
-    expect(section).toContain("### Patch");
     expect(section).toContain("- Fix bug");
   });
 

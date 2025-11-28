@@ -13,6 +13,7 @@
 
 ## Coding Approaches
 - You should think twice before throwing an error, returning something should be the default
+- Always make sure that the tests are updated
 
 ## Dependencies
 - Minimize external dependencies

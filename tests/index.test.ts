@@ -29,8 +29,12 @@ describe("Public API exports", () => {
           name: "test-app",
           packages: ["./packages/test"],
           versioning: semver(),
+          changelog: {
+            path: "CHANGELOG.md",
+          },
         },
       ],
+      git: {} as any,
     });
 
     expect(config.apps).toHaveLength(1);

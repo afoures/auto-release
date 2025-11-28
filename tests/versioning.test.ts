@@ -22,7 +22,7 @@ describe("semver", () => {
     const result = strategy.bump({
       current_version: "1.2.3",
       changes,
-      time: { now: () => new Date() },
+      date: new Date(),
     });
     expect(result).toBe("2.0.0");
   });
@@ -40,7 +40,7 @@ describe("semver", () => {
     const result = strategy.bump({
       current_version: "1.2.3",
       changes,
-      time: { now: () => new Date() },
+      date: new Date(),
     });
     expect(result).toBe("1.3.0");
   });
@@ -58,7 +58,7 @@ describe("semver", () => {
     const result = strategy.bump({
       current_version: "1.2.3",
       changes,
-      time: { now: () => new Date() },
+      date: new Date(),
     });
     expect(result).toBe("1.2.4");
   });
@@ -76,7 +76,7 @@ describe("semver", () => {
     const result = strategy.bump({
       current_version: "1.2.3",
       changes,
-      time: { now: () => new Date() },
+      date: new Date(),
     });
     expect(result).toBe("1.2.3");
   });
@@ -106,7 +106,7 @@ describe("semver", () => {
     const result = strategy.bump({
       current_version: "1.2.3",
       changes,
-      time: { now: () => new Date() },
+      date: new Date(),
     });
     expect(result).toBe("2.0.0");
   });
@@ -124,7 +124,7 @@ describe("semver", () => {
             file_path: "/test.md",
           },
         ],
-        time: { now: () => new Date() },
+        date: new Date(),
       })
     ).toThrow("Invalid semver version");
   });
@@ -149,7 +149,7 @@ describe("calver", () => {
     const result = strategy.bump({
       current_version: "2025.11.0",
       changes,
-      time: { now: () => new Date("2025-11-26") },
+      date: new Date("2025-11-26"),
     });
     expect(result).toBe("2025.11.1");
   });
@@ -167,7 +167,7 @@ describe("calver", () => {
     const result = strategy.bump({
       current_version: "2025.11.5",
       changes,
-      time: { now: () => new Date("2025-12-01") },
+      date: new Date("2025-12-01"),
     });
     expect(result).toBe("2025.12.0");
   });
@@ -177,7 +177,7 @@ describe("calver", () => {
     const result = strategy.bump({
       current_version: "2025.11.0",
       changes: [],
-      time: { now: () => new Date("2025-11-26") },
+      date: new Date("2025-11-26"),
     });
     expect(result).toBe("2025.11.0");
   });
@@ -195,7 +195,7 @@ describe("calver", () => {
             file_path: "/test.md",
           },
         ],
-        time: { now: () => new Date() },
+        date: new Date(),
       })
     ).toThrow("Invalid calver version");
   });
