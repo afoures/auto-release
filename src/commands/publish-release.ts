@@ -40,7 +40,7 @@ export const publish_release = create_command({
     const branch_name = values.branch;
     const logger = create_logger();
     const provider = config.git.provider;
-    const release_branch_prefix = config.git.release_branch_prefix || "autorelease";
+    const release_branch_prefix = config.git.release_branch_prefix || "release";
 
     // Get default branch
     const default_branch = await provider.get_default_branch();
@@ -64,9 +64,7 @@ export const publish_release = create_command({
         if (target_apps.length === 0) {
           // Try matching by release branch name
           target_apps = config.apps.filter(
-            (a) =>
-              (a.release_branch || `${release_branch_prefix}/${a.name}`) ===
-              branch_name
+            (a) => `${release_branch_prefix}/${a.name}` === branch_name
           );
         }
       }

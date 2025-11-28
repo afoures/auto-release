@@ -1,7 +1,10 @@
-import { resolve, relative } from "node:path";
+import { relative } from "node:path";
 import { get_current_version, resolve_packages } from "../packages.js";
 import { discover_all_changes } from "../changes.js";
-import { generate_updated_changelog, get_changelog_path } from "../changelog.js";
+import {
+  generate_updated_changelog,
+  get_changelog_path,
+} from "../changelog.js";
 import { generate_release_notes } from "../release-notes.js";
 import { create_logger } from "../utils/logger.js";
 import { create_command } from "../cli.js";
@@ -30,7 +33,7 @@ export const prepare_release = create_command({
     const dry_run = values["dry-run"] ?? false;
     const logger = create_logger();
     const provider = config.git.provider;
-    const release_branch_prefix = config.git.release_branch_prefix || "autorelease";
+    const release_branch_prefix = config.git.release_branch_prefix || "release";
 
     // Discover all changes
     const changes_map = await discover_all_changes(
@@ -46,10 +49,6 @@ export const prepare_release = create_command({
     if (app_filter && target_apps.length === 0) {
       throw new Error(`App "${app_filter}" not found in config`);
     }
-
-    // Get default branch
-    const default_branch = await provider.get_default_branch();
-    const default_branch_sha = await provider.get_branch_sha(default_branch);
 
     // Process each app with pending changes
     const releases: Array<{
@@ -77,7 +76,7 @@ export const prepare_release = create_command({
       });
 
       // Determine release branch name
-      const release_branch = app.release_branch || `${release_branch_prefix}/${app.name}`;
+      const release_branch = `${release_branch_prefix}/${app.name}`;
 
       releases.push({
         app,
@@ -107,6 +106,10 @@ export const prepare_release = create_command({
       return { ok: true as const };
     }
 
+    // Get default branch (only needed for actual operations, not dry-run)
+    const default_branch = await provider.get_default_branch();
+    const default_branch_sha = await provider.get_branch_sha(default_branch);
+
     // Process each release
     for (const rel of releases) {
       logger.info(`\nPreparing release for ${rel.app.name}...`);
@@ -125,7 +128,9 @@ export const prepare_release = create_command({
             default_branch
           );
           if (!content) {
-            throw new Error(`Could not read ${relative_path} from ${default_branch}`);
+            throw new Error(
+              `Could not read ${relative_path} from ${default_branch}`
+            );
           }
           package_files.push({ path: relative_path, content });
         }
@@ -195,14 +200,18 @@ export const prepare_release = create_command({
         });
 
         // Find existing PR or create new one
-        const existing_pr = await provider.find_pull_request(rel.release_branch);
+        const existing_pr = await provider.find_pull_request(
+          rel.release_branch
+        );
         if (existing_pr) {
           await provider.update_pull_request(
             existing_pr.number,
             pr_title,
             pr_body
           );
-          logger.success(`Updated PR #${existing_pr.number}: ${existing_pr.url}`);
+          logger.success(
+            `Updated PR #${existing_pr.number}: ${existing_pr.url}`
+          );
         } else {
           const pr = await provider.create_pull_request(
             rel.release_branch,
@@ -213,7 +222,9 @@ export const prepare_release = create_command({
           logger.success(`Created PR #${pr.number}: ${pr.url}`);
         }
       } catch (error: any) {
-        logger.error(`Failed to prepare release for ${rel.app.name}: ${error.message}`);
+        logger.error(
+          `Failed to prepare release for ${rel.app.name}: ${error.message}`
+        );
         throw error;
       }
     }
@@ -222,4 +233,3 @@ export const prepare_release = create_command({
     return { ok: true as const };
   },
 });
-

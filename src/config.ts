@@ -123,7 +123,7 @@ function normalize_config(config: AutoReleaseConfig): AutoReleaseConfig {
     git: {
       provider: config.git.provider,
       tag_template: config.git.tag_template || "${appName}@${version}",
-      release_branch_prefix: config.git.release_branch_prefix || "autorelease",
+      release_branch_prefix: config.git.release_branch_prefix || "release",
     },
   };
 
