@@ -17,7 +17,7 @@
     "dist"
   ],
   "bin": {
-    "auto-release": "./dist/cli.mjs"
+    "auto-release": "./dist/auto-release.mjs"
   },
   "main": "./dist/index.mjs",
   "module": "./dist/index.mjs",

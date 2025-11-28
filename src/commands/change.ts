@@ -2,9 +2,9 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { text, select, confirm, isCancel } from "@clack/prompts";
 import { create_logger } from "../utils/logger.js";
-import { command } from "./types.js";
+import { create_command } from "../cli.js";
 
-export const change = command({
+export const change = create_command({
   name: "change",
   description: "Create a new change file",
   schema: {
