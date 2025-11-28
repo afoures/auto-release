@@ -22,7 +22,7 @@
 
 - **CLI Commands**
   - `validate`: Validate configuration, packages, and change files
-  - `change`: Create new change files interactively or via CLI
+  - `record`: Record new changes interactively or via CLI
   - `preview`: Preview next release without making changes
   - `release`: Update versions, generate changelogs, and consume changes
   - `deploy`: Run deployment commands/handlers and create git tags

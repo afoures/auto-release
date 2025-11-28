@@ -4,9 +4,9 @@ import { text, select, confirm, isCancel } from "@clack/prompts";
 import { create_logger } from "../utils/logger.js";
 import { create_command } from "../cli.js";
 
-export const change = create_command({
-  name: "change",
-  description: "Create a new change file",
+export const record = create_command({
+  name: "record",
+  description: "Record a new change",
   schema: {
     app: {
       type: "string",
