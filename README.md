@@ -50,7 +50,7 @@ export default define_config({
 2. Create a change file:
 
 ```bash
-auto-release change
+auto-release record
 ```
 
 3. Preview the next release:
@@ -241,7 +241,7 @@ Example: `major.add-authentication.md`, `patch.fix-login-bug.md`
 #### Interactive Mode
 
 ```bash
-auto-release change
+auto-release record
 ```
 
 Prompts you for:
@@ -253,7 +253,7 @@ Prompts you for:
 #### Non-Interactive Mode
 
 ```bash
-auto-release change \
+auto-release record \
   --app web-app \
   --type minor \
   --summary "Add dark mode support" \
@@ -302,16 +302,16 @@ Validates:
 
 Exit code: 0 if valid, 1 if errors found (CI-friendly).
 
-### `change`
+### `record`
 
-Create a new change file:
+Record a new change:
 
 ```bash
 # Interactive
-auto-release change
+auto-release record
 
 # Non-interactive
-auto-release change \
+auto-release record \
   --app my-app \
   --type minor \
   --summary "Add new feature"
@@ -456,7 +456,7 @@ git push --tags
 
 2. **Create change file**:
    ```bash
-   auto-release change
+   auto-release record
    ```
 
 3. **Commit everything** (including change file):

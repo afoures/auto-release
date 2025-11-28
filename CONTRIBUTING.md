@@ -47,7 +47,7 @@ auto-release/
 │   │   └── calver.ts         # Calver strategy
 │   ├── commands/
 │   │   ├── validate.ts       # Validate command
-│   │   ├── change.ts         # Change command
+│   │   ├── record.ts         # Record command
 │   │   ├── preview.ts        # Preview command
 │   │   ├── release.ts        # Release command
 │   │   └── deploy.ts         # Deploy command
