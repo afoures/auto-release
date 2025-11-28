@@ -28,7 +28,15 @@ yarn add auto-release
 
 ## Quick Start
 
-1. Create a configuration file `auto-release.config.ts` at your repo root:
+1. Run the interactive setup:
+
+   ```bash
+   npx auto-release init
+   # or
+   pnpm auto-release init
+   ```
+
+   This creates `auto-release.config.ts`, bootstraps the `.changes` directory, and installs the dependency. Prefer manual setup? Create `auto-release.config.ts` yourself:
 
 ```typescript
 import { define_config } from 'auto-release'
@@ -278,6 +286,20 @@ This adds a comprehensive user profile page with the following features:
 ```
 
 ## Commands
+
+### `init`
+
+Interactively scaffold `auto-release` in a repository:
+
+```bash
+auto-release init
+```
+
+What it does:
+- Detects or prompts for your package manager and installs `auto-release`
+- Asks for apps, packages, changelog paths, and versioning strategies
+- Configures GitHub or GitLab provider details
+- Generates `auto-release.config.ts`, `.changes/`, and empty changelog files (one per app)
 
 ### `check`
 

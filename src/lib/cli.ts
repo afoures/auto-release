@@ -22,8 +22,18 @@ type convert_to_values<args extends Record<string, Option>> = {
 /**
  * Command definition interface
  */
+type CommandRunContext<
+  args extends Record<string, Option>,
+  needs_config extends boolean
+> = {
+  values: convert_to_values<args>;
+} & (needs_config extends true
+  ? { config: NormalizedConfig }
+  : { config?: NormalizedConfig });
+
 export interface Command<
-  args extends Record<string, Option> = Record<string, Option>
+  args extends Record<string, Option> = Record<string, Option>,
+  needs_config extends boolean = true
 > {
   /**
    * Command name (e.g., "check", "record")
@@ -41,12 +51,14 @@ export interface Command<
   schema: args;
 
   /**
+   * Whether the command needs the config file to be loaded (default: true)
+   */
+  requires_config?: needs_config;
+
+  /**
    * Run the command with parsed arguments and config
    */
-  run: (args: {
-    values: convert_to_values<args>;
-    config: NormalizedConfig;
-  }) => Promise<
+  run: (args: CommandRunContext<args, needs_config>) => Promise<
     { status: "success"; message?: string } | { status: "error"; error: string }
   >;
 }
@@ -54,9 +66,10 @@ export interface Command<
 /**
  * Command helper function
  */
-export function create_command<args extends Record<string, Option>>(
-  command: Command<args>
-): Command<args> {
+export function create_command<
+  args extends Record<string, Option>,
+  needs_config extends boolean = true
+>(command: Command<args, needs_config>): Command<args, needs_config> {
   return command;
 }
 
@@ -146,7 +159,7 @@ export interface CreateCliOptions {
   /**
    * Commands available in the CLI
    */
-  commands: Record<string, Command<any>>;
+  commands: Record<string, Command<any, any>>;
 
   /**
    * Default config file path
@@ -160,8 +173,8 @@ export interface CreateCliOptions {
 function show_help(
   name: string,
   description: string,
-  commands: Record<string, Command<any>>,
-  command?: Command<any>
+  commands: Record<string, Command<any, any>>,
+  command?: Command<any, any>
 ) {
   if (!command) {
     // Calculate max command name length for proper alignment
@@ -249,18 +262,26 @@ export function create_cli(options: CreateCliOptions) {
       process.exit(0);
     }
 
-    // Load config
-    let config;
-    try {
-      config = await load_config(values.config || default_config_path);
-    } catch (error: any) {
-      log.error(`Failed to load config: ${error.message}`);
-      cancel("Config loading failed");
-      process.exit(1);
+    const needs_config =
+      command.requires_config === undefined ? true : command.requires_config;
+
+    let config: NormalizedConfig | undefined;
+    if (needs_config) {
+      try {
+        config = await load_config(values.config || default_config_path);
+      } catch (error: any) {
+        log.error(`Failed to load config: ${error.message}`);
+        cancel("Config loading failed");
+        process.exit(1);
+      }
     }
 
+    const run_args: CommandRunContext<any, any> = needs_config
+      ? ({ values: values as any, config: config! } as CommandRunContext<any, any>)
+      : ({ values: values as any } as CommandRunContext<any, any>);
+
     // Execute command
-    const result = await command.run({ values: values as any, config });
+    const result = await command.run(run_args);
 
     // Handle exit code based on result
     if (result.status === "error") {
