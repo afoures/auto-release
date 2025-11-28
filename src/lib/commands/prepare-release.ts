@@ -32,8 +32,8 @@ export const prepare_release = create_command({
     const app_filter = values.app;
     const dry_run = values["dry-run"] ?? false;
     const logger = create_logger();
-    const provider = config.git.provider;
-    const release_branch_prefix = config.git.release_branch_prefix || "release";
+    const provider = config.git;
+    const release_branch_prefix = config.release_branch_prefix;
 
     // Discover all changes
     let changes_map: Map<string, any>;

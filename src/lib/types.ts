@@ -66,27 +66,20 @@ export interface AppConfig {
 }
 
 /**
- * Git configuration
- */
-export interface GitConfig {
-  provider: GitProvider;
-  tag_template?: string;
-  release_branch_prefix?: string;
-}
-
-/**
  * Auto-release configuration
  */
 export interface AutoReleaseConfig {
-  apps: AppConfig[];
   changes_dir?: string;
-  git: GitConfig; // Now required
+  release_branch_prefix?: string;
+  git: GitProvider;
+  apps: AppConfig[];
 }
 
 export type NormalizedConfig = {
-  apps: AppConfig[];
   changes_dir: string;
-  git: Required<GitConfig>;
+  release_branch_prefix: string;
+  git: GitProvider;
+  apps: AppConfig[];
 };
 
 /**

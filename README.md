@@ -123,7 +123,7 @@ export default define_config({
   
   // Optional: Git configuration
   git: {
-    tag_template: '${appName}@${version}', // default
+    // Tag format is always app_name@version (not customizable)
   },
 })
 ```
@@ -404,7 +404,7 @@ Options:
 - `--yes`: Skip confirmation prompt
 - `--config <path>`: Custom config file path
 
-**Tag format**: Uses `git.tagTemplate` (default: `${appName}@${version}`)
+**Tag format**: Always uses `app_name@version` format (not customizable)
 
 After successful deployment:
 ```bash

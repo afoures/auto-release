@@ -4,20 +4,6 @@ import { get_changelog_path } from "../changelog.js";
 import { create_logger } from "../utils/logger.js";
 import { create_command } from "../cli.js";
 
-/**
- * Format git tag using template
- */
-function format_tag(
-  config: { git?: { tag_template?: string } },
-  app_name: string,
-  version: string
-): string {
-  const template = config.git?.tag_template || "${appName}@${version}";
-  return template
-    .replace("${appName}", app_name)
-    .replace("${version}", version);
-}
-
 export const publish_release = create_command({
   name: "publish-release",
   description: "Create git tags and releases after release PR merge",
@@ -40,8 +26,8 @@ export const publish_release = create_command({
     const app_filter = values.app;
     const branch_name = values.branch;
     const logger = create_logger();
-    const provider = config.git.provider;
-    const release_branch_prefix = config.git.release_branch_prefix || "release";
+    const provider = config.git;
+    const release_branch_prefix = config.release_branch_prefix;
 
     // Get default branch
     let default_branch: string;
@@ -175,7 +161,7 @@ export const publish_release = create_command({
         }
 
         // Create git tag
-        const tag_name = format_tag(config, app.name, version);
+        const tag_name = `${app.name}@${version}`;
         await provider.create_tag(tag_name, default_branch_sha, release_body);
         logger.success(`Created tag: ${tag_name}`);
 

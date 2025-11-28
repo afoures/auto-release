@@ -20,12 +20,9 @@ export default define_config({
     },
   ],
   changes_dir: ".changes",
-  git: {
-    provider: github({
-      token: process.env.GITHUB_TOKEN!,
-      owner: process.env.GITHUB_OWNER!,
-      repo: process.env.GITHUB_REPO!,
-    }),
-    tag_template: "v${version}",
-  },
+  git: github({
+    token: process.env.GITHUB_TOKEN!,
+    owner: process.env.GITHUB_OWNER!,
+    repo: process.env.GITHUB_REPO!,
+  }),
 });

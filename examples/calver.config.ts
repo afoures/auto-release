@@ -21,11 +21,8 @@ export default define_config({
     },
   ],
   changes_dir: ".changes",
-  git: {
-    provider: gitlab({
-      token: process.env.GITLAB_TOKEN!,
-      project_id: process.env.GITLAB_PROJECT_ID!,
-    }),
-    tag_template: "api-${version}",
-  },
+  git: gitlab({
+    token: process.env.GITLAB_TOKEN!,
+    project_id: process.env.GITLAB_PROJECT_ID!,
+  }),
 });
