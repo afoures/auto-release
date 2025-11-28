@@ -2,7 +2,7 @@ import type { DeployContext } from "../types.js";
 import { get_current_version, resolve_packages } from "../packages.js";
 import { create_logger } from "../utils/logger.js";
 import { exec as util_exec } from "../utils/exec.js";
-import { confirm } from "../utils/prompts.js";
+import { confirm, isCancel } from "@clack/prompts";
 import { command } from "./types.js";
 
 /**
@@ -99,8 +99,11 @@ export const deploy = command({
 
     // Confirm
     if (!yes) {
-      const confirmed = await confirm("Proceed with deployment?", false);
-      if (!confirmed) {
+      const confirmed = await confirm({
+        message: "Proceed with deployment?",
+        initialValue: false,
+      });
+      if (isCancel(confirmed) || !confirmed) {
         logger.info("Deployment cancelled");
         return { ok: true as const };
       }

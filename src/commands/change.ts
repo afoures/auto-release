@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { prompt, select, multiline } from "../utils/prompts.js";
+import { text, select, confirm, isCancel } from "@clack/prompts";
 import { create_logger } from "../utils/logger.js";
 import { command } from "./types.js";
 
@@ -39,10 +39,14 @@ export const change = command({
       if (config.apps.length === 1) {
         app_name = config.apps[0].name;
       } else {
-        app_name = await select(
-          "Select app:",
-          config.apps.map((a) => a.name)
-        );
+        const selected = await select({
+          message: "Select app:",
+          options: config.apps.map((a) => ({ value: a.name, label: a.name })),
+        });
+        if (isCancel(selected)) {
+          throw new Error("App selection cancelled");
+        }
+        app_name = selected as string;
       }
     }
 
@@ -57,7 +61,14 @@ export const change = command({
     // Determine change type
     let change_type = values.type;
     if (!change_type) {
-      change_type = await select("Select change type:", valid_types);
+      const selected = await select({
+        message: "Select change type:",
+        options: valid_types.map((t) => ({ value: t, label: t })),
+      });
+      if (isCancel(selected)) {
+        throw new Error("Change type selection cancelled");
+      }
+      change_type = selected as string;
     }
 
     if (!valid_types.includes(change_type)) {
@@ -71,7 +82,13 @@ export const change = command({
     // Get summary
     let summary = values.summary;
     if (!summary) {
-      summary = await prompt("Enter summary: ");
+      const input = await text({
+        message: "Enter summary:",
+      });
+      if (isCancel(input)) {
+        throw new Error("Summary input cancelled");
+      }
+      summary = input;
     }
 
     if (!summary.trim()) {
@@ -82,9 +99,17 @@ export const change = command({
     let description = values.description;
     if (!description && !values.summary) {
       // Only prompt if not provided via CLI
-      const has_description = await prompt("Add description? (y/N): ");
-      if (has_description.toLowerCase() === "y") {
-        description = await multiline("Enter description:");
+      const has_description = await confirm({
+        message: "Add description?",
+        initialValue: false,
+      });
+      if (!isCancel(has_description) && has_description) {
+        const desc_input = await text({
+          message: "Enter description:",
+        });
+        if (!isCancel(desc_input)) {
+          description = desc_input;
+        }
       }
     }
 
