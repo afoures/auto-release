@@ -1,9 +1,9 @@
 import { get_current_version } from '../packages.js'
 import { discover_all_changes } from '../changes.js'
 import { create_logger } from '../utils/logger.js'
-import { command } from './types.js'
+import { create_command } from '../cli.js'
 
-export const preview = command({
+export const preview = create_command({
   name: 'preview',
   description: 'Preview what would be released',
   schema: {

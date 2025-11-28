@@ -1,9 +1,9 @@
 import { validate_packages } from "../packages.js";
 import { discover_all_changes } from "../changes.js";
 import { create_logger } from "../utils/logger.js";
-import { command } from "./types.js";
+import { create_command } from "../cli.js";
 
-export const validate = command({
+export const validate = create_command({
   name: "validate",
   description: "Validate configuration, packages, and change files",
   schema: {
@@ -54,6 +54,8 @@ export const validate = command({
       }
     }
 
-    return valid ? { ok: true as const } : { ok: false as const, errors, warnings };
+    return valid
+      ? { ok: true as const }
+      : { ok: false as const, errors, warnings };
   },
 });

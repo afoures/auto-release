@@ -1,37 +1,160 @@
-#!/usr/bin/env node
-
 import { parseArgs } from "node:util";
+import type { ParseArgsOptionDescriptor } from "node:util";
 import { load_config } from "./config.js";
-import { validate } from "./commands/validate.js";
-import { change } from "./commands/change.js";
-import { preview } from "./commands/preview.js";
-import { release } from "./commands/release.js";
-import { deploy } from "./commands/deploy.js";
-import type { Command } from "./commands/types.js";
-import { generate_help } from "./commands/types.js";
+import type { AutoReleaseConfig } from "./types.js";
 
-const commands = {
-  validate,
-  change,
-  preview,
-  release,
-  deploy,
+/**
+ * Extended option schema with description for help generation
+ */
+export interface Option extends ParseArgsOptionDescriptor {
+  description?: string;
+}
+
+type convert_to_values<args extends Record<string, Option>> = {
+  [K in keyof args]: args[K]["type"] extends "string"
+    ? string
+    : args[K]["type"] extends "boolean"
+    ? boolean
+    : never;
 };
+
+/**
+ * Command definition interface
+ */
+export interface Command<
+  args extends Record<string, Option> = Record<string, Option>
+> {
+  /**
+   * Command name (e.g., "validate", "change")
+   */
+  name: string;
+
+  /**
+   * Short description for command listing
+   */
+  description: string;
+
+  /**
+   * Argument parsing schema for node:util parseArgs with descriptions
+   */
+  schema: args;
+
+  /**
+   * Run the command with parsed arguments and config
+   */
+  run: (args: {
+    values: convert_to_values<args>;
+    config: AutoReleaseConfig;
+  }) => Promise<
+    | { ok: true; warnings?: string[] }
+    | { ok: false; errors?: string[]; warnings?: string[] }
+  >;
+}
+
+/**
+ * Command helper function
+ */
+export function create_command<args extends Record<string, Option>>(
+  command: Command<args>
+): Command<args> {
+  return command;
+}
+
+/**
+ * Generate help text from command metadata and schema
+ */
+export function generate_help(
+  name: string,
+  description: string,
+  schema: Record<string, Option>
+): string {
+  const options: Array<{ name: string; description: string }> = [];
+
+  // Add help option (always present)
+  options.push({
+    name: "--help".padEnd(20),
+    description: "Show help",
+  });
+
+  // Sort options: config first, then alphabetically
+  const sortedKeys = Object.keys(schema).sort((a, b) => {
+    if (a === "config") return -1;
+    if (b === "config") return 1;
+    return a.localeCompare(b);
+  });
+
+  for (const key of sortedKeys) {
+    const option = schema[key];
+    const optionName = key.length === 1 ? `-${key}` : `--${key}`;
+    const typeHint = option.type === "string" ? " <value>" : "";
+    const displayName = `${optionName}${typeHint}`;
+    const desc = option.description || "";
+
+    options.push({
+      name: displayName.padEnd(20),
+      description: desc,
+    });
+  }
+
+  const optionsText = options
+    .map((opt) => `  ${opt.name}    ${opt.description}`)
+    .join("\n");
+
+  return `
+auto-release ${name} - ${description}
+
+Usage:
+  auto-release ${name} [options]
+
+Options:
+${optionsText}
+`;
+}
+
+/**
+ * Options for creating a CLI
+ */
+export interface CreateCliOptions {
+  /**
+   * Name of the CLI tool (e.g., "auto-release")
+   */
+  name: string;
+
+  /**
+   * Description of the CLI tool
+   */
+  description: string;
+
+  /**
+   * Commands available in the CLI
+   */
+  commands: Record<string, Command<any>>;
+
+  /**
+   * Default config file path
+   */
+  default_config_path?: string;
+}
 
 /**
  * Display help message
  */
-function show_help(command?: Command<any>) {
+function show_help(
+  name: string,
+  description: string,
+  commands: Record<string, Command<any>>,
+  command?: Command<any>
+) {
   if (!command) {
     const command_list = Object.values(commands)
       .map((cmd) => `  ${cmd.name.padEnd(12)} ${cmd.description}`)
       .join("\n");
 
     console.log(`
-auto-release - Changesets-inspired release management tool
+${name} - ${description}
 
 Usage:
-  auto-release <command> [options]
+  ${name} <command> [options]
 
 Commands:
 ${command_list}
@@ -40,7 +163,7 @@ Options:
   --config <path>    Path to config file (default: auto-release.config.ts)
   --help             Show help
 
-Run 'auto-release <command> --help' for command-specific help.
+Run '${name} <command> --help' for command-specific help.
 `);
     return;
   }
@@ -49,55 +172,71 @@ Run 'auto-release <command> --help' for command-specific help.
 }
 
 /**
- * Main CLI entry point
+ * Create a CLI handler function
  */
-async function main() {
-  const args = process.argv.slice(2);
+export function create_cli(options: CreateCliOptions) {
+  const {
+    name,
+    description,
+    commands,
+    default_config_path = "auto-release.config.ts",
+  } = options;
 
-  if (args.length === 0 || args[0] === "--help" || args[0] === "-h") {
-    show_help();
-    process.exit(0);
-  }
+  /**
+   * Main CLI entry point
+   */
+  return async function run_cli() {
+    const args = process.argv.slice(2);
 
-  const command_name = args[0];
-  const command = commands[command_name as keyof typeof commands];
+    if (args.length === 0 || args[0] === "--help" || args[0] === "-h") {
+      show_help(name, description, commands);
+      process.exit(0);
+    }
 
-  if (!command) {
-    show_help();
-    process.exit(1);
-  }
+    const command_name = args[0];
+    const command = commands[command_name as keyof typeof commands];
 
-  // Parse arguments using command's schema
-  const { values } = parseArgs({
-    args: args.slice(1),
-    options: {
-      ...command.schema,
-      config: { type: "string" as const },
-      help: { type: "boolean" as const },
-    },
-    allowPositionals: true,
-  });
-
-  if (values.help) {
-    show_help(command);
-    process.exit(0);
-  }
-
-  try {
-    // Load config
-    const config = await load_config(values.config || "auto-release.config.ts");
-
-    // Execute command
-    const result = await command.run({ values: values as any, config });
-
-    // Handle exit code based on result
-    if (!result.ok) {
+    if (!command) {
+      show_help(name, description, commands);
       process.exit(1);
     }
-  } catch (error: any) {
-    console.error(`Error: ${error.message}`);
-    process.exit(1);
-  }
-}
 
-main();
+    // Parse arguments using command's schema
+    const { values } = parseArgs({
+      args: args.slice(1),
+      options: {
+        ...command.schema,
+        config: { type: "string" as const },
+        help: { type: "boolean" as const },
+      },
+      allowPositionals: true,
+    }) as {
+      values: {
+        config?: string;
+        help?: boolean;
+        [key: string]: string | boolean | (string | boolean)[] | undefined;
+      };
+    };
+
+    if (values.help) {
+      show_help(name, description, commands, command);
+      process.exit(0);
+    }
+
+    try {
+      // Load config
+      const config = await load_config(values.config || default_config_path);
+
+      // Execute command
+      const result = await command.run({ values: values as any, config });
+
+      // Handle exit code based on result
+      if (!result.ok) {
+        process.exit(1);
+      }
+    } catch (error: any) {
+      console.error(`Error: ${error.message}`);
+      process.exit(1);
+    }
+  };
+}

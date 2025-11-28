@@ -3,7 +3,7 @@ import { get_current_version, resolve_packages } from "../packages.js";
 import { create_logger } from "../utils/logger.js";
 import { exec as util_exec } from "../utils/exec.js";
 import { confirm, isCancel } from "@clack/prompts";
-import { command } from "./types.js";
+import { create_command } from "../cli.js";
 
 /**
  * Format git tag using template
@@ -19,7 +19,7 @@ function format_tag(
     .replace("${version}", version);
 }
 
-export const deploy = command({
+export const deploy = create_command({
   name: "deploy",
   description: "Deploy apps and create git tags",
   schema: {

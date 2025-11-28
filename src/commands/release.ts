@@ -4,9 +4,9 @@ import { discover_all_changes } from "../changes.js";
 import { write_changelog, get_changelog_path } from "../changelog.js";
 import { create_logger } from "../utils/logger.js";
 import { confirm, isCancel } from "@clack/prompts";
-import { command } from "./types.js";
+import { create_command } from "../cli.js";
 
-export const release = command({
+export const release = create_command({
   name: "release",
   description: "Release apps with pending changes",
   schema: {
