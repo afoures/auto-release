@@ -1,7 +1,14 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { text, select, confirm, isCancel } from "@clack/prompts";
-import { create_logger } from "../utils/logger.js";
+import {
+  text,
+  select,
+  confirm,
+  isCancel,
+  intro,
+  log,
+  cancel,
+} from "@clack/prompts";
 import { create_command } from "../cli.js";
 
 export const record = create_command({
@@ -31,20 +38,24 @@ export const record = create_command({
   },
   run: async ({ values, config }) => {
     const cwd = process.cwd();
-    const logger = create_logger();
+    intro(`record a new change`);
 
     // Determine app
     let app_name = values.app;
     if (!app_name) {
       if (config.apps.length === 1) {
         app_name = config.apps[0].name;
+        log.success(`Defaulting to app: ${app_name}`);
       } else {
         const selected = await select({
           message: "Select app:",
           options: config.apps.map((a) => ({ value: a.name, label: a.name })),
         });
         if (isCancel(selected)) {
-          throw new Error("App selection cancelled");
+          cancel("App selection cancelled");
+          return {
+            status: "success" as const,
+          };
         }
         app_name = selected as string;
       }
@@ -52,7 +63,10 @@ export const record = create_command({
 
     const app = config.apps.find((a) => a.name === app_name);
     if (!app) {
-      throw new Error(`App "${app_name}" not found in config`);
+      return {
+        status: "error" as const,
+        error: `App "${app_name}" not found in config`,
+      };
     }
 
     // Get valid change types from the versioning strategy
@@ -66,17 +80,21 @@ export const record = create_command({
         options: valid_types.map((t) => ({ value: t, label: t })),
       });
       if (isCancel(selected)) {
-        throw new Error("Change type selection cancelled");
+        cancel("Change type selection cancelled");
+        return {
+          status: "success" as const,
+        };
       }
       change_type = selected as string;
     }
 
     if (!valid_types.includes(change_type)) {
-      throw new Error(
-        `Invalid change type "${change_type}". Valid types for ${app_name}: ${valid_types.join(
+      return {
+        status: "error" as const,
+        error: `Invalid change type "${change_type}". Valid types for ${app_name}: ${valid_types.join(
           ", "
-        )}`
-      );
+        )}`,
+      };
     }
 
     // Get summary
@@ -86,13 +104,19 @@ export const record = create_command({
         message: "Enter summary:",
       });
       if (isCancel(input)) {
-        throw new Error("Summary input cancelled");
+        cancel("Summary input cancelled");
+        return {
+          status: "success" as const,
+        };
       }
-      summary = input;
+      summary = input ?? "";
     }
 
     if (!summary.trim()) {
-      throw new Error("Summary cannot be empty");
+      return {
+        status: "error" as const,
+        error: "Summary cannot be empty",
+      };
     }
 
     // Get description (optional)
@@ -134,13 +158,23 @@ export const record = create_command({
     }
 
     // Write file
-    const changes_dir = join(cwd, config.changes_dir!, app_name);
-    await mkdir(changes_dir, { recursive: true });
+    try {
+      const changes_dir = join(cwd, config.changes_dir!, app_name);
+      await mkdir(changes_dir, { recursive: true });
 
-    const file_path = join(changes_dir, filename);
-    await writeFile(file_path, content, "utf-8");
+      const file_path = join(changes_dir, filename);
+      await writeFile(file_path, content, "utf-8");
 
-    logger.success(`Created change file: ${file_path}`);
-    return { ok: true as const };
+      log.success(`Created change file: ${file_path}`);
+      return {
+        status: "success" as const,
+        message: `Created change file: ${file_path}`,
+      };
+    } catch (error: any) {
+      return {
+        status: "error" as const,
+        error: `Failed to create change file: ${error.message}`,
+      };
+    }
   },
 });

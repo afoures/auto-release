@@ -11,6 +11,9 @@
 - Avoid `any` type
 - Enable strict mode
 
+## Coding Approaches
+- You should think twice before throwing an error, returning something should be the default
+
 ## Dependencies
 - Minimize external dependencies
 - Prefer Node.js built-in modules

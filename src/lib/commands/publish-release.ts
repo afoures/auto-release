@@ -1,7 +1,6 @@
-import { resolve, relative } from "node:path";
-import { get_current_version, resolve_packages } from "../packages.js";
+import { relative } from "node:path";
+import { resolve_packages } from "../packages.js";
 import { get_changelog_path } from "../changelog.js";
-import { generate_release_body } from "../release-notes.js";
 import { create_logger } from "../utils/logger.js";
 import { create_command } from "../cli.js";
 
@@ -14,7 +13,9 @@ function format_tag(
   version: string
 ): string {
   const template = config.git?.tag_template || "${appName}@${version}";
-  return template.replace("${appName}", app_name).replace("${version}", version);
+  return template
+    .replace("${appName}", app_name)
+    .replace("${version}", version);
 }
 
 export const publish_release = create_command({
@@ -43,8 +44,17 @@ export const publish_release = create_command({
     const release_branch_prefix = config.git.release_branch_prefix || "release";
 
     // Get default branch
-    const default_branch = await provider.get_default_branch();
-    const default_branch_sha = await provider.get_branch_sha(default_branch);
+    let default_branch: string;
+    let default_branch_sha: string;
+    try {
+      default_branch = await provider.get_default_branch();
+      default_branch_sha = await provider.get_branch_sha(default_branch);
+    } catch (error: any) {
+      return {
+        status: "error" as const,
+        error: `Failed to get default branch: ${error.message}`,
+      };
+    }
 
     let target_apps = config.apps;
 
@@ -52,7 +62,10 @@ export const publish_release = create_command({
     if (app_filter) {
       target_apps = config.apps.filter((a) => a.name === app_filter);
       if (target_apps.length === 0) {
-        throw new Error(`App "${app_filter}" not found in config`);
+        return {
+          status: "error" as const,
+          error: `App "${app_filter}" not found in config`,
+        };
       }
     } else if (branch_name) {
       // Try to detect app from branch name
@@ -69,9 +82,10 @@ export const publish_release = create_command({
         }
       }
       if (target_apps.length === 0) {
-        throw new Error(
-          `Could not detect app from branch "${branch_name}". Please specify --app`
-        );
+        return {
+          status: "error" as const,
+          error: `Could not detect app from branch "${branch_name}". Please specify --app`,
+        };
       }
     } else {
       // No app or branch specified - publish all apps that have been released
@@ -82,6 +96,7 @@ export const publish_release = create_command({
     }
 
     // Process each app
+    const errors: string[] = [];
     for (const app of target_apps) {
       logger.info(`\nPublishing release for ${app.name}...`);
 
@@ -95,14 +110,23 @@ export const publish_release = create_command({
         );
 
         if (!package_content) {
-          throw new Error(`Could not read ${package_path} from ${default_branch}`);
+          errors.push(`Could not read ${package_path} from ${default_branch}`);
+          continue;
         }
 
-        const package_json = JSON.parse(package_content);
+        let package_json: any;
+        try {
+          package_json = JSON.parse(package_content);
+        } catch (error: any) {
+          errors.push(`Failed to parse ${package_path}: ${error.message}`);
+          continue;
+        }
+
         const version = package_json.version;
 
         if (!version) {
-          throw new Error(`No version found in ${package_path}`);
+          errors.push(`No version found in ${package_path}`);
+          continue;
         }
 
         logger.info(`Version: ${version}`);
@@ -122,12 +146,16 @@ export const publish_release = create_command({
           const lines = changelog_content.split("\n");
           let in_release_section = false;
           let release_lines: string[] = [];
-          let release_start = 0;
 
           // Find the version header
           for (let i = 0; i < lines.length; i++) {
-            if (lines[i].match(new RegExp(`^## ${version.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`))) {
-              release_start = i;
+            if (
+              lines[i].match(
+                new RegExp(
+                  `^## ${version.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`
+                )
+              )
+            ) {
               in_release_section = true;
               release_lines.push(lines[i]);
               continue;
@@ -156,13 +184,23 @@ export const publish_release = create_command({
         await provider.create_release(tag_name, release_name, release_body);
         logger.success(`Created release: ${release_name}`);
       } catch (error: any) {
-        logger.error(`Failed to publish release for ${app.name}: ${error.message}`);
-        throw error;
+        errors.push(
+          `Failed to publish release for ${app.name}: ${error.message}`
+        );
       }
     }
 
+    if (errors.length > 0) {
+      return {
+        status: "error" as const,
+        error: errors.join("; "),
+      };
+    }
+
     logger.success("\n✨ Release published!");
-    return { ok: true as const };
+    return {
+      status: "success" as const,
+      message: "Release published successfully",
+    };
   },
 });
-
