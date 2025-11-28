@@ -1,9 +1,10 @@
-import { define_config, type VersionStrategy } from "../src/index.js";
+import { define_config, type VersioningStrategy } from "../src/index.js";
+import { github } from "../src/github-provider.js";
 
 /**
  * Custom versioning strategy factory example
  */
-function custom_version(): VersionStrategy {
+function custom_version(): VersioningStrategy {
   return {
     change_types: ["breaking", "feature", "fix"],
 
@@ -44,4 +45,11 @@ export default define_config({
     },
   ],
   changes_dir: ".changes",
+  git: {
+    provider: github({
+      token: process.env.GITHUB_TOKEN!,
+      owner: process.env.GITHUB_OWNER!,
+      repo: process.env.GITHUB_REPO!,
+    }),
+  },
 });
