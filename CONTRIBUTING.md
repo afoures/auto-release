@@ -6,7 +6,7 @@ Thank you for considering contributing to auto-release!
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/author/auto-release.git
+git clone https://github.com/afoures/auto-release.git
 cd auto-release
 ```
 

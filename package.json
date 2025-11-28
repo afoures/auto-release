@@ -3,18 +3,18 @@
   "version": "0.1.0",
   "description": "A changesets-inspired release management tool for monorepos",
   "type": "module",
-  "license": "MIT",
-  "homepage": "https://github.com/author/auto-release#readme",
+  "homepage": "https://github.com/afoures/auto-release#readme",
   "bugs": {
-    "url": "https://github.com/author/auto-release/issues"
+    "url": "https://github.com/afoures/auto-release/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/author/auto-release.git"
+    "url": "git+https://github.com/afoures/auto-release.git"
   },
-  "author": "Author Name <author.name@mail.com>",
+  "author": "Antoine Fourès <contact@afoures.com>",
   "files": [
-    "dist"
+    "dist",
+    "package.json"
   ],
   "bin": {
     "auto-release": "./dist/auto-release.mjs"
