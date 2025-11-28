@@ -2,6 +2,8 @@
  * Core types for auto-release
  */
 
+import type { GitProvider as ProviderGitProvider } from "./providers/types.js";
+
 /**
  * A resolved change file with parsed metadata
  */
@@ -76,13 +78,21 @@ export interface AppConfig {
   versioning: VersioningConfig;
   changelog: ChangelogConfig;
   deploy?: DeployConfig;
+  release_branch?: string; // Override release branch name, default: "{prefix}/{app_name}"
 }
+
+/**
+ * Git provider interface (re-exported from providers for use in GitConfig)
+ */
+export type GitProvider = ProviderGitProvider;
 
 /**
  * Git configuration
  */
 export interface GitConfig {
+  provider: GitProvider;
   tag_template?: string;
+  release_branch_prefix?: string;
 }
 
 /**
@@ -91,7 +101,7 @@ export interface GitConfig {
 export interface AutoReleaseConfig {
   apps: AppConfig[];
   changes_dir?: string;
-  git?: GitConfig;
+  git: GitConfig; // Now required
 }
 
 /**
