@@ -26,7 +26,7 @@ export interface Command<
   args extends Record<string, Option> = Record<string, Option>
 > {
   /**
-   * Command name (e.g., "validate", "record")
+   * Command name (e.g., "check", "record")
    */
   name: string;
 
