@@ -1,4 +1,4 @@
-import type { VersionStrategy } from "../types.js";
+import type { VersioningStrategy } from "./types.js";
 
 interface CalverParsed {
   year: number;
@@ -30,7 +30,7 @@ function format(parsed: CalverParsed): string {
  * Format: YYYY.MM.micro (e.g., 2025.11.0)
  * All changes bump micro, types are for grouping only
  */
-export function calver(): VersionStrategy {
+export function calver(): VersioningStrategy {
   return {
     change_types: ["feature", "fix", "none"] as const,
 

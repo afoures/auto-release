@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { generate_changelog_section } from "../src/changelog.js";
-import { semver } from "../src/versioning/semver.js";
-import type { AppConfig, ResolvedChange } from "../src/types.js";
+import { generate_changelog_section } from "../src/lib/changelog.js";
+import { semver } from "../src/semantic-versioning.js";
+import type { AppConfig, ResolvedChange } from "../src/lib/types.js";
 
 describe("generate_changelog_section", () => {
   const strategy = semver();

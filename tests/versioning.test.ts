@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { semver } from "../src/versioning/semver.js";
-import { calver } from "../src/versioning/calver.js";
-import type { ResolvedChange } from "../src/types.js";
+import { semver } from "../src/semantic-versioning.js";
+import { calver } from "../src/calendar-versioning.js";
+import type { ResolvedChange } from "../src/lib/types.js";
 
 describe("semver", () => {
   it("should return a strategy with correct change_types", () => {

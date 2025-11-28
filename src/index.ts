@@ -5,17 +5,9 @@
 // Export core types
 export type {
   AutoReleaseConfig,
-  AppConfig,
-  DeployConfig,
-  DeployContext,
-  VersionStrategy,
-  VersioningConfig,
-  ChangelogConfig,
-  GitConfig,
-  ResolvedChange,
-  ValidationResult,
-  Logger,
-} from "./types.js";
+  VersioningStrategy,
+  GitProvider,
+} from "./lib/types.js";
 
 // Export config helper
-export { define_config } from "./config.js";
+export { define_config } from "./lib/config.js";

@@ -1,4 +1,4 @@
-import type { VersionStrategy } from "../types.js";
+import type { VersioningStrategy } from "./types.js";
 
 interface SemverParsed {
   major: number;
@@ -28,7 +28,7 @@ function format(parsed: SemverParsed): string {
  * Semver versioning strategy factory
  * Supports change types: major, minor, patch, none
  */
-export function semver(): VersionStrategy {
+export function semver(): VersioningStrategy {
   return {
     change_types: ["major", "minor", "patch", "none"] as const,
 

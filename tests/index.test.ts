@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { define_config } from "../src/index.js";
-import { semver } from "../src/versioning/semver.js";
-import { calver } from "../src/versioning/calver.js";
+import { semver } from "../src/semantic-versioning.js";
+import { calver } from "../src/calendar-versioning.js";
 
 describe("Public API exports", () => {
   it("should export define_config helper", () => {

@@ -3,11 +3,11 @@ import { defineConfig } from "tsdown";
 export default defineConfig({
   entry: [
     "src/index.ts",
-    "src/auto-release.ts",
-    "src/versioning/semver.ts",
-    "src/versioning/calver.ts",
-    "src/git/github.ts",
-    "src/git/gitlab.ts",
+    "src/bin.ts",
+    "src/semantic-versioning.ts",
+    "src/calendar-versioning.ts",
+    "src/github-provider.ts",
+    "src/gitlab-provider.ts",
   ],
   format: ["esm"],
   dts: true,
