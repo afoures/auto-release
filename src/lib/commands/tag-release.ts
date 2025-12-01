@@ -4,8 +4,8 @@ import { get_changelog_path } from "../changelog.js";
 import { create_logger } from "../utils/logger.js";
 import { create_command } from "../cli.js";
 
-export const publish_release = create_command({
-  name: "publish-release",
+export const tag_release = create_command({
+  name: "tag-release",
   description: "Create git tags and releases after release PR merge",
   schema: {
     app: {
@@ -190,3 +190,4 @@ export const publish_release = create_command({
     };
   },
 });
+

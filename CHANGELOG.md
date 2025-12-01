@@ -23,8 +23,8 @@
 - **CLI Commands**
   - `check`: Validate configuration, packages, and change files
   - `record`: Record new changes interactively or via CLI
-  - `prepare-release`: Create or update release PRs (with enhanced `--dry-run` showing detailed changes)
-  - `publish-release`: Publish releases and create git tags
+  - `generate-release`: Create or update release PRs (with enhanced `--dry-run` showing detailed changes)
+  - `tag-release`: Create git tags and releases after release PR merge
 
 - **Change File Management**
   - Markdown-based change files with validation

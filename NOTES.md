@@ -1,7 +1,7 @@
 # Flow
 
 1. merge sur main
-2. la CI sur main qui run `auto-release prepare-release`
+2. la CI sur main qui run `auto-release generate-release`
 3. creation/update de la branche de release avec
   - nouvelle version apply sur les packages
   - changelog généré
@@ -11,7 +11,7 @@
   - build + deploy sur env de test (⚠️ ici on doit pouvoir override la version via le commit/time/whatever car risque de multiple déploiement ici)
   - possibilité de force de deploy sur pré-prod ??
 5. lorsqu'on est ready, on merge cette MR
-6. la CI sur main va procéder au tagging via `auto-release publish-release` (naming pas bon maybe ?)
+6. la CI sur main va procéder au tagging via `auto-release tag-release`
 7. la CI du tag s'occupe du build + deploy en pré-prod/prod (maybe de manière manuelle)
 
 # Open questions
