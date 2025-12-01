@@ -3,8 +3,8 @@
 import { create_cli } from "./lib/cli.js";
 import { check } from "./lib/commands/check.js";
 import { record } from "./lib/commands/record.js";
-import { prepare_release } from "./lib/commands/prepare-release.js";
-import { publish_release } from "./lib/commands/publish-release.js";
+import { generate_release } from "./lib/commands/generate-release.js";
+import { tag_release } from "./lib/commands/tag-release.js";
 import { init } from "./lib/commands/init.js";
 
 const run = create_cli({
@@ -14,8 +14,8 @@ const run = create_cli({
     init,
     check,
     record,
-    "prepare-release": prepare_release,
-    "publish-release": publish_release,
+    "generate-release": generate_release,
+    "tag-release": tag_release,
   },
 });
 

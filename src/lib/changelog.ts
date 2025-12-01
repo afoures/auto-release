@@ -154,7 +154,7 @@ export function generate_changelog_section(options: {
 
 /**
  * Generate full updated changelog content without writing to disk
- * Used by prepare-release to create file content for provider commit
+ * Used by generate-release to create file content for provider commit
  */
 export function generate_updated_changelog(options: {
   existing_content: string | null;

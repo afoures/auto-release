@@ -64,7 +64,7 @@ auto-release record
 3. Preview what would be released (dry-run):
 
 ```bash
-auto-release prepare-release --dry-run
+auto-release generate-release --dry-run
 ```
 
 4. Prepare release PRs:
@@ -343,19 +343,19 @@ Options:
 - `--description <text>`: Detailed description
 - `--config <path>`: Custom config file path
 
-### `prepare-release`
+### `generate-release`
 
 Create or update release PRs from change files:
 
 ```bash
 # Create/update release PRs
-auto-release prepare-release
+auto-release generate-release
 
 # Preview what would be released (dry-run)
-auto-release prepare-release --dry-run
+auto-release generate-release --dry-run
 
 # Specific app only
-auto-release prepare-release --app web-app
+auto-release generate-release --app web-app
 ```
 
 When using `--dry-run`, shows:
@@ -492,8 +492,8 @@ git push --tags
 
 4. **On main branch**, when ready to release:
    ```bash
-   auto-release prepare-release --dry-run  # Review what will be released
-   auto-release prepare-release  # Create/update release PRs
+   auto-release generate-release --dry-run  # Review what will be released
+   auto-release generate-release  # Create/update release PRs
    ```
 
 5. **Deploy** (usually in CI after release commit):
@@ -529,12 +529,12 @@ jobs:
       - run: pnpm auto-release check
       
       # Preview what would be released
-      - run: pnpm auto-release prepare-release --dry-run
+      - run: pnpm auto-release generate-release --dry-run
       
       # Check if there are changes to release
       - id: check-changes
         run: |
-          if pnpm auto-release prepare-release --dry-run | grep -q "No pending changes"; then
+          if pnpm auto-release generate-release --dry-run | grep -q "No pending changes"; then
             echo "has_changes=false" >> $GITHUB_OUTPUT
           else
             echo "has_changes=true" >> $GITHUB_OUTPUT

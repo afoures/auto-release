@@ -10,8 +10,8 @@ import { create_logger } from "../utils/logger.js";
 import { create_command } from "../cli.js";
 import type { FileChange } from "../providers/types.js";
 
-export const prepare_release = create_command({
-  name: "prepare-release",
+export const generate_release = create_command({
+  name: "generate-release",
   description: "Create or update release PRs from change files",
   schema: {
     app: {
@@ -299,3 +299,4 @@ export const prepare_release = create_command({
     };
   },
 });
+
