@@ -27,6 +27,7 @@ function format(parsed: CalendarVersion): string {
 
 /**
  * Calendar versioning strategy factory
+ *
  * Format: year.minor.patch (e.g., 2025.1.2)
  */
 export function calver(): VersioningStrategy {

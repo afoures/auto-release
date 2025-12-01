@@ -27,6 +27,7 @@ function format(parsed: SemanticVersion): string {
 
 /**
  * Semantic versioning strategy factory
+ *
  * Format: major.minor.patch (e.g., 1.0.0)
  */
 export function semver(): VersioningStrategy {
