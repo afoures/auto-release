@@ -1,56 +1,67 @@
+import { regex } from "arkregex";
 import type { VersioningStrategy } from "./types.js";
 
-interface CalverParsed {
-  year: number;
-  month: number;
-  micro: number;
+interface CalendarVersion {
+  year: bigint;
+  minor: bigint;
+  patch: bigint;
 }
 
-const CALVER_REGEX = /^(\d{4})\.(\d{2})\.(\d+)$/;
+const CALVER_REGEX = regex("^(?<year>\\d{4}).(?<minor>\\d+).(?<patch>\\d+)$");
 
-function parse(version: string): CalverParsed {
-  const match = version.match(CALVER_REGEX);
+function parse(version: string): CalendarVersion {
+  const match = CALVER_REGEX.exec(version);
   if (!match) {
-    throw new Error(`Invalid calver version: ${version}`);
+    throw new Error(`Invalid calendar version: ${version}`);
   }
   return {
-    year: parseInt(match[1], 10),
-    month: parseInt(match[2], 10),
-    micro: parseInt(match[3], 10),
+    year: BigInt(match.groups.year),
+    minor: BigInt(match.groups.minor),
+    patch: BigInt(match.groups.patch),
   };
 }
 
-function format(parsed: CalverParsed): string {
-  const padded_month = parsed.month.toString().padStart(2, "0");
-  return `${parsed.year}.${padded_month}.${parsed.micro}`;
+function format(parsed: CalendarVersion): string {
+  return `${parsed.year}.${parsed.minor}.${parsed.patch}`;
 }
 
 /**
- * Calver versioning strategy factory
- * Format: YYYY.MM.micro (e.g., 2025.11.0)
- * All changes bump micro, types are for grouping only
+ * Calendar versioning strategy factory
+ * Format: year.minor.patch (e.g., 2025.1.2)
  */
 export function calver(): VersioningStrategy {
   return {
-    change_types: ["feature", "fix", "none"] as const,
+    change_types: ["feature", "fix"] as const,
 
     bump({ current_version, changes, date }): string {
-      // If no changes, return current version
       if (changes.length === 0) {
         return current_version;
       }
 
       const parsed = parse(current_version);
-      const current_year = date.getFullYear();
-      const current_month = date.getMonth() + 1; // 0-indexed
+      const current_year = BigInt(date.getFullYear());
 
-      // If current year/month matches, increment micro; otherwise reset to 0
-      if (parsed.year === current_year && parsed.month === current_month) {
-        parsed.micro++;
+      let highest_type: "feature" | "fix" = "fix";
+      const precedence = { feature: 2, fix: 1 };
+
+      for (const change of changes) {
+        const type = change.type as keyof typeof precedence;
+        if (precedence[type] > precedence[highest_type]) {
+          highest_type = type;
+        }
+      }
+
+      if (parsed.year === current_year) {
+        if (highest_type === "feature") {
+          parsed.minor++;
+          parsed.patch = 0n;
+        } else if (highest_type === "fix") {
+          parsed.patch++;
+        }
       } else {
         parsed.year = current_year;
-        parsed.month = current_month;
-        parsed.micro = 0;
+        parsed.minor = 1n;
+        parsed.patch = 0n;
       }
 
       return format(parsed);
