@@ -6,6 +6,7 @@ export default defineConfig({
     "src/bin.ts",
     "src/semantic-versioning.ts",
     "src/calendar-versioning.ts",
+    "src/marketing-versioning.ts",
     "src/github-provider.ts",
     "src/gitlab-provider.ts",
   ],
