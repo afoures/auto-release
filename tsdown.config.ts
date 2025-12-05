@@ -9,6 +9,7 @@ export default defineConfig({
     "src/marketing-versioning.ts",
     "src/github-provider.ts",
     "src/gitlab-provider.ts",
+    "src/components.ts",
   ],
   format: ["esm"],
   dts: true,

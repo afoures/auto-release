@@ -1,7 +1,10 @@
-import { define_config } from "../src/index.js";
+import {
+  define_config,
+  default_changelog_formatter,
+  VersionManager,
+} from "../src/index.js";
 import { github } from "../src/github-provider.js";
-import { VersionManager } from "../src/lib/versioning/types.js";
-import { default_changelog_formatter } from "../src/lib/formatter.js";
+import { node } from "../src/components.js";
 
 type AllowedChangeKind = "breaking" | "feature" | "fix";
 /**
@@ -57,7 +60,7 @@ export default define_config({
   changes_dir: ".changes",
   apps: {
     "custom-app": {
-      packages: ["packages/custom"],
+      components: [node("packages/custom")],
       changelog: "CHANGELOG.md",
       versioning: custom_version(),
     },
