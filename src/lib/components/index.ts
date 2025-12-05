@@ -1,8 +1,10 @@
-export type FileToUpdate = {
+export type Part = {
   path: string;
-  updater: (content: string, version: string) => Promise<string>;
+  get_current_version: () => string;
+  update_version: (version: string) => void;
 };
 
 export type Component = () => {
-  files_to_update: Array<FileToUpdate>;
+  path: string;
+  parts: Array<Part>;
 };

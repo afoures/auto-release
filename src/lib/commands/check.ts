@@ -16,13 +16,15 @@ export const check = create_command({
       description: "Output as JSON",
     },
   },
-  run: async ({ values, config }) => {
+  run: async ({ args, get_config }) => {
     const cwd = process.cwd();
-    const json = values.json ?? false;
+    const json = args.json ?? false;
     const logger = create_logger(json);
 
     const errors: string[] = [];
     const warnings: string[] = [];
+
+    const config = await get_config();
 
     // Validate packages
     logger.info("Validating packages...");
@@ -64,4 +66,3 @@ export const check = create_command({
     }
   },
 });
-

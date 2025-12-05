@@ -34,17 +34,15 @@ function custom_version(): VersioningStrategy {
  * Example configuration with custom strategy
  */
 export default define_config({
+  changes_dir: ".changes",
   apps: [
     {
       name: "custom-app",
       packages: ["packages/custom"],
       versioning: custom_version(),
-      changelog: {
-        path: "CHANGELOG.md",
-      },
+      changelog: "CHANGELOG.md",
     },
   ],
-  changes_dir: ".changes",
   git: {
     provider: github({
       token: process.env.GITHUB_TOKEN!,

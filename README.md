@@ -589,17 +589,6 @@ Unlike traditional Changesets:
 - **Flexible strategies** beyond semver
 - **Simpler model** for multi-package apps
 
-## TypeScript API
-
-You can also use `auto-release` programmatically:
-
-```typescript
-import { load_config } from 'auto-release'
-
-const config = await load_config()
-// Use config to build custom workflows
-```
-
 ## License
 
 MIT

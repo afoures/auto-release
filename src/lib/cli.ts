@@ -11,29 +11,28 @@ export interface Option extends ParseArgsOptionDescriptor {
   description?: string;
 }
 
+type OptionValue<T> = T extends "string"
+  ? string
+  : T extends "boolean"
+  ? boolean
+  : never;
+
 type convert_to_values<args extends Record<string, Option>> = {
-  [K in keyof args]?: args[K]["type"] extends "string"
-    ? string
-    : args[K]["type"] extends "boolean"
-    ? boolean
-    : never;
+  [K in keyof args]?: args[K]["multiple"] extends true
+    ? OptionValue<args[K]["type"]>[]
+    : OptionValue<args[K]["type"]>;
 };
 
 /**
  * Command definition interface
  */
-type CommandRunContext<
-  args extends Record<string, Option>,
-  needs_config extends boolean
-> = {
-  values: convert_to_values<args>;
-} & (needs_config extends true
-  ? { config: NormalizedConfig }
-  : { config?: NormalizedConfig });
+type CommandRunContext<args extends Record<string, Option>> = {
+  args: convert_to_values<args>;
+  get_config: () => Promise<NormalizedConfig>;
+};
 
 export interface Command<
-  args extends Record<string, Option> = Record<string, Option>,
-  needs_config extends boolean = true
+  args extends Record<string, Option> = Record<string, Option>
 > {
   /**
    * Command name (e.g., "check", "record")
@@ -51,14 +50,11 @@ export interface Command<
   schema: args;
 
   /**
-   * Whether the command needs the config file to be loaded (default: true)
-   */
-  requires_config?: needs_config;
-
-  /**
    * Run the command with parsed arguments and config
    */
-  run: (args: CommandRunContext<args, needs_config>) => Promise<
+  run: (
+    args: CommandRunContext<args>
+  ) => Promise<
     { status: "success"; message?: string } | { status: "error"; error: string }
   >;
 }
@@ -66,10 +62,9 @@ export interface Command<
 /**
  * Command helper function
  */
-export function create_command<
-  args extends Record<string, Option>,
-  needs_config extends boolean = true
->(command: Command<args, needs_config>): Command<args, needs_config> {
+export function create_command<args extends Record<string, Option>>(
+  command: Command<args>
+): Command<args> {
   return command;
 }
 
@@ -159,7 +154,7 @@ export interface CreateCliOptions {
   /**
    * Commands available in the CLI
    */
-  commands: Record<string, Command<any, any>>;
+  commands: Record<string, Command<any>>;
 
   /**
    * Default config file path
@@ -173,8 +168,8 @@ export interface CreateCliOptions {
 function show_help(
   name: string,
   description: string,
-  commands: Record<string, Command<any, any>>,
-  command?: Command<any, any>
+  commands: Record<string, Command<any>>,
+  command?: Command<any>
 ) {
   if (!command) {
     // Calculate max command name length for proper alignment
@@ -262,13 +257,15 @@ export function create_cli(options: CreateCliOptions) {
       process.exit(0);
     }
 
-    const needs_config =
-      command.requires_config === undefined ? true : command.requires_config;
+    let cached_config: NormalizedConfig | undefined;
 
-    let config: NormalizedConfig | undefined;
-    if (needs_config) {
+    async function get_config() {
+      if (cached_config) {
+        return cached_config;
+      }
       try {
-        config = await load_config(values.config || default_config_path);
+        cached_config = await load_config(values.config || default_config_path);
+        return cached_config;
       } catch (error: any) {
         log.error(`Failed to load config: ${error.message}`);
         cancel("Config loading failed");
@@ -276,9 +273,10 @@ export function create_cli(options: CreateCliOptions) {
       }
     }
 
-    const run_args: CommandRunContext<any, any> = needs_config
-      ? ({ values: values as any, config: config! } as CommandRunContext<any, any>)
-      : ({ values: values as any } as CommandRunContext<any, any>);
+    const run_args: CommandRunContext<any> = {
+      args: values,
+      get_config,
+    };
 
     // Execute command
     const result = await command.run(run_args);

@@ -6,23 +6,20 @@ import { github } from "../src/github-provider.js";
  * Example configuration for a single-app repository
  */
 export default define_config({
+  changes_dir: ".changes",
   apps: [
     {
       name: "my-app",
       packages: ["packages/my-app"],
       versioning: semver(),
-      changelog: {
-        path: "CHANGELOG.md",
-      },
-      deploy: {
-        command: "npm publish",
-      },
+      changelog: "CHANGELOG.md",
     },
   ],
-  changes_dir: ".changes",
-  git: github({
-    token: process.env.GITHUB_TOKEN!,
-    owner: process.env.GITHUB_OWNER!,
-    repo: process.env.GITHUB_REPO!,
-  }),
+  git: {
+    provider: github({
+      token: process.env.GITHUB_TOKEN!,
+      owner: process.env.GITHUB_OWNER!,
+      repo: process.env.GITHUB_REPO!,
+    }),
+  },
 });
