@@ -47,6 +47,10 @@
       "import": "./dist/gitlab-provider.mjs",
       "types": "./dist/gitlab-provider.d.mts"
     },
+    "./components": {
+      "import": "./dist/components.mjs",
+      "types": "./dist/components.d.mts"
+    },
     "./package.json": "./package.json"
   },
   "scripts": {

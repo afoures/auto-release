@@ -1,7 +1,7 @@
-import { define_config } from "../src/index.js";
+import { define_config, default_changelog_formatter } from "../src/index.js";
 import { calver } from "../src/calendar-versioning.js";
 import { gitlab } from "../src/gitlab-provider.js";
-import { default_changelog_formatter } from "../src/lib/formatter.js";
+import { node } from "../src/components.js";
 
 /**
  * Example configuration using calver versioning
@@ -10,7 +10,7 @@ export default define_config({
   changes_dir: ".changes",
   apps: {
     api: {
-      packages: ["packages/api"],
+      components: [node("packages/api")],
       changelog: "CHANGELOG.md",
       versioning: calver({
         formatter: default_changelog_formatter({

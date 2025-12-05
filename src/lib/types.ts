@@ -2,7 +2,6 @@
  * Core types for auto-release
  */
 
-import type { Root } from "mdast";
 import type { Component } from "./components/types.js";
 import type { GitProvider } from "./providers/types.js";
 import type { VersionManager, Change, Formatter } from "./versioning/types.js";
@@ -23,8 +22,7 @@ export interface Logger {
  * App configuration
  */
 export interface AppConfig<change_kind extends string> {
-  packages?: string[];
-  components?: Array<Component>;
+  components: Array<Component>;
   versioning: VersionManager<change_kind>;
   changelog: string;
 }

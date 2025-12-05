@@ -1,7 +1,7 @@
-import { define_config } from "../src/index.js";
+import { define_config, default_changelog_formatter } from "../src/index.js";
 import { semver } from "../src/semantic-versioning.js";
 import { github } from "../src/github-provider.js";
-import { default_changelog_formatter } from "../src/lib/formatter.js";
+import { node } from "../src/components.js";
 
 /**
  * Example configuration for a single-app repository
@@ -10,7 +10,7 @@ export default define_config({
   changes_dir: ".changes",
   apps: {
     "my-app": {
-      packages: ["packages/my-app"],
+      components: [node("packages/my-app")],
       changelog: "CHANGELOG.md",
       versioning: semver({
         formatter: default_changelog_formatter({
