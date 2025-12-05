@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import type { Component, Part } from "./index.js";
+import type { Component, Part } from "./types.js";
 
 export function node(path: string): Component {
   return () => {

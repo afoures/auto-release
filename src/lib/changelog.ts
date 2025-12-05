@@ -1,17 +1,12 @@
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
-import type {
-  AppConfig,
-  ResolvedChange,
-  VersioningStrategy,
-  ChangelogFormatter,
-} from "./types.js";
+import type { AppConfig, Change, VersionManager } from "./types.js";
 
 /**
  * Get changelog path for an app
  */
 export function get_changelog_path(
-  app: AppConfig,
+  app: AppConfig<any>,
   cwd: string = process.cwd()
 ): string {
   return resolve(cwd, app.changelog.path);
@@ -59,7 +54,7 @@ export const default_changelog_formatter: ChangelogFormatter = {
 /**
  * Get the formatter for an app, falling back to default
  */
-function get_formatter(app: AppConfig): ChangelogFormatter {
+function get_formatter(app: AppConfig<any>): ChangelogFormatter {
   return app.changelog.formatter || default_changelog_formatter;
 }
 
@@ -67,15 +62,15 @@ function get_formatter(app: AppConfig): ChangelogFormatter {
  * Group changes by type
  */
 function group_changes_by_type(
-  changes: ResolvedChange[]
-): Map<string, ResolvedChange[]> {
-  const grouped = new Map<string, ResolvedChange[]>();
+  changes: Change<any>[]
+): Map<string, Change<any>[]> {
+  const grouped = new Map<string, Change<any>[]>();
 
   for (const change of changes) {
-    if (!grouped.has(change.type)) {
-      grouped.set(change.type, []);
+    if (!grouped.has(change.kind)) {
+      grouped.set(change.kind, []);
     }
-    grouped.get(change.type)!.push(change);
+    grouped.get(change.kind)!.push(change);
   }
 
   return grouped;
@@ -91,15 +86,14 @@ function capitalize(str: string): string {
 /**
  * Format a single change entry
  */
-function format_change(change: ResolvedChange): string {
+function format_change(change: Change<any>): string {
   let entry = `- ${change.title}`;
-  if (change.body) {
+  if (change.description.length > 0) {
     // Indent body content
-    const indented_body = change.body
-      .split("\n")
+    const indented_description = change.description
       .map((line) => `  ${line}`)
       .join("\n");
-    entry += `\n${indented_body}`;
+    entry += `\n${indented_description}`;
   }
   return entry;
 }
@@ -108,12 +102,12 @@ function format_change(change: ResolvedChange): string {
  * Generate changelog section for a release
  */
 export function generate_changelog_section(options: {
-  app: AppConfig;
+  app: AppConfig<any>;
   current_version: string;
   next_version: string;
   date: Date;
-  changes: ResolvedChange[];
-  strategy: VersioningStrategy;
+  changes: Change<any>[];
+  versioning: VersionManager<any>;
 }): string {
   const { app, next_version, date, changes } = options;
   const formatter = get_formatter(app);
@@ -136,8 +130,8 @@ export function generate_changelog_section(options: {
   const grouped = group_changes_by_type(changes);
 
   // Order types according to strategy's change_types order
-  const ordered_types = options.strategy.change_types.filter((type) =>
-    grouped.has(type)
+  const ordered_types = options.versioning.allowed_changes.filter((kind) =>
+    grouped.has(kind)
   );
 
   for (const type of ordered_types) {
@@ -158,12 +152,12 @@ export function generate_changelog_section(options: {
  */
 export function generate_updated_changelog(options: {
   existing_content: string | null;
-  app: AppConfig;
+  app: AppConfig<any>;
   current_version: string;
   next_version: string;
   date: Date;
-  changes: ResolvedChange[];
-  strategy: VersioningStrategy;
+  changes: Change<any>[];
+  versioning: VersionManager<any>;
 }): string {
   const { existing_content, app } = options;
   const formatter = get_formatter(app);
@@ -209,12 +203,12 @@ export function generate_updated_changelog(options: {
  * Write or update changelog file
  */
 export async function write_changelog(options: {
-  app: AppConfig;
+  app: AppConfig<any>;
   current_version: string;
   next_version: string;
   date: Date;
-  changes: ResolvedChange[];
-  strategy: VersioningStrategy;
+  changes: Change<any>[];
+  versioning: VersionManager<any>;
   changelog_path: string;
 }): Promise<void> {
   const { changelog_path } = options;

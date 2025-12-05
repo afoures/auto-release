@@ -1,22 +1,42 @@
-import { define_config, type VersioningStrategy } from "../src/index.js";
+import { define_config } from "../src/index.js";
 import { github } from "../src/github-provider.js";
+import { VersionManager } from "../src/lib/versioning/types.js";
+import { default_changelog_formatter } from "../src/lib/formatter.js";
 
+type AllowedChangeKind = "breaking" | "feature" | "fix";
 /**
  * Custom versioning strategy factory example
  */
-function custom_version(): VersioningStrategy {
+function custom_version(): VersionManager<AllowedChangeKind> {
+  const allowed_changes = ["breaking", "feature", "fix"] as const;
   return {
-    change_types: ["breaking", "feature", "fix"],
-
-    bump({ current_version, changes }) {
-      const [major_str, minor_str] = current_version.split(".");
+    allowed_changes,
+    formatter: default_changelog_formatter<AllowedChangeKind>({
+      kind_map: {
+        breaking: "Breaking Change",
+        feature: "Feature",
+        fix: "Bug Fix",
+      },
+    })(allowed_changes),
+    compare(version_a, version_b) {
+      const a = version_a.split(".");
+      const b = version_b.split(".");
+      if (a[0] !== b[0]) return a[0] > b[0] ? 1 : -1;
+      if (a[1] !== b[1]) return a[1] > b[1] ? 1 : -1;
+      return 0;
+    },
+    validate({ version }) {
+      return true;
+    },
+    bump({ version, changes }) {
+      const [major_str, minor_str] = version.split(".");
       const parsed = {
         major: parseInt(major_str, 10),
         minor: parseInt(minor_str, 10),
       };
 
-      const has_breaking = changes.some((c) => c.type === "breaking");
-      const has_feature = changes.some((c) => c.type === "feature");
+      const has_breaking = changes.some((c) => c.kind === "breaking");
+      const has_feature = changes.some((c) => c.kind === "feature");
 
       if (has_breaking) {
         parsed.major++;
@@ -35,14 +55,13 @@ function custom_version(): VersioningStrategy {
  */
 export default define_config({
   changes_dir: ".changes",
-  apps: [
-    {
-      name: "custom-app",
+  apps: {
+    "custom-app": {
       packages: ["packages/custom"],
-      versioning: custom_version(),
       changelog: "CHANGELOG.md",
+      versioning: custom_version(),
     },
-  ],
+  },
   git: {
     provider: github({
       token: process.env.GITHUB_TOKEN!,

@@ -5,9 +5,12 @@
 // Export core types
 export type {
   AutoReleaseConfig,
-  VersioningStrategy,
+  VersionManager,
+  Change,
   GitProvider,
 } from "./lib/types.js";
 
 // Export config helper
 export { define_config } from "./lib/config.js";
+
+export { default_changelog_formatter } from "./lib/formatter.js";

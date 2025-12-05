@@ -15,7 +15,7 @@ export interface ResolvedPackage {
  * Resolve and read package.json files for an app
  */
 export async function resolve_packages(
-  app: AppConfig,
+  app: AppConfig<any>,
   cwd: string = process.cwd()
 ): Promise<ResolvedPackage[]> {
   const packages: ResolvedPackage[] = [];
@@ -54,7 +54,7 @@ export async function resolve_packages(
  * Get current version for an app (validates all packages have same version)
  */
 export async function get_current_version(
-  app: AppConfig,
+  app: AppConfig<any>,
   cwd: string = process.cwd()
 ): Promise<string> {
   const packages = await resolve_packages(app, cwd);
@@ -80,7 +80,7 @@ export async function get_current_version(
  * Write new version to all package.json files for an app
  */
 export async function write_version(
-  app: AppConfig,
+  app: AppConfig<any>,
   new_version: string,
   cwd: string = process.cwd()
 ): Promise<void> {
@@ -104,7 +104,7 @@ export async function write_version(
  * Validate that all packages exist and have matching versions
  */
 export async function validate_packages(
-  apps: AppConfig[],
+  apps: AppConfig<any>[],
   cwd: string = process.cwd()
 ): Promise<{ valid: boolean; errors: string[] }> {
   const errors: string[] = [];
