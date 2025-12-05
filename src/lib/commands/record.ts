@@ -36,12 +36,14 @@ export const record = create_command({
       description: "Path to config file",
     },
   },
-  run: async ({ values, config }) => {
+  run: async ({ args, get_config }) => {
     const cwd = process.cwd();
     intro(`record a new change`);
 
+    const config = await get_config();
+
     // Determine app
-    let app_name = values.app;
+    let app_name = args.app;
     if (!app_name) {
       if (config.apps.length === 1) {
         app_name = config.apps[0].name;
@@ -73,7 +75,7 @@ export const record = create_command({
     const valid_types = Array.from(app.versioning.change_types);
 
     // Determine change type
-    let change_type = values.type;
+    let change_type = args.type;
     if (!change_type) {
       const selected = await select({
         message: "Select change type:",
@@ -98,7 +100,7 @@ export const record = create_command({
     }
 
     // Get summary
-    let summary = values.summary;
+    let summary = args.summary;
     if (!summary) {
       const input = await text({
         message: "Enter summary:",
@@ -120,8 +122,8 @@ export const record = create_command({
     }
 
     // Get description (optional)
-    let description = values.description;
-    if (!description && !values.summary) {
+    let description = args.description;
+    if (!description && !args.summary) {
       // Only prompt if not provided via CLI
       const has_description = await confirm({
         message: "Add description?",

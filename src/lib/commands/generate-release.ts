@@ -27,13 +27,16 @@ export const generate_release = create_command({
       description: "Path to config file",
     },
   },
-  run: async ({ values, config }) => {
+  run: async ({ args, get_config }) => {
     const cwd = process.cwd();
-    const app_filter = values.app;
-    const dry_run = values["dry-run"] ?? false;
+    const app_filter = args.app;
+    const dry_run = args["dry-run"] ?? false;
+
+    const config = await get_config();
+
     const logger = create_logger();
-    const provider = config.git;
-    const release_branch_prefix = config.release_branch_prefix;
+    const provider = config.git.provider;
+    const release_branch_prefix = config.git.default_release_branch_prefix;
 
     // Discover all changes
     let changes_map: Map<string, any>;
@@ -120,7 +123,7 @@ export const generate_release = create_command({
       logger.info(`  Version: ${rel.current_version} → ${rel.next_version}`);
       logger.info(`  Branch: ${rel.release_branch}`);
       logger.info(`  Changes: ${rel.changes.length} file(s)`);
-      
+
       // Show detailed change information
       if (rel.changes.length > 0) {
         logger.info("");
@@ -299,4 +302,3 @@ export const generate_release = create_command({
     };
   },
 });
-

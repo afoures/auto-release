@@ -9,9 +9,7 @@ describe("generate_changelog_section", () => {
     name: "test-app",
     packages: ["packages/test"],
     versioning: strategy,
-    changelog: {
-      path: "CHANGELOG.md",
-    },
+    changelog: "CHANGELOG.md",
   };
 
   it("should generate changelog section with grouped changes", () => {

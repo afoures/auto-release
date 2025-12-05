@@ -21,13 +21,14 @@ export const tag_release = create_command({
       description: "Path to config file",
     },
   },
-  run: async ({ values, config }) => {
+  run: async ({ args, get_config }) => {
     const cwd = process.cwd();
-    const app_filter = values.app;
-    const branch_name = values.branch;
+    const app_filter = args.app;
+    const branch_name = args.branch;
+    const config = await get_config();
     const logger = create_logger();
-    const provider = config.git;
-    const release_branch_prefix = config.release_branch_prefix;
+    const provider = config.git.provider;
+    const release_branch_prefix = config.git.default_release_branch_prefix;
 
     // Get default branch
     let default_branch: string;
@@ -190,4 +191,3 @@ export const tag_release = create_command({
     };
   },
 });
-

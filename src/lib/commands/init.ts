@@ -238,11 +238,10 @@ function sanitize_env_var(value: string, fallback: string): string {
 
 const INIT_SCHEMA: Record<string, Option> = {};
 
-export const init = create_command<typeof INIT_SCHEMA, false>({
+export const init = create_command({
   name: "init",
   description: "Set up auto-release in the current repository",
   schema: INIT_SCHEMA,
-  requires_config: false,
   run: async () => {
     intro("auto-release init");
     const cwd = process.cwd();
@@ -296,7 +295,7 @@ export const init = create_command<typeof INIT_SCHEMA, false>({
       const changes_dir_input = await text({
         message: "Where should change files live?",
         initialValue: ".changes",
-        validate: (value) =>
+        validate: (value = "") =>
           value.trim().length === 0 ? "Directory cannot be empty" : undefined,
       });
       if (isCancel(changes_dir_input)) {
@@ -308,7 +307,7 @@ export const init = create_command<typeof INIT_SCHEMA, false>({
       const release_prefix_input = await text({
         message: "Release branch prefix",
         initialValue: "release",
-        validate: (value) =>
+        validate: (value = "") =>
           value.trim().length === 0
             ? "Release branch prefix cannot be empty"
             : undefined,
@@ -322,7 +321,7 @@ export const init = create_command<typeof INIT_SCHEMA, false>({
       const app_count_input = await text({
         message: "How many apps should auto-release manage?",
         initialValue: "1",
-        validate: (value) => {
+        validate: (value = "") => {
           const parsed = Number.parseInt(value, 10);
           return Number.isNaN(parsed) || parsed <= 0
             ? "Enter a positive number"
@@ -344,7 +343,7 @@ export const init = create_command<typeof INIT_SCHEMA, false>({
         const app_name_input = await text({
           message: `App #${index + 1} name (lowercase, no spaces)`,
           initialValue: default_name,
-          validate: (value) =>
+          validate: (value = "") =>
             value.trim().length === 0 ? "App name is required" : undefined,
         });
         if (isCancel(app_name_input)) {
@@ -356,7 +355,7 @@ export const init = create_command<typeof INIT_SCHEMA, false>({
         const package_paths_input = await text({
           message: `Package paths for ${app_name} (comma separated)`,
           initialValue: app_count === 1 ? "." : `apps/${app_name}`,
-          validate: (value) =>
+          validate: (value = "") =>
             value.trim().length === 0
               ? "At least one package path is required"
               : undefined,
@@ -374,7 +373,7 @@ export const init = create_command<typeof INIT_SCHEMA, false>({
           message: `Changelog path for ${app_name}`,
           initialValue:
             app_count === 1 ? "CHANGELOG.md" : `apps/${app_name}/CHANGELOG.md`,
-          validate: (value) =>
+          validate: (value = "") =>
             value.trim().length === 0
               ? "Changelog path is required"
               : undefined,
@@ -424,7 +423,7 @@ export const init = create_command<typeof INIT_SCHEMA, false>({
         const owner_input = await text({
           message: "GitHub owner (user or org)",
           initialValue: package_json.name?.replace(/@.*\//, "") || "",
-          validate: (value) =>
+          validate: (value = "") =>
             value.trim().length === 0 ? "Owner is required" : undefined,
         });
         if (isCancel(owner_input)) {
@@ -437,7 +436,7 @@ export const init = create_command<typeof INIT_SCHEMA, false>({
           initialValue: package_json.name
             ? package_json.name.replace(/^@[^/]+\//, "")
             : apps[0]?.name || "",
-          validate: (value) =>
+          validate: (value = "") =>
             value.trim().length === 0 ? "Repository is required" : undefined,
         });
         if (isCancel(repo_input)) {
@@ -466,7 +465,7 @@ export const init = create_command<typeof INIT_SCHEMA, false>({
       } else {
         const project_input = await text({
           message: "GitLab project ID (group/name or numeric)",
-          validate: (value) =>
+          validate: (value = "") =>
             value.trim().length === 0 ? "Project ID is required" : undefined,
         });
         if (isCancel(project_input)) {

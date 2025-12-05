@@ -46,7 +46,9 @@ export async function load_config(
  */
 function validate_config(config: AutoReleaseConfig): void {
   if (!config.git) {
-    throw new Error('Config must have a "git" provider. Use github() or gitlab() from "auto-release/providers"');
+    throw new Error(
+      'Config must have a "git" provider. Use github() or gitlab() from "auto-release/providers"'
+    );
   }
 
   if (!config.apps || !Array.isArray(config.apps)) {
@@ -90,11 +92,7 @@ function validate_config(config: AutoReleaseConfig): void {
     }
 
     if (!app.changelog) {
-      throw new Error(`App "${app.name}" must have a "changelog" config`);
-    }
-
-    if (!app.changelog.path) {
-      throw new Error(`App "${app.name}" changelog must have a "path"`);
+      throw new Error(`App "${app.name}" must have a changelog path`);
     }
   }
 }
@@ -104,14 +102,20 @@ function validate_config(config: AutoReleaseConfig): void {
  */
 function normalize_config(config: AutoReleaseConfig): NormalizedConfig {
   if (!config.git) {
-    throw new Error('Config must have a "git" provider (use github() or gitlab())');
+    throw new Error(
+      'Config must have a "git" provider (use github() or gitlab())'
+    );
   }
 
   const normalized: NormalizedConfig = {
     apps: config.apps,
     changes_dir: config.changes_dir || ".changes",
-    release_branch_prefix: config.release_branch_prefix || "release",
-    git: config.git,
+    git: {
+      provider: config.git.provider,
+      default_target_branch: config.git.default_target_branch || "main",
+      default_release_branch_prefix:
+        config.git.default_release_branch_prefix || "release",
+    },
   };
 
   return Object.freeze(normalized);
