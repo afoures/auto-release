@@ -2,11 +2,12 @@
  * Core types for auto-release
  */
 
-import type { Component } from "./components/index.js";
+import type { Root } from "mdast";
+import type { Component } from "./components/types.js";
 import type { GitProvider } from "./providers/types.js";
-import type { VersioningStrategy, ResolvedChange } from "./versioning/types.js";
+import type { VersionManager, Change, Formatter } from "./versioning/types.js";
 
-export type { GitProvider, VersioningStrategy, ResolvedChange };
+export type { GitProvider, VersionManager, Change, Formatter, Component };
 
 /**
  * Logger interface for structured output
@@ -21,11 +22,10 @@ export interface Logger {
 /**
  * App configuration
  */
-export interface AppConfig {
-  name: string;
+export interface AppConfig<change_kind extends string> {
   packages?: string[];
   components?: Array<Component>;
-  versioning: VersioningStrategy;
+  versioning: VersionManager<change_kind>;
   changelog: string;
 }
 
@@ -39,7 +39,7 @@ export interface AutoReleaseConfig {
     default_target_branch?: string;
     default_release_branch_prefix?: string;
   };
-  apps: AppConfig[];
+  apps: Record<string, AppConfig<any>>;
 }
 
 export type NormalizedConfig = {
@@ -49,7 +49,7 @@ export type NormalizedConfig = {
     default_target_branch: string;
     default_release_branch_prefix: string;
   };
-  apps: AppConfig[];
+  apps: Record<string, AppConfig<any>>;
 };
 
 /**

@@ -1,6 +1,12 @@
 # auto-release
 
+some global description
+
+on multiple lines
+
 ## 0.1.0 – 2025-11-26
+
+some local description
 
 ### Major
 

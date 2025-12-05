@@ -1,8 +1,9 @@
-import { readdir, readFile } from 'node:fs/promises'
-import { join } from 'node:path'
-import type { ResolvedChange, AppConfig } from './types.js'
+import { readdir, readFile } from "node:fs/promises";
+import { join } from "node:path";
+import type { Change, AppConfig } from "./types.js";
+import { regex } from "arkregex";
 
-const CHANGE_FILE_REGEX = /^([a-z0-9-]+)\.([a-z0-9-]+)\.md$/
+const CHANGE_FILE_REGEX = regex("^(?<kind>[a-z0-9-]+).(?<slug>[a-z0-9-]+).md$");
 
 /**
  * Parse change filename and validate format
@@ -10,12 +11,12 @@ const CHANGE_FILE_REGEX = /^([a-z0-9-]+)\.([a-z0-9-]+)\.md$/
  */
 export function parse_change_filename(
   filename: string
-): { type: string; slug: string } | null {
-  const match = filename.match(CHANGE_FILE_REGEX)
+): { kind: string; slug: string } | null {
+  const match = CHANGE_FILE_REGEX.exec(filename);
   if (!match) {
-    return null
+    return null;
   }
-  return { type: match[1], slug: match[2] }
+  return { kind: match.groups.kind, slug: match.groups.slug };
 }
 
 /**
@@ -23,113 +24,112 @@ export function parse_change_filename(
  * If first non-empty line starts with #, treat as heading title with remaining as body
  * Otherwise, treat first line as simple title
  */
-export function parse_change_markdown(content: string): {
-  title: string
-  body?: string
-} {
-  const lines = content.split('\n')
-  const non_empty_lines = lines.filter((line) => line.trim() !== '')
+export function parse_change_markdown(content: string) {
+  const lines = content.split("\n");
+  const non_empty_lines = lines.filter((line) => line.trim() !== "");
 
   if (non_empty_lines.length === 0) {
-    throw new Error('Change file is empty')
+    throw new Error("Change file is empty");
   }
 
-  const first_line = non_empty_lines[0].trim()
+  const first_line = non_empty_lines[0].trim();
 
   // Check if first line is a heading
-  if (first_line.startsWith('#')) {
-    const title = first_line.replace(/^#+\s*/, '').trim()
-    const body_start_index = lines.findIndex((line) => line.trim() === first_line)
-    const body_lines = lines.slice(body_start_index + 1).join('\n').trim()
+  if (first_line.startsWith("#")) {
+    const title = first_line.replace(/^#+\s*/, "").trim();
+    const body_start_index = lines.findIndex(
+      (line) => line.trim() === first_line
+    );
+    const body_lines = lines.slice(body_start_index + 1);
     return {
       title,
-      body: body_lines || undefined,
-    }
+      description: body_lines,
+    };
   }
 
   // Simple title (first line)
   return {
     title: first_line,
-    body: non_empty_lines.slice(1).join('\n').trim() || undefined,
-  }
+    description: non_empty_lines.slice(1),
+  };
 }
 
 /**
  * Discover and parse change files for a specific app
  */
-export async function discover_changes(
+export async function discover_changes<change_kind extends string>(
   app_name: string,
   changes_dir: string,
-  valid_change_types: readonly string[]
-): Promise<ResolvedChange[]> {
-  const app_changes_dir = join(changes_dir, app_name)
-  
-  let files: string[]
+  valid_change_kinds: readonly change_kind[]
+): Promise<Change<change_kind>[]> {
+  const app_changes_dir = join(changes_dir, app_name);
+
+  let files: string[];
   try {
-    files = await readdir(app_changes_dir)
+    files = await readdir(app_changes_dir);
   } catch (error: any) {
     // Directory doesn't exist or can't be read - no changes
-    if (error.code === 'ENOENT') {
-      return []
+    if (error.code === "ENOENT") {
+      return [];
     }
-    throw error
+    throw error;
   }
 
-  const changes: ResolvedChange[] = []
+  const changes: Change<change_kind>[] = [];
 
   for (const file of files) {
-    if (!file.endsWith('.md')) {
-      continue
+    if (!file.endsWith(".md")) {
+      continue;
     }
 
-    const parsed = parse_change_filename(file)
+    const parsed = parse_change_filename(file);
     if (!parsed) {
       throw new Error(
         `Invalid change filename format: ${file} (expected: type.slug-words.md)`
-      )
+      );
     }
 
-    if (!valid_change_types.includes(parsed.type)) {
+    if (!valid_change_kinds.includes(parsed.kind as change_kind)) {
       throw new Error(
-        `Invalid change type "${parsed.type}" in file ${file}. Valid types: ${valid_change_types.join(', ')}`
-      )
+        `Invalid change kind "${
+          parsed.kind
+        }" in file ${file}. Valid kinds: ${valid_change_kinds.join(", ")}`
+      );
     }
 
-    const file_path = join(app_changes_dir, file)
-    const content = await readFile(file_path, 'utf-8')
-    const { title, body } = parse_change_markdown(content)
+    const file_path = join(app_changes_dir, file);
+    const content = await readFile(file_path, "utf-8");
+    const { title, description } = parse_change_markdown(content);
 
     changes.push({
-      app_name,
-      type: parsed.type,
+      kind: parsed.kind as change_kind,
       title,
-      body,
-      file_path,
-    })
+      description,
+    });
   }
 
-  return changes
+  return changes;
 }
 
 /**
  * Discover changes for all apps
  */
 export async function discover_all_changes(
-  apps: AppConfig[],
+  apps: AppConfig<any>[],
   changes_dir: string
-): Promise<Map<string, ResolvedChange[]>> {
-  const changes_map = new Map<string, ResolvedChange[]>()
+): Promise<Map<string, Change<any>[]>> {
+  const changes_map = new Map<string, Change<any>[]>();
 
   for (const app of apps) {
-    const valid_change_types = app.versioning.change_types
+    const valid_change_types = app.versioning.allowed_changes;
 
     const changes = await discover_changes(
       app.name,
       changes_dir,
       valid_change_types
-    )
-    changes_map.set(app.name, changes)
+    );
+    changes_map.set(app.name, changes);
   }
 
-  return changes_map
+  return changes_map;
 }

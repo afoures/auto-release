@@ -1,5 +1,5 @@
 import { regex } from "arkregex";
-import type { VersioningStrategy } from "./types.js";
+import type { Change, Formatter, VersionManager } from "./types.js";
 
 interface CalendarVersion {
   year: bigint;
@@ -25,30 +25,62 @@ function format(parsed: CalendarVersion): string {
   return `${parsed.year}.${parsed.minor}.${parsed.patch}`;
 }
 
+type AllowedChangeKind = "feature" | "fix";
+
 /**
- * Calendar versioning strategy factory
+ * Create a calendar versioning manager
  *
  * Format: year.minor.patch (e.g., 2025.1.2)
  */
-export function calver(): VersioningStrategy {
+export function calver<
+  parsed_changelog extends {
+    releases: Array<{
+      version: string;
+      changes: Array<Change<AllowedChangeKind>>;
+    }>;
+  }
+>({
+  formatter,
+}: {
+  formatter: (
+    allowed_changes: readonly AllowedChangeKind[]
+  ) => Formatter<AllowedChangeKind, parsed_changelog>;
+}): VersionManager<AllowedChangeKind, parsed_changelog> {
+  const allowed_changes = ["feature", "fix"] as const;
+
   return {
-    change_types: ["feature", "fix"] as const,
-
-    bump({ current_version, changes, date }): string {
-      if (changes.length === 0) {
-        return current_version;
+    allowed_changes,
+    formatter: formatter(allowed_changes),
+    compare(version_a, version_b) {
+      const a = parse(version_a);
+      const b = parse(version_b);
+      if (a.year !== b.year) {
+        return a.year > b.year ? 1 : -1;
       }
-
-      const parsed = parse(current_version);
+      if (a.minor !== b.minor) {
+        return a.minor > b.minor ? 1 : -1;
+      }
+      if (a.patch !== b.patch) {
+        return a.patch > b.patch ? 1 : -1;
+      }
+      return 0;
+    },
+    validate({ version }) {
+      return CALVER_REGEX.test(version);
+    },
+    bump({ version, changes, date }): string {
+      const parsed = parse(version);
       const current_year = BigInt(date.getFullYear());
 
-      let highest_type: "feature" | "fix" = "fix";
-      const precedence = { feature: 2, fix: 1 };
+      let highest_type: AllowedChangeKind = "fix";
+      const precedence = { feature: 2, fix: 1 } satisfies Record<
+        AllowedChangeKind,
+        number
+      >;
 
       for (const change of changes) {
-        const type = change.type as keyof typeof precedence;
-        if (precedence[type] > precedence[highest_type]) {
-          highest_type = type;
+        if (precedence[change.kind] > precedence[highest_type]) {
+          highest_type = change.kind;
         }
       }
 

@@ -1,12 +1,5 @@
 import { regex } from "arkregex";
-import {
-  type Change,
-  type ChangelogContent,
-  type ChangelogFormatter,
-  type ChangelogVersion,
-  type VersioningStrategy,
-  type VersionManager,
-} from "./index.js";
+import type { Change, Formatter, VersionManager } from "./types.js";
 
 interface MarketingVersion {
   marketing: bigint;
@@ -34,43 +27,56 @@ function format(parsed: MarketingVersion): string {
   return `${parsed.marketing}.${parsed.minor}.${parsed.patch}`;
 }
 
-const change_types = ["marketing", "feature", "fix"] as const;
-type ChangeTypes = (typeof change_types)[number];
-
-type CalverChangelogContent = ChangelogContent<ChangeTypes> & {
-  header: Array<string>;
-};
+type AllowedChangeKind = "marketing" | "feature" | "fix";
 
 /**
  * Marketing versioning strategy factory
  *
  * Format: marketing.minor.patch (e.g., 1.0.0)
  */
-export function markver({
-  changelog_formatter: custom_changelog_formatter,
+export function markver<
+  parsed_changelog extends {
+    releases: Array<{
+      version: string;
+      changes: Array<Change<AllowedChangeKind>>;
+    }>;
+  }
+>({
+  formatter,
 }: {
-  changelog_formatter?: ChangelogFormatter<ChangeTypes, CalverChangelogContent>;
-} = {}): VersioningStrategy<{
-  change_types: ChangeTypes;
-  changelog_content: CalverChangelogContent;
-}> {
-  const version_manager = {
+  formatter: (
+    allowed_changes: readonly AllowedChangeKind[]
+  ) => Formatter<AllowedChangeKind, parsed_changelog>;
+}): VersionManager<AllowedChangeKind> {
+  const allowed_changes = ["marketing", "feature", "fix"] as const;
+
+  return {
+    allowed_changes,
+    formatter: formatter(allowed_changes),
+    compare(version_a, version_b) {
+      const a = parse(version_a);
+      const b = parse(version_b);
+      if (a.marketing !== b.marketing)
+        return a.marketing > b.marketing ? 1 : -1;
+      if (a.minor !== b.minor) return a.minor > b.minor ? 1 : -1;
+      if (a.patch !== b.patch) return a.patch > b.patch ? 1 : -1;
+      return 0;
+    },
     validate({ version }) {
       return MARKVER_REGEX.test(version);
     },
-    bump({ version, changes }) {
+    bump({ version, changes, date }): string {
       const parsed = parse(version);
-      let highest_type: ChangeTypes = "fix";
-      const precedence = {
-        marketing: 3,
-        feature: 2,
-        fix: 1,
-      } satisfies Record<ChangeTypes, number>;
+      // will always increase patch version if no other change type is present
+      let highest_type: AllowedChangeKind = "fix";
+      const precedence = { marketing: 3, feature: 2, fix: 1 } satisfies Record<
+        AllowedChangeKind,
+        number
+      >;
 
       for (const change of changes) {
-        const type = change.kind;
-        if (precedence[type] > precedence[highest_type]) {
-          highest_type = type;
+        if (precedence[change.kind] > precedence[highest_type]) {
+          highest_type = change.kind;
         }
       }
 
@@ -87,60 +93,5 @@ export function markver({
 
       return format(parsed);
     },
-  } satisfies VersionManager<ChangeTypes>;
-
-  const default_changelog_formatter = {
-    parse({ text }) {
-      const header: Array<string> = [];
-      const versions: Array<ChangelogVersion<ChangeTypes>> = [];
-      let context: null | ChangelogVersion<ChangeTypes> = null;
-      let change: null | Change<ChangeTypes> = null;
-      for (const line of text) {
-        if (line.startsWith("##")) {
-          context = {
-            version: line.split(" ")[1],
-            changes: [],
-          };
-          versions.push(context);
-        } else if (!context) {
-          header.push(line);
-        } else if (context && line.startsWith("-")) {
-          change = {
-            kind: line.split(" ")[1].slice(1, -1) as ChangeTypes,
-            title: line.split(" ").slice(2).join(" "),
-          };
-          context.changes.push(change);
-        } else if (change && line) {
-          change.description =
-            (change.description ? change.description + "\n" : "") + line;
-        }
-      }
-      return {
-        header,
-        versions,
-      };
-    },
-    format({ changelog }) {
-      const content = changelog.versions.flatMap(({ version, changes }) => {
-        return [`## ${version}`].concat(
-          changes.flatMap((change) => {
-            return [
-              `- [${change.kind}] ${change.title}`,
-              change.description ? change.description : "",
-            ].filter(Boolean);
-          })
-        );
-      });
-      return changelog.header.concat(content);
-    },
-  } satisfies ChangelogFormatter<ChangeTypes, CalverChangelogContent>;
-
-  const changelog_formatter =
-    custom_changelog_formatter ?? default_changelog_formatter;
-
-  return {
-    change_types,
-    version_manager,
-    changelog_formatter,
   };
 }

@@ -1,4 +1,4 @@
-import { define_config } from "./dist/index.mjs";
+import { define_config, default_changelog_formatter } from "./dist/index.mjs";
 import { semver } from "./dist/semantic-versioning.mjs";
 import { github } from "./dist/github-provider.mjs";
 
@@ -8,14 +8,21 @@ import { github } from "./dist/github-provider.mjs";
  * To use this as your actual config, rename to auto-release.config.ts
  */
 export default define_config({
-  apps: [
-    {
-      name: "auto-release",
+  apps: {
+    "auto-release": {
       packages: ["."],
-      versioning: semver(),
       changelog: "CHANGELOG.md",
+      versioning: semver({
+        formatter: default_changelog_formatter({
+          kind_map: {
+            major: "Major",
+            minor: "Minor",
+            patch: "Patch",
+          },
+        }),
+      }),
     },
-  ],
+  },
   changes_dir: ".changes",
   git: {
     provider: github({

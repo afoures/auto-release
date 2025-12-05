@@ -1,5 +1,5 @@
 import { regex } from "arkregex";
-import type { VersioningStrategy } from "./types.js";
+import type { Change, Formatter, VersionManager } from "./types.js";
 
 interface SemanticVersion {
   major: bigint;
@@ -25,26 +25,62 @@ function format(parsed: SemanticVersion): string {
   return `${parsed.major}.${parsed.minor}.${parsed.patch}`;
 }
 
+type AllowedChangeKind = "major" | "minor" | "patch";
+
 /**
  * Semantic versioning strategy factory
  *
  * Format: major.minor.patch (e.g., 1.0.0)
  */
-export function semver(): VersioningStrategy {
-  return {
-    change_types: ["major", "minor", "patch"] as const,
+export function semver<
+  parsed_changelog extends {
+    releases: Array<{
+      version: string;
+      changes: Array<Change<AllowedChangeKind>>;
+    }>;
+  }
+>({
+  formatter,
+}: {
+  formatter: (
+    allowed_changes: readonly AllowedChangeKind[]
+  ) => Formatter<AllowedChangeKind, parsed_changelog>;
+}): VersionManager<AllowedChangeKind> {
+  const allowed_changes = ["major", "minor", "patch"] as const;
 
-    bump({ current_version, changes }): string {
-      const parsed = parse(current_version);
+  return {
+    allowed_changes,
+    formatter: formatter(allowed_changes),
+    compare(version_a, version_b) {
+      const a = parse(version_a);
+      const b = parse(version_b);
+      if (a.major !== b.major) {
+        return a.major > b.major ? 1 : -1;
+      }
+      if (a.minor !== b.minor) {
+        return a.minor > b.minor ? 1 : -1;
+      }
+      if (a.patch !== b.patch) {
+        return a.patch > b.patch ? 1 : -1;
+      }
+      return 0;
+    },
+    validate({ version }) {
+      return SEMVER_REGEX.test(version);
+    },
+    bump({ version, changes }): string {
+      const parsed = parse(version);
 
       // Determine highest precedence change type
-      let highest_type: "major" | "minor" | "patch" = "patch";
-      const precedence = { major: 3, minor: 2, patch: 1 };
+      let highest_type: AllowedChangeKind = "patch";
+      const precedence = { major: 3, minor: 2, patch: 1 } satisfies Record<
+        AllowedChangeKind,
+        number
+      >;
 
       for (const change of changes) {
-        const type = change.type as keyof typeof precedence;
-        if (precedence[type] > precedence[highest_type]) {
-          highest_type = type;
+        if (precedence[change.kind] > precedence[highest_type]) {
+          highest_type = change.kind;
         }
       }
 

@@ -5,7 +5,9 @@ import type { AutoReleaseConfig, NormalizedConfig } from "./types.js";
 /**
  * Helper function for users to define their config
  */
-export function define_config(config: AutoReleaseConfig): AutoReleaseConfig {
+export function define_config<const config extends AutoReleaseConfig>(
+  config: config
+): config {
   return config;
 }
 
@@ -83,8 +85,8 @@ function validate_config(config: AutoReleaseConfig): void {
     }
 
     if (
-      !app.versioning.change_types ||
-      !Array.isArray(app.versioning.change_types)
+      !app.versioning.allowed_changes ||
+      !Array.isArray(app.versioning.allowed_changes)
     ) {
       throw new Error(
         `App "${app.name}" versioning must have a "change_types" array`
