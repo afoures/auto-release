@@ -40,18 +40,26 @@ yarn add auto-release
 
 ```typescript
 import { define_config } from 'auto-release'
+import { semver } from 'auto-release/versioning'
+import { github } from 'auto-release/providers'
+import { node } from 'auto-release/components'
 
 export default define_config({
-  apps: [
-    {
-      name: 'my-app',
-      packages: ['packages/my-app'],
-      versioning: {
-        strategy: 'semver',
-        change_types: ['major', 'minor', 'patch', 'none'],
-      },
+  git: {
+    provider: github({
+      token: process.env.GITHUB_TOKEN!,
+      owner: 'your-org',
+      repo: 'your-repo',
+    }),
+    default_target_branch: 'main',
+  },
+  apps: {
+    'my-app': {
+      components: [node('packages/my-app')],
+      versioning: semver(),
+      changelog: 'CHANGELOG.md',
     },
-  ],
+  },
 })
 ```
 
@@ -87,159 +95,146 @@ Create `auto-release.config.ts` at your repository root:
 
 ```typescript
 import { define_config } from 'auto-release'
+import { semver, calver } from 'auto-release/versioning'
+import { github } from 'auto-release/providers'
+import { node } from 'auto-release/components'
 
 export default define_config({
-  // Required: List of apps to manage
-  apps: [
-    {
-      // App name (used in change file paths and tags)
-      name: 'web-app',
+  // Required: Git provider configuration
+  git: {
+    provider: github({
+      token: process.env.GITHUB_TOKEN!,
+      owner: 'your-org',
+      repo: 'your-repo',
+    }),
+    // Optional: Default target branch for PRs and releases (default: 'main')
+    default_target_branch: 'main',
+    // Optional: Release branch prefix (default: 'release')
+    default_release_branch_prefix: 'release',
+  },
+  
+  // Required: Apps record (object keyed by app name)
+  apps: {
+    'web-app': {
+      // Components that define version sources (e.g., package.json files)
+      components: [
+        node('packages/web'),
+        node('packages/shared'),
+      ],
       
-      // Packages belonging to this app (folders with package.json)
-      packages: ['packages/web', 'packages/shared'],
+      // Versioning strategy with optional formatter
+      versioning: semver({
+        // Optional: Custom formatter for changelog/release notes
+        formatter: default_changelog_formatter({
+          kind_map: {
+            major: 'Major Changes',
+            minor: 'Minor Changes',
+            patch: 'Patch Changes',
+          },
+        }),
+      }),
       
-      // Versioning configuration
-      versioning: {
-        strategy: 'semver', // or 'calver', or a custom strategy
-        change_types: ['major', 'minor', 'patch', 'none'],
-      },
-      
-      // Required: Changelog configuration
-      changelog: {
-        path: 'apps/web/CHANGELOG.md',
-      },
-      
-      // Optional: Deployment configuration
-      deploy: {
-        command: 'pnpm --filter web deploy', // shell command to run
-        // OR
-        handler: async (context) => {
-          // Custom deployment logic
-          await context.exec('docker build...')
-        },
-      },
+      // Required: Changelog file path (relative to repo root)
+      changelog: 'apps/web/CHANGELOG.md',
     },
-  ],
+  },
   
   // Optional: Directory for change files (default: '.changes')
   changes_dir: '.changes',
-  
-  // Optional: Custom version strategies
-  version_strategies: {
-    custom: my_custom_strategy,
-  },
-  
-  // Optional: Git configuration
-  git: {
-    // Tag format is always app_name@version (not customizable)
-  },
 })
 ```
 
 ### Apps Configuration
 
-Each app in the `apps` array represents a releasable unit:
+The `apps` configuration is a **record** (object) keyed by app name. Each app represents a releasable unit:
 
-- **`name`**: Unique identifier for the app
-- **`packages`**: Array of folder paths containing `package.json` files
-  - All packages must have the same version
+- **App name** (key): Unique identifier used in change file paths and git tags
+- **`components`**: Array of component functions that define version sources
+  - Components like `node()` read/write versions from `package.json` files
+  - All components must have the same version
   - Versions will be updated together on release
-- **`versioning`**: Version strategy and allowed change types
-- **`changelog`**: Required changelog configuration with path
-- **`deploy`**: Optional deployment configuration
+- **`versioning`**: Version manager (created via `semver()` or `calver()`)
+  - Includes `allowed_changes` (change types) and `bump()` function
+  - Optional `formatter` for custom changelog/release notes formatting
+- **`changelog`**: Required string path to changelog file (relative to repo root)
 
 ### Versioning Strategies
+
+Versioning strategies are created via factory functions (`semver()` or `calver()`) that return a `VersionManager` object.
 
 #### Semver Strategy
 
 Standard semantic versioning (X.Y.Z):
 
 ```typescript
-{
-  versioning: {
-    strategy: 'semver',
-    change_types: ['major', 'minor', 'patch', 'none'],
-  },
-}
+import { semver } from 'auto-release/versioning'
+import { default_changelog_formatter } from 'auto-release'
+
+// With default formatter
+versioning: semver()
+
+// With custom formatter
+versioning: semver({
+  formatter: default_changelog_formatter({
+    kind_map: {
+      major: 'Major Changes',
+      minor: 'Minor Changes',
+      patch: 'Patch Changes',
+    },
+  }),
+})
 ```
 
+- **Allowed changes**: `['major', 'minor', 'patch']`
 - `major`: Breaking changes (X.0.0)
 - `minor`: New features (0.Y.0)
 - `patch`: Bug fixes (0.0.Z)
-- `none`: Documentation/internal changes (no version bump)
-
-When multiple changes exist, the highest precedence wins (major > minor > patch > none).
+- When multiple changes exist, the highest precedence wins (major > minor > patch)
+- Returns current version if no changes provided
 
 #### Calver Strategy
 
-Calendar versioning (YYYY.MM.micro):
+Calendar versioning (YYYY.MINOR.PATCH):
 
 ```typescript
-import { calver_strategy } from 'auto-release'
+import { calver } from 'auto-release/versioning'
 
-{
-  versioning: {
-    strategy: calver_strategy,
-    change_types: ['feature', 'fix', 'none'],
-  },
-}
-```
+// With default formatter
+versioning: calver()
 
-- Format: `YYYY.MM.micro` (e.g., `2025.11.0`)
-- Year and month from current date
-- `micro` increments within the same month, resets on new month
-- All changes bump the version; types are for grouping only
-
-#### Custom Strategy
-
-Define your own versioning logic:
-
-```typescript
-import { define_config, type VersionStrategy } from 'auto-release'
-
-const custom_strategy: VersionStrategy = {
-  id: 'custom',
-  change_types: ['breaking', 'feature', 'fix'],
-  
-  parse(version: string) {
-    const [major, minor] = version.split('.')
-    return { major: parseInt(major), minor: parseInt(minor) }
-  },
-  
-  format(parsed: any) {
-    return `${parsed.major}.${parsed.minor}`
-  },
-  
-  bump({ current_version, changes, now }) {
-    const parsed = this.parse(current_version)
-    // Your custom bump logic
-    return this.format(parsed)
-  },
-}
-
-export default define_config({
-  apps: [
-    {
-      name: 'my-app',
-      packages: ['packages/app'],
-      versioning: {
-        strategy: custom_strategy,
-        change_types: ['breaking', 'feature', 'fix'],
-      },
+// With custom formatter
+versioning: calver({
+  formatter: default_changelog_formatter({
+    kind_map: {
+      feature: 'Features',
+      fix: 'Bug Fixes',
     },
-  ],
+  }),
 })
 ```
+
+- **Allowed changes**: `['feature', 'fix']`
+- Format: `YYYY.MINOR.PATCH` (e.g., `2025.1.2`)
+- Year from current date
+- `MINOR` increments for features, `PATCH` increments for fixes
+- Resets to `YYYY.1.0` when year changes
+- Returns current version if no changes provided
+
+#### Formatters
+
+Formatters control how changelogs and release notes are generated. The `default_changelog_formatter()` provides a simple default, but you can create custom formatters that implement the `Formatter` interface for full control over markdown parsing and generation.
 
 ## Change Files
 
 Change files are stored in `.changes/<appName>/` with the format:
 
 ```
-<type>.<slug>.md
+<kind>.<slug>.md
 ```
 
 Example: `major.add-authentication.md`, `patch.fix-login-bug.md`
+
+The `kind` must match one of the `allowed_changes` from your app's versioning strategy.
 
 ### Creating Change Files
 
@@ -265,6 +260,8 @@ auto-release record \
   --description "Users can now toggle between light and dark themes"
 ```
 
+Note: `--type` refers to the change `kind` (must be one of the versioning strategy's `allowed_changes`).
+
 ### Change File Format
 
 **Simple format** (title only):
@@ -273,7 +270,7 @@ auto-release record \
 Fix authentication bug in login flow
 ```
 
-**Detailed format** (with heading and body):
+**Detailed format** (with heading and description):
 
 ```markdown
 # Add user profile page
@@ -284,6 +281,8 @@ This adds a comprehensive user profile page with the following features:
 - Bio and social links
 - Privacy settings
 ```
+
+The description (body) is parsed as an array of lines and can be used by formatters to generate rich changelog entries.
 
 ## Commands
 
@@ -388,10 +387,11 @@ auto-release release --app web-app
 ```
 
 Actions performed:
-1. Computes next versions using version strategies
-2. Updates `version` field in all app's `package.json` files
-3. Appends new section to changelog
-4. Deletes consumed change files
+1. Computes next versions using version strategies (`bump()` function)
+2. Updates version in all app's component files (via component `update_version()`)
+3. Generates changelog section using versioning formatter
+4. Appends new section to changelog file
+5. Deletes consumed change files
 
 Options:
 - `--app <name>`: Filter by app name
@@ -420,7 +420,7 @@ auto-release deploy --app web-app
 ```
 
 Actions performed:
-1. Reads current version from packages
+1. Reads current version from components
 2. Runs deployment command/handler for each app
 3. If ALL deployments succeed, creates git tags
 4. If ANY deployment fails, no tags are created
@@ -438,39 +438,22 @@ After successful deployment:
 git push --tags
 ```
 
-### Deploy Configuration
+### Components
 
-#### Command-based
+Components define where versions are read from and written to. Built-in components:
 
-```typescript
-{
-  deploy: {
-    command: 'npm publish',
-  },
-}
-```
+- **`node(path)`**: Reads/writes version from `package.json` at the given path
+- **`expo(path)`**: Reads/writes version from `app.json` (Expo projects)
+- **`php(path)`**: Reads/writes version from `composer.json` (PHP projects)
 
-#### Handler-based
+Components are functions that return an object with:
+- `path`: Base path of the component
+- `parts`: Array of parts, each with:
+  - `path`: File path
+  - `get_current_version()`: Function to read current version
+  - `update_version(version)`: Function to write new version
 
-```typescript
-{
-  deploy: {
-    handler: async (context) => {
-      const { app, current_version, packages, logger, exec } = context
-      
-      logger.info(`Deploying ${app.name}@${current_version}`)
-      
-      // Build
-      await exec('pnpm build')
-      
-      // Upload to S3
-      await exec(`aws s3 sync dist/ s3://my-bucket/${current_version}/`)
-      
-      logger.success('Deployment complete')
-    },
-  },
-}
-```
+You can create custom components by implementing the `Component` interface.
 
 ## Workflows
 

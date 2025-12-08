@@ -1,7 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { define_config } from "../src/index.js";
-import { semver } from "../src/semantic-versioning.js";
-import { calver } from "../src/calendar-versioning.js";
+import { semver } from "../src/lib/versioning/semantic.js";
+import { calver } from "../src/lib/versioning/calendar.js";
+import { github } from "../src/lib/providers/github.js";
+import { node } from "../src/lib/components/node.js";
 
 describe("Public API exports", () => {
   it("should export define_config helper", () => {
@@ -11,39 +13,38 @@ describe("Public API exports", () => {
   it("should export semver factory function from versioning subpath", () => {
     expect(typeof semver).toBe("function");
     const strategy = semver();
-    expect(strategy.change_types).toEqual(["major", "minor", "patch", "none"]);
+    expect(strategy.allowed_changes).toEqual(["major", "minor", "patch"]);
     expect(typeof strategy.bump).toBe("function");
   });
 
   it("should export calver factory function from versioning subpath", () => {
     expect(typeof calver).toBe("function");
     const strategy = calver();
-    expect(strategy.change_types).toEqual(["feature", "fix", "none"]);
+    expect(strategy.allowed_changes).toEqual(["feature", "fix"]);
     expect(typeof strategy.bump).toBe("function");
   });
 
   it("should allow defining a config with strategy", () => {
     const config = define_config({
-      apps: [
-        {
-          name: "test-app",
-          packages: ["./packages/test"],
+      apps: {
+        "test-app": {
+          components: [node("./packages/test")],
           versioning: semver(),
-          changelog: {
-            path: "CHANGELOG.md",
-          },
+          changelog: "CHANGELOG.md",
         },
-      ],
-      git: {} as any,
+      },
+      git: {
+        provider: github({ token: "test", owner: "test", repo: "test" }),
+        default_target_branch: "main",
+      },
     });
 
-    expect(config.apps).toHaveLength(1);
-    expect(config.apps[0].name).toBe("test-app");
-    expect(config.apps[0].versioning.change_types).toEqual([
+    expect(Object.keys(config.apps)).toHaveLength(1);
+    expect(config.apps["test-app"]).toBeDefined();
+    expect(config.apps["test-app"].versioning.allowed_changes).toEqual([
       "major",
       "minor",
       "patch",
-      "none",
     ]);
   });
 });

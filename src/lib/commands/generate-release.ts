@@ -1,6 +1,9 @@
 import { relative } from "node:path";
-import { get_current_version, resolve_packages } from "../packages.js";
-import { discover_all_changes } from "../changes.js";
+import { get_current_version } from "../packages.js";
+import {
+  discover_all_changes,
+  discover_all_changes_with_metadata,
+} from "../changes.js";
 import {
   generate_updated_changelog,
   get_changelog_path,
@@ -9,6 +12,7 @@ import { generate_release_notes } from "../release-notes.js";
 import { create_logger } from "../utils/logger.js";
 import { create_command } from "../cli.js";
 import type { FileChange } from "../providers/types.js";
+import type { AppConfig } from "../types.js";
 
 export const generate_release = create_command({
   name: "generate-release",
@@ -41,10 +45,7 @@ export const generate_release = create_command({
     // Discover all changes
     let changes_map: Map<string, any>;
     try {
-      changes_map = await discover_all_changes(
-        config.apps,
-        config.changes_dir!
-      );
+      changes_map = await discover_all_changes(config.apps, config.changes_dir);
     } catch (error: any) {
       return {
         status: "error" as const,
@@ -53,11 +54,13 @@ export const generate_release = create_command({
     }
 
     // Filter apps if specified
-    const target_apps = app_filter
-      ? config.apps.filter((a) => a.name === app_filter)
-      : config.apps;
+    const target_app_entries = app_filter
+      ? Object.entries(config.apps).filter(
+          ([app_name]) => app_name === app_filter
+        )
+      : Object.entries(config.apps);
 
-    if (app_filter && target_apps.length === 0) {
+    if (app_filter && target_app_entries.length === 0) {
       return {
         status: "error" as const,
         error: `App "${app_filter}" not found in config`,
@@ -66,34 +69,36 @@ export const generate_release = create_command({
 
     // Process each app with pending changes
     const releases: Array<{
-      app: (typeof target_apps)[0];
+      app_name: string;
+      app: AppConfig<any>;
       current_version: string;
       next_version: string;
       changes: typeof changes_map extends Map<string, infer C> ? C : never;
       release_branch: string;
     }> = [];
 
-    for (const app of target_apps) {
-      const changes = changes_map.get(app.name) || [];
+    for (const [app_name, app] of target_app_entries) {
+      const changes = changes_map.get(app_name) || [];
 
       if (changes.length === 0) {
         continue;
       }
 
       try {
-        const current_version = await get_current_version(app, cwd);
+        const current_version = await get_current_version(app, app_name, cwd);
         const strategy = app.versioning;
 
         const next_version = strategy.bump({
-          current_version,
+          version: current_version,
           changes,
           date: new Date(),
         });
 
         // Determine release branch name
-        const release_branch = `${release_branch_prefix}/${app.name}`;
+        const release_branch = `${release_branch_prefix}/${app_name}`;
 
         releases.push({
+          app_name,
           app,
           current_version,
           next_version,
@@ -103,7 +108,7 @@ export const generate_release = create_command({
       } catch (error: any) {
         return {
           status: "error" as const,
-          error: `Failed to get version for ${app.name}: ${error.message}`,
+          error: `Failed to get version for ${app_name}: ${error.message}`,
         };
       }
     }
@@ -119,23 +124,11 @@ export const generate_release = create_command({
     // Display plan
     logger.info("Release PR plan:\n");
     for (const rel of releases) {
-      logger.info(`📦 ${rel.app.name}`);
+      logger.info(`📦 ${rel.app_name}`);
       logger.info(`  Version: ${rel.current_version} → ${rel.next_version}`);
       logger.info(`  Branch: ${rel.release_branch}`);
       logger.info(`  Changes: ${rel.changes.length} file(s)`);
-
-      // Show detailed change information
-      if (rel.changes.length > 0) {
-        logger.info("");
-        for (const change of rel.changes) {
-          const relative_path = relative(cwd, change.file_path);
-          logger.info(`    [${change.type}] ${change.title}`);
-          logger.info(`      ${relative_path}`);
-        }
-        logger.info("");
-      } else {
-        logger.info("");
-      }
+      logger.info("");
     }
 
     if (dry_run) {
@@ -147,48 +140,25 @@ export const generate_release = create_command({
     }
 
     // Get default branch (only needed for actual operations, not dry-run)
-    let default_branch: string;
+    const default_branch = config.git.default_target_branch;
     let default_branch_sha: string;
     try {
-      default_branch = await provider.get_default_branch();
       default_branch_sha = await provider.get_branch_sha(default_branch);
     } catch (error: any) {
       return {
         status: "error" as const,
-        error: `Failed to get default branch: ${error.message}`,
+        error: `Failed to get branch SHA for ${default_branch}: ${error.message}`,
       };
     }
 
     // Process each release
     const errors: string[] = [];
     for (const rel of releases) {
-      logger.info(`\nPreparing release for ${rel.app.name}...`);
+      logger.info(`\nPreparing release for ${rel.app_name}...`);
 
       try {
         // Fetch current files from default branch
-        const packages = await resolve_packages(rel.app, cwd);
-        const changelog_path = get_changelog_path(rel.app, cwd);
-
-        // Read current package.json files
-        const package_files: Array<{ path: string; content: string }> = [];
-        for (const pkg of packages) {
-          const relative_path = relative(cwd, pkg.path);
-          const content = await provider.get_file_content(
-            relative_path,
-            default_branch
-          );
-          if (!content) {
-            errors.push(
-              `Could not read ${relative_path} from ${default_branch}`
-            );
-            continue;
-          }
-          package_files.push({ path: relative_path, content });
-        }
-
-        if (errors.length > 0) {
-          continue;
-        }
+        const changelog_path = get_changelog_path(rel.app, rel.app_name, cwd);
 
         // Read current changelog
         const changelog_relative_path = relative(cwd, changelog_path);
@@ -200,38 +170,74 @@ export const generate_release = create_command({
         // Generate updated files
         const file_changes: FileChange[] = [];
 
-        // Update package.json files
-        for (const pkg_file of package_files) {
-          try {
-            const package_json = JSON.parse(pkg_file.content);
-            package_json.version = rel.next_version;
+        // Update component files
+        // Components define parts that need version updates
+        // We read current content from provider, update version, and write back
+        for (const component of rel.app.components) {
+          const component_result = component();
+          for (const part of component_result.parts) {
+            const part_relative_path = relative(cwd, part.path);
+            const current_content = await provider.get_file_content(
+              part_relative_path,
+              default_branch
+            );
+
+            if (!current_content) {
+              errors.push(
+                `Could not read ${part_relative_path} from ${default_branch}`
+              );
+              continue;
+            }
+
+            // Update version in content
+            // For JSON files (package.json, etc.), parse and update version field
+            let updated_content = current_content;
+            try {
+              const parsed = JSON.parse(current_content);
+              if (parsed.version !== undefined) {
+                parsed.version = rel.next_version;
+                updated_content = JSON.stringify(parsed, null, 2) + "\n";
+              }
+            } catch {
+              // Not JSON - for other file types, components would handle this
+              // but since we're working with provider content, we can't use update_version
+              // For now, skip non-JSON files or implement component-specific logic
+              // This is a limitation that may need component-specific handlers
+            }
+
             file_changes.push({
-              path: pkg_file.path,
-              content: JSON.stringify(package_json, null, 2) + "\n",
+              path: part_relative_path,
+              content: updated_content,
             });
-          } catch (error: any) {
-            errors.push(`Failed to parse ${pkg_file.path}: ${error.message}`);
-            continue;
           }
+        }
+
+        if (errors.length > 0) {
+          continue;
         }
 
         // Update changelog
         const updated_changelog = generate_updated_changelog({
           existing_content: existing_changelog,
           app: rel.app,
+          app_name: rel.app_name,
           current_version: rel.current_version,
           next_version: rel.next_version,
           date: new Date(),
           changes: rel.changes,
-          strategy: rel.app.versioning,
         });
         file_changes.push({
           path: changelog_relative_path,
           content: updated_changelog,
         });
 
-        // Delete change files
-        for (const change of rel.changes) {
+        // Delete change files - need to discover changes with metadata
+        const changes_with_metadata = await discover_all_changes_with_metadata(
+          { [rel.app_name]: rel.app },
+          config.changes_dir
+        );
+        const app_changes = changes_with_metadata.get(rel.app_name) || [];
+        for (const change of app_changes) {
           const change_relative_path = relative(cwd, change.file_path);
           file_changes.push({
             path: change_relative_path,
@@ -240,7 +246,7 @@ export const generate_release = create_command({
         }
 
         // Create or update branch
-        const commit_message = `chore: release ${rel.app.name} ${rel.next_version}`;
+        const commit_message = `chore: release ${rel.app_name} ${rel.next_version}`;
         await provider.create_or_update_branch(
           rel.release_branch,
           default_branch_sha,
@@ -250,13 +256,13 @@ export const generate_release = create_command({
         logger.success(`Updated branch: ${rel.release_branch}`);
 
         // Generate PR title and body
-        const pr_title = `chore: release ${rel.app.name} ${rel.next_version}`;
+        const pr_title = `chore: release ${rel.app_name} ${rel.next_version}`;
         const pr_body = generate_release_notes({
           app: rel.app,
+          app_name: rel.app_name,
           current_version: rel.current_version,
           next_version: rel.next_version,
           changes: rel.changes,
-          strategy: rel.app.versioning,
         });
 
         // Find existing PR or create new one
@@ -283,7 +289,7 @@ export const generate_release = create_command({
         }
       } catch (error: any) {
         errors.push(
-          `Failed to prepare release for ${rel.app.name}: ${error.message}`
+          `Failed to prepare release for ${rel.app_name}: ${error.message}`
         );
       }
     }

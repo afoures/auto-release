@@ -53,34 +53,37 @@ function validate_config(config: AutoReleaseConfig): void {
     );
   }
 
-  if (!config.apps || !Array.isArray(config.apps)) {
-    throw new Error('Config must have an "apps" array');
+  if (
+    !config.apps ||
+    typeof config.apps !== "object" ||
+    Array.isArray(config.apps)
+  ) {
+    throw new Error(
+      'Config must have an "apps" record (object keyed by app name)'
+    );
   }
 
-  if (config.apps.length === 0) {
+  const app_entries = Object.entries(config.apps);
+  if (app_entries.length === 0) {
     throw new Error("Config must have at least one app");
   }
 
-  for (const app of config.apps) {
-    if (!app.name) {
-      throw new Error('Each app must have a "name"');
+  for (const [app_name, app] of app_entries) {
+    if (!app.components || !Array.isArray(app.components)) {
+      throw new Error(`App "${app_name}" must have a "components" array`);
     }
 
-    if (!app.packages || !Array.isArray(app.packages)) {
-      throw new Error(`App "${app.name}" must have a "packages" array`);
-    }
-
-    if (app.packages.length === 0) {
-      throw new Error(`App "${app.name}" must have at least one package`);
+    if (app.components.length === 0) {
+      throw new Error(`App "${app_name}" must have at least one component`);
     }
 
     if (!app.versioning) {
-      throw new Error(`App "${app.name}" must have a "versioning" config`);
+      throw new Error(`App "${app_name}" must have a "versioning" config`);
     }
 
     if (typeof app.versioning.bump !== "function") {
       throw new Error(
-        `App "${app.name}" versioning must have a "bump" function. Did you forget to call the strategy function?`
+        `App "${app_name}" versioning must have a "bump" function. Did you forget to call the strategy function?`
       );
     }
 
@@ -89,12 +92,12 @@ function validate_config(config: AutoReleaseConfig): void {
       !Array.isArray(app.versioning.allowed_changes)
     ) {
       throw new Error(
-        `App "${app.name}" versioning must have a "change_types" array`
+        `App "${app_name}" versioning must have an "allowed_changes" array`
       );
     }
 
-    if (!app.changelog) {
-      throw new Error(`App "${app.name}" must have a changelog path`);
+    if (!app.changelog || typeof app.changelog !== "string") {
+      throw new Error(`App "${app_name}" must have a changelog path (string)`);
     }
   }
 }

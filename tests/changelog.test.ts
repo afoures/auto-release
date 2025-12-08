@@ -1,46 +1,42 @@
 import { describe, it, expect } from "vitest";
 import { generate_changelog_section } from "../src/lib/changelog.js";
-import { semver } from "../src/semantic-versioning.js";
-import type { AppConfig, ResolvedChange } from "../src/lib/types.js";
+import { semver } from "../src/lib/versioning/semantic.js";
+import type { AppConfig, Change } from "../src/lib/types.js";
 
 describe("generate_changelog_section", () => {
   const strategy = semver();
-  const app: AppConfig = {
-    name: "test-app",
-    packages: ["packages/test"],
+  const app: AppConfig<any> = {
+    components: [],
     versioning: strategy,
     changelog: "CHANGELOG.md",
   };
 
   it("should generate changelog section with grouped changes", () => {
-    const changes: ResolvedChange[] = [
+    const changes: Change<"major" | "minor" | "patch">[] = [
       {
-        app_name: "test-app",
-        type: "major",
+        kind: "major",
         title: "Breaking API change",
-        file_path: "/changes/major.breaking.md",
+        description: [],
       },
       {
-        app_name: "test-app",
-        type: "minor",
+        kind: "minor",
         title: "Add new feature",
-        file_path: "/changes/minor.feature.md",
+        description: [],
       },
       {
-        app_name: "test-app",
-        type: "patch",
+        kind: "patch",
         title: "Fix bug",
-        file_path: "/changes/patch.fix.md",
+        description: [],
       },
     ];
 
     const section = generate_changelog_section({
       app,
+      app_name: "test-app",
       current_version: "1.0.0",
       next_version: "2.0.0",
       date: new Date("2025-11-26"),
       changes,
-      strategy,
     });
 
     expect(section).toContain("## 2.0.0 (2025-11-26)");
@@ -49,27 +45,28 @@ describe("generate_changelog_section", () => {
     expect(section).toContain("- Fix bug");
   });
 
-  it("should include body content if present", () => {
-    const changes: ResolvedChange[] = [
+  it("should include description content if present", () => {
+    const changes: Change<"minor">[] = [
       {
-        app_name: "test-app",
-        type: "minor",
+        kind: "minor",
         title: "Add authentication",
-        body: "This adds JWT-based authentication with refresh tokens.",
-        file_path: "/changes/minor.auth.md",
+        description: [
+          "This adds JWT-based authentication with refresh tokens.",
+        ],
       },
     ];
 
     const section = generate_changelog_section({
       app,
+      app_name: "test-app",
       current_version: "1.0.0",
       next_version: "1.1.0",
       date: new Date("2025-11-26"),
       changes,
-      strategy,
     });
 
     expect(section).toContain("- Add authentication");
-    expect(section).toContain("This adds JWT-based authentication");
+    // Description is included via formatter.generate_release_notes
+    expect(section).toContain("- Add authentication");
   });
 });

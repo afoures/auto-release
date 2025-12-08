@@ -1,15 +1,16 @@
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
-import type { AppConfig, Change, VersionManager } from "./types.js";
+import type { AppConfig, Change } from "./types.js";
 
 /**
  * Get changelog path for an app
  */
 export function get_changelog_path(
   app: AppConfig<any>,
+  app_name: string,
   cwd: string = process.cwd()
 ): string {
-  return resolve(cwd, app.changelog.path);
+  return resolve(cwd, app.changelog);
 }
 
 /**
@@ -23,127 +24,32 @@ function format_date(date: Date): string {
 }
 
 /**
- * Default changelog formatter
- */
-export const default_changelog_formatter: ChangelogFormatter = {
-  template: ({ app_name }) => {
-    return [
-      `# \`${app_name}\` CHANGELOG`,
-      "",
-      "All notable changes to this project will be documented in this file.",
-      "",
-    ];
-  },
-  release: ({ version, date, changes }) => {
-    const formatted_date = format_date(date);
-    const lines: string[] = [`## ${version} (${formatted_date})`, ""];
-
-    for (const change of changes) {
-      lines.push(`- ${change.title}`);
-      if (change.body) {
-        lines.push("");
-        lines.push(change.body);
-      }
-      lines.push("");
-    }
-
-    return lines;
-  },
-};
-
-/**
- * Get the formatter for an app, falling back to default
- */
-function get_formatter(app: AppConfig<any>): ChangelogFormatter {
-  return app.changelog.formatter || default_changelog_formatter;
-}
-
-/**
- * Group changes by type
- */
-function group_changes_by_type(
-  changes: Change<any>[]
-): Map<string, Change<any>[]> {
-  const grouped = new Map<string, Change<any>[]>();
-
-  for (const change of changes) {
-    if (!grouped.has(change.kind)) {
-      grouped.set(change.kind, []);
-    }
-    grouped.get(change.kind)!.push(change);
-  }
-
-  return grouped;
-}
-
-/**
- * Capitalize first letter
- */
-function capitalize(str: string): string {
-  return str.charAt(0).toUpperCase() + str.slice(1);
-}
-
-/**
- * Format a single change entry
- */
-function format_change(change: Change<any>): string {
-  let entry = `- ${change.title}`;
-  if (change.description.length > 0) {
-    // Indent body content
-    const indented_description = change.description
-      .map((line) => `  ${line}`)
-      .join("\n");
-    entry += `\n${indented_description}`;
-  }
-  return entry;
-}
-
-/**
  * Generate changelog section for a release
  */
 export function generate_changelog_section(options: {
   app: AppConfig<any>;
+  app_name: string;
   current_version: string;
   next_version: string;
   date: Date;
   changes: Change<any>[];
-  versioning: VersionManager<any>;
 }): string {
   const { app, next_version, date, changes } = options;
-  const formatter = get_formatter(app);
+  const formatter = app.versioning.formatter;
 
-  // Use formatter if available
-  if (formatter.release) {
-    const lines = formatter.release({
-      version: next_version,
-      date,
-      changes,
-    });
-    return lines.join("\n") + "\n";
-  }
+  // Use formatter to generate release notes
+  const release_notes = formatter.generate_release_notes({
+    from_version: options.current_version,
+    to_version: next_version,
+    changes,
+  });
 
-  // Fallback to old format if no formatter
   const formatted_date = format_date(date);
-  let section = `## ${next_version} – ${formatted_date}\n\n`;
+  let section = `## ${next_version} (${formatted_date})\n\n`;
+  section += release_notes.join("\n");
+  section += "\n";
 
-  // Group changes by type
-  const grouped = group_changes_by_type(changes);
-
-  // Order types according to strategy's change_types order
-  const ordered_types = options.versioning.allowed_changes.filter((kind) =>
-    grouped.has(kind)
-  );
-
-  for (const type of ordered_types) {
-    const type_changes = grouped.get(type)!;
-    section += `### ${capitalize(type)}\n\n`;
-    for (const change of type_changes) {
-      section += format_change(change) + "\n";
-    }
-    section += "\n";
-  }
-
-  return section.trimEnd() + "\n";
+  return section;
 }
 
 /**
@@ -153,14 +59,13 @@ export function generate_changelog_section(options: {
 export function generate_updated_changelog(options: {
   existing_content: string | null;
   app: AppConfig<any>;
+  app_name: string;
   current_version: string;
   next_version: string;
   date: Date;
   changes: Change<any>[];
-  versioning: VersionManager<any>;
 }): string {
-  const { existing_content, app } = options;
-  const formatter = get_formatter(app);
+  const { existing_content, app_name } = options;
 
   // Generate new section
   const new_section = generate_changelog_section(options);
@@ -169,13 +74,8 @@ export function generate_updated_changelog(options: {
   let new_content: string;
 
   if (!existing_content || existing_content.trim() === "") {
-    // New changelog file - use template formatter if available
-    if (formatter.template) {
-      const template_lines = formatter.template({ app_name: app.name });
-      new_content = template_lines.join("\n") + "\n\n" + new_section;
-    } else {
-      new_content = `# ${app.name}\n\n${new_section}\n`;
-    }
+    // New changelog file
+    new_content = `# ${app_name}\n\n${new_section}\n`;
   } else {
     // Existing changelog - insert after title or at beginning
     const lines = existing_content.split("\n");
@@ -204,11 +104,11 @@ export function generate_updated_changelog(options: {
  */
 export async function write_changelog(options: {
   app: AppConfig<any>;
+  app_name: string;
   current_version: string;
   next_version: string;
   date: Date;
   changes: Change<any>[];
-  versioning: VersionManager<any>;
   changelog_path: string;
 }): Promise<void> {
   const { changelog_path } = options;

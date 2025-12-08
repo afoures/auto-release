@@ -3,8 +3,8 @@ import {
   default_changelog_formatter,
   VersionManager,
 } from "../src/index.js";
-import { github } from "../src/github-provider.js";
-import { node } from "../src/components.js";
+import { github } from "../src/lib/providers/github.js";
+import { node } from "../src/lib/components/node.js";
 
 type AllowedChangeKind = "breaking" | "feature" | "fix";
 /**
@@ -31,7 +31,12 @@ function custom_version(): VersionManager<AllowedChangeKind> {
     validate({ version }) {
       return true;
     },
-    bump({ version, changes }) {
+    bump({ version, changes, date }) {
+      // Return current version if no changes
+      if (changes.length === 0) {
+        return version;
+      }
+
       const [major_str, minor_str] = version.split(".");
       const parsed = {
         major: parseInt(major_str, 10),
@@ -58,18 +63,19 @@ function custom_version(): VersionManager<AllowedChangeKind> {
  */
 export default define_config({
   changes_dir: ".changes",
-  apps: {
-    "custom-app": {
-      components: [node("packages/custom")],
-      changelog: "CHANGELOG.md",
-      versioning: custom_version(),
-    },
-  },
   git: {
     provider: github({
       token: process.env.GITHUB_TOKEN!,
       owner: process.env.GITHUB_OWNER!,
       repo: process.env.GITHUB_REPO!,
     }),
+    default_target_branch: "main",
+  },
+  apps: {
+    "custom-app": {
+      components: [node("packages/custom")],
+      changelog: "CHANGELOG.md",
+      versioning: custom_version(),
+    },
   },
 });

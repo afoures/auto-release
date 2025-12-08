@@ -1,5 +1,5 @@
 import { relative } from "node:path";
-import { resolve_packages } from "../packages.js";
+import { get_current_version } from "../packages.js";
 import { get_changelog_path } from "../changelog.js";
 import { create_logger } from "../utils/logger.js";
 import { create_command } from "../cli.js";
@@ -31,44 +31,49 @@ export const tag_release = create_command({
     const release_branch_prefix = config.git.default_release_branch_prefix;
 
     // Get default branch
-    let default_branch: string;
+    const default_branch = config.git.default_target_branch;
     let default_branch_sha: string;
     try {
-      default_branch = await provider.get_default_branch();
       default_branch_sha = await provider.get_branch_sha(default_branch);
     } catch (error: any) {
       return {
         status: "error" as const,
-        error: `Failed to get default branch: ${error.message}`,
+        error: `Failed to get branch SHA for ${default_branch}: ${error.message}`,
       };
     }
 
-    let target_apps = config.apps;
+    let target_app_entries: Array<[string, (typeof config.apps)[string]]> = [];
 
     // If app is specified, use it
     if (app_filter) {
-      target_apps = config.apps.filter((a) => a.name === app_filter);
-      if (target_apps.length === 0) {
+      const app = config.apps[app_filter];
+      if (!app) {
         return {
           status: "error" as const,
           error: `App "${app_filter}" not found in config`,
         };
       }
+      target_app_entries = [[app_filter, app]];
     } else if (branch_name) {
       // Try to detect app from branch name
-      // Expected format: autorelease/{app_name} or custom/{app_name}
+      // Expected format: release/{app_name} or custom/{app_name}
       const branch_parts = branch_name.split("/");
       if (branch_parts.length >= 2) {
         const app_name = branch_parts.slice(1).join("/"); // Handle nested app names
-        target_apps = config.apps.filter((a) => a.name === app_name);
-        if (target_apps.length === 0) {
+        const app = config.apps[app_name];
+        if (app) {
+          target_app_entries = [[app_name, app]];
+        } else {
           // Try matching by release branch name
-          target_apps = config.apps.filter(
-            (a) => `${release_branch_prefix}/${a.name}` === branch_name
-          );
+          for (const [name, app_config] of Object.entries(config.apps)) {
+            if (`${release_branch_prefix}/${name}` === branch_name) {
+              target_app_entries = [[name, app_config]];
+              break;
+            }
+          }
         }
       }
-      if (target_apps.length === 0) {
+      if (target_app_entries.length === 0) {
         return {
           status: "error" as const,
           error: `Could not detect app from branch "${branch_name}". Please specify --app`,
@@ -80,46 +85,21 @@ export const tag_release = create_command({
       logger.warn(
         "No app or branch specified. Publishing all apps (this may not be intended)"
       );
+      target_app_entries = Object.entries(config.apps);
     }
 
     // Process each app
     const errors: string[] = [];
-    for (const app of target_apps) {
-      logger.info(`\nPublishing release for ${app.name}...`);
+    for (const [app_name, app] of target_app_entries) {
+      logger.info(`\nPublishing release for ${app_name}...`);
 
       try {
-        // Get current version from default branch (after PR merge)
-        const packages = await resolve_packages(app, cwd);
-        const package_path = relative(cwd, packages[0].path);
-        const package_content = await provider.get_file_content(
-          package_path,
-          default_branch
-        );
-
-        if (!package_content) {
-          errors.push(`Could not read ${package_path} from ${default_branch}`);
-          continue;
-        }
-
-        let package_json: any;
-        try {
-          package_json = JSON.parse(package_content);
-        } catch (error: any) {
-          errors.push(`Failed to parse ${package_path}: ${error.message}`);
-          continue;
-        }
-
-        const version = package_json.version;
-
-        if (!version) {
-          errors.push(`No version found in ${package_path}`);
-          continue;
-        }
-
-        logger.info(`Version: ${version}`);
+        // Get current version from components
+        const current_version = await get_current_version(app, app_name, cwd);
+        logger.info(`Version: ${current_version}`);
 
         // Get changelog content for release notes
-        const changelog_path = get_changelog_path(app, cwd);
+        const changelog_path = get_changelog_path(app, app_name, cwd);
         const changelog_relative_path = relative(cwd, changelog_path);
         const changelog_content = await provider.get_file_content(
           changelog_relative_path,
@@ -127,7 +107,7 @@ export const tag_release = create_command({
         );
 
         // Extract release notes from changelog
-        let release_body = `Release ${app.name} ${version}`;
+        let release_body = `Release ${app_name} ${current_version}`;
         if (changelog_content) {
           // Extract the first release section (most recent)
           const lines = changelog_content.split("\n");
@@ -139,7 +119,10 @@ export const tag_release = create_command({
             if (
               lines[i].match(
                 new RegExp(
-                  `^## ${version.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`
+                  `^## ${current_version.replace(
+                    /[.*+?^${}()|[\]\\]/g,
+                    "\\$&"
+                  )}`
                 )
               )
             ) {
@@ -149,7 +132,7 @@ export const tag_release = create_command({
             }
             if (in_release_section) {
               // Stop at next release section
-              if (lines[i].match(/^## \d+\.\d+\.\d+/)) {
+              if (lines[i].match(/^## /)) {
                 break;
               }
               release_lines.push(lines[i]);
@@ -162,17 +145,17 @@ export const tag_release = create_command({
         }
 
         // Create git tag
-        const tag_name = `${app.name}@${version}`;
+        const tag_name = `${app_name}@${current_version}`;
         await provider.create_tag(tag_name, default_branch_sha, release_body);
         logger.success(`Created tag: ${tag_name}`);
 
         // Create release
-        const release_name = `${app.name} ${version}`;
+        const release_name = `${app_name} ${current_version}`;
         await provider.create_release(tag_name, release_name, release_body);
         logger.success(`Created release: ${release_name}`);
       } catch (error: any) {
         errors.push(
-          `Failed to publish release for ${app.name}: ${error.message}`
+          `Failed to publish release for ${app_name}: ${error.message}`
         );
       }
     }

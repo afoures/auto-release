@@ -1,26 +1,25 @@
 import { describe, it, expect } from "vitest";
-import { semver } from "../src/semantic-versioning.js";
-import { calver } from "../src/calendar-versioning.js";
-import type { ResolvedChange } from "../src/lib/types.js";
+import { semver } from "../src/lib/versioning/semantic.js";
+import { calver } from "../src/lib/versioning/calendar.js";
+import type { Change } from "../src/lib/versioning/types.js";
 
 describe("semver", () => {
-  it("should return a strategy with correct change_types", () => {
+  it("should return a strategy with correct allowed_changes", () => {
     const strategy = semver();
-    expect(strategy.change_types).toEqual(["major", "minor", "patch", "none"]);
+    expect(strategy.allowed_changes).toEqual(["major", "minor", "patch"]);
   });
 
   it("should bump major version", () => {
     const strategy = semver();
-    const changes: ResolvedChange[] = [
+    const changes: Change<"major" | "minor" | "patch">[] = [
       {
-        app_name: "test",
-        type: "major",
+        kind: "major",
         title: "Breaking change",
-        file_path: "/test.md",
+        description: [],
       },
     ];
     const result = strategy.bump({
-      current_version: "1.2.3",
+      version: "1.2.3",
       changes,
       date: new Date(),
     });
@@ -29,16 +28,15 @@ describe("semver", () => {
 
   it("should bump minor version", () => {
     const strategy = semver();
-    const changes: ResolvedChange[] = [
+    const changes: Change<"major" | "minor" | "patch">[] = [
       {
-        app_name: "test",
-        type: "minor",
+        kind: "minor",
         title: "New feature",
-        file_path: "/test.md",
+        description: [],
       },
     ];
     const result = strategy.bump({
-      current_version: "1.2.3",
+      version: "1.2.3",
       changes,
       date: new Date(),
     });
@@ -47,64 +45,53 @@ describe("semver", () => {
 
   it("should bump patch version", () => {
     const strategy = semver();
-    const changes: ResolvedChange[] = [
+    const changes: Change<"major" | "minor" | "patch">[] = [
       {
-        app_name: "test",
-        type: "patch",
+        kind: "patch",
         title: "Bug fix",
-        file_path: "/test.md",
+        description: [],
       },
     ];
     const result = strategy.bump({
-      current_version: "1.2.3",
+      version: "1.2.3",
       changes,
       date: new Date(),
     });
     expect(result).toBe("1.2.4");
   });
 
-  it('should not bump on "none" type', () => {
+  it("should bump patch version when no changes", () => {
     const strategy = semver();
-    const changes: ResolvedChange[] = [
-      {
-        app_name: "test",
-        type: "none",
-        title: "Documentation update",
-        file_path: "/test.md",
-      },
-    ];
     const result = strategy.bump({
-      current_version: "1.2.3",
-      changes,
+      version: "1.2.3",
+      changes: [],
       date: new Date(),
     });
-    expect(result).toBe("1.2.3");
+    // When no changes, defaults to patch bump
+    expect(result).toBe("1.2.4");
   });
 
   it("should use highest precedence when multiple changes", () => {
     const strategy = semver();
-    const changes: ResolvedChange[] = [
+    const changes: Change<"major" | "minor" | "patch">[] = [
       {
-        app_name: "test",
-        type: "patch",
+        kind: "patch",
         title: "Bug fix",
-        file_path: "/test1.md",
+        description: [],
       },
       {
-        app_name: "test",
-        type: "major",
+        kind: "major",
         title: "Breaking change",
-        file_path: "/test2.md",
+        description: [],
       },
       {
-        app_name: "test",
-        type: "minor",
+        kind: "minor",
         title: "New feature",
-        file_path: "/test3.md",
+        description: [],
       },
     ];
     const result = strategy.bump({
-      current_version: "1.2.3",
+      version: "1.2.3",
       changes,
       date: new Date(),
     });
@@ -115,88 +102,86 @@ describe("semver", () => {
     const strategy = semver();
     expect(() =>
       strategy.bump({
-        current_version: "1.2",
+        version: "1.2",
         changes: [
           {
-            app_name: "test",
-            type: "patch",
+            kind: "patch",
             title: "fix",
-            file_path: "/test.md",
+            description: [],
           },
         ],
         date: new Date(),
       })
-    ).toThrow("Invalid semver version");
+    ).toThrow("Invalid semantic version");
   });
 });
 
 describe("calver", () => {
-  it("should return a strategy with correct change_types", () => {
+  it("should return a strategy with correct allowed_changes", () => {
     const strategy = calver();
-    expect(strategy.change_types).toEqual(["feature", "fix", "none"]);
+    expect(strategy.allowed_changes).toEqual(["feature", "fix"]);
   });
 
-  it("should increment micro when same month", () => {
+  it("should increment minor when same year", () => {
     const strategy = calver();
-    const changes: ResolvedChange[] = [
+    const changes: Change<"feature" | "fix">[] = [
       {
-        app_name: "test",
-        type: "feature",
+        kind: "feature",
         title: "New feature",
-        file_path: "/test.md",
+        description: [],
       },
     ];
     const result = strategy.bump({
-      current_version: "2025.11.0",
+      version: "2025.1.0",
       changes,
       date: new Date("2025-11-26"),
     });
-    expect(result).toBe("2025.11.1");
+    expect(result).toBe("2025.2.0");
   });
 
-  it("should reset micro when different month", () => {
+  it("should reset when different year", () => {
     const strategy = calver();
-    const changes: ResolvedChange[] = [
+    const changes: Change<"feature" | "fix">[] = [
       {
-        app_name: "test",
-        type: "feature",
+        kind: "feature",
         title: "New feature",
-        file_path: "/test.md",
+        description: [],
       },
     ];
     const result = strategy.bump({
-      current_version: "2025.11.5",
+      version: "2025.5.0",
       changes,
-      date: new Date("2025-12-01"),
+      date: new Date("2026-01-01"),
     });
-    expect(result).toBe("2025.12.0");
+    expect(result).toBe("2026.1.0");
   });
 
-  it("should return current version when no changes", () => {
+  it("should bump patch version when no changes", () => {
     const strategy = calver();
     const result = strategy.bump({
-      current_version: "2025.11.0",
+      version: "2025.1.0",
       changes: [],
       date: new Date("2025-11-26"),
     });
-    expect(result).toBe("2025.11.0");
+    // When no changes, defaults to fix (patch) bump
+    expect(result).toBe("2025.1.1");
   });
 
   it("should throw on invalid calver", () => {
     const strategy = calver();
+    // Invalid version format will cause parse() to throw
     expect(() =>
       strategy.bump({
-        current_version: "2025-11-5",
+        version: "invalid-version",
         changes: [
           {
-            app_name: "test",
-            type: "feature",
+            kind: "feature",
             title: "feat",
-            file_path: "/test.md",
+            description: [],
           },
         ],
         date: new Date(),
       })
-    ).toThrow("Invalid calver version");
+    ).toThrow("Invalid calendar version");
   });
 });
