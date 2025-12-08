@@ -8,9 +8,9 @@ export type {
   VersionManager,
   Change,
   GitProvider,
+  Formatter,
+  ChangeKindDisplayMap,
 } from "./lib/types.js";
 
 // Export config helper
 export { define_config } from "./lib/config.js";
-
-export { default_changelog_formatter } from "./lib/formatter.js";

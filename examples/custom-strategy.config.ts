@@ -1,7 +1,8 @@
 import {
   define_config,
-  default_changelog_formatter,
   VersionManager,
+  Formatter,
+  ChangeKindDisplayMap,
 } from "../src/index.js";
 import { github } from "../src/lib/providers/github.js";
 import { node } from "../src/lib/components/node.js";
@@ -14,13 +15,8 @@ function custom_version(): VersionManager<AllowedChangeKind> {
   const allowed_changes = ["breaking", "feature", "fix"] as const;
   return {
     allowed_changes,
-    formatter: default_changelog_formatter<AllowedChangeKind>({
-      kind_map: {
-        breaking: "Breaking Change",
-        feature: "Feature",
-        fix: "Bug Fix",
-      },
-    })(allowed_changes),
+    formatter: {} as Formatter<AllowedChangeKind, any>,
+    display_map: {} as ChangeKindDisplayMap<AllowedChangeKind>,
     compare(version_a, version_b) {
       const a = version_a.split(".");
       const b = version_b.split(".");

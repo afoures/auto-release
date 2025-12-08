@@ -4,9 +4,21 @@
 
 import type { Component } from "./components/types.js";
 import type { GitProvider } from "./providers/types.js";
-import type { VersionManager, Change, Formatter } from "./versioning/types.js";
+import type {
+  VersionManager,
+  Change,
+  Formatter,
+  ChangeKindDisplayMap,
+} from "./versioning/types.js";
 
-export type { GitProvider, VersionManager, Change, Formatter, Component };
+export type {
+  GitProvider,
+  VersionManager,
+  Change,
+  Formatter,
+  Component,
+  ChangeKindDisplayMap,
+};
 
 /**
  * Logger interface for structured output

@@ -7,7 +7,7 @@ export type Change<kind extends string> = {
 };
 
 export type Formatter<
-  change_kinds extends string,
+  change_kinds extends string = string,
   parsed_changelog extends {
     releases: Array<{
       version: string;
@@ -32,6 +32,11 @@ export type Formatter<
   }): Array<string>;
 };
 
+export type ChangeKindDisplayMap<change_kind extends string> = Record<
+  NoInfer<change_kind>,
+  { singular: string; plural: string }
+>;
+
 export type VersionManager<
   change_kind extends string = string,
   parsed_changelog extends {
@@ -55,4 +60,5 @@ export type VersionManager<
     date: Date;
   }): string;
   formatter: Formatter<change_kind, parsed_changelog>;
+  display_map: ChangeKindDisplayMap<change_kind>;
 };
