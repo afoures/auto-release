@@ -54,13 +54,11 @@ export const generate_release = create_command({
     }
 
     // Filter apps if specified
-    const target_app_entries = app_filter
-      ? Object.entries(config.apps).filter(
-          ([app_name]) => app_name === app_filter
-        )
-      : Object.entries(config.apps);
+    const target_apps = app_filter
+      ? config.apps.filter((app) => app.name === app_filter)
+      : config.apps;
 
-    if (app_filter && target_app_entries.length === 0) {
+    if (app_filter && target_apps.length === 0) {
       return {
         status: "error" as const,
         error: `App "${app_filter}" not found in config`,
@@ -69,15 +67,15 @@ export const generate_release = create_command({
 
     // Process each app with pending changes
     const releases: Array<{
-      app_name: string;
-      app: AppDefinition;
+      app: { name: string; definition: AppDefinition };
       current_version: string;
       next_version: string;
       changes: typeof changes_map extends Map<string, infer C> ? C : never;
       release_branch: string;
     }> = [];
 
-    for (const [app_name, app] of target_app_entries) {
+    for (const app of target_apps) {
+      const app_name = app.name;
       const changes = changes_map.get(app_name) || [];
 
       if (changes.length === 0) {
@@ -85,8 +83,8 @@ export const generate_release = create_command({
       }
 
       try {
-        const current_version = await get_current_version(app, app_name, cwd);
-        const strategy = app.versioning;
+        const current_version = await get_current_version(app, cwd);
+        const strategy = app.definition.versioning;
 
         const next_version = strategy.bump({
           version: current_version,
@@ -98,7 +96,6 @@ export const generate_release = create_command({
         const release_branch = `${release_branch_prefix}/${app_name}`;
 
         releases.push({
-          app_name,
           app,
           current_version,
           next_version,
@@ -124,7 +121,7 @@ export const generate_release = create_command({
     // Display plan
     logger.info("Release PR plan:\n");
     for (const rel of releases) {
-      logger.info(`📦 ${rel.app_name}`);
+      logger.info(`📦 ${rel.app.name}`);
       logger.info(`  Version: ${rel.current_version} → ${rel.next_version}`);
       logger.info(`  Branch: ${rel.release_branch}`);
       logger.info(`  Changes: ${rel.changes.length} file(s)`);
@@ -154,11 +151,11 @@ export const generate_release = create_command({
     // Process each release
     const errors: string[] = [];
     for (const rel of releases) {
-      logger.info(`\nPreparing release for ${rel.app_name}...`);
+      logger.info(`\nPreparing release for ${rel.app.name}...`);
 
       try {
         // Fetch current files from default branch
-        const changelog_path = get_changelog_path(rel.app, rel.app_name, cwd);
+        const changelog_path = get_changelog_path(rel.app.definition, cwd);
 
         // Read current changelog
         const changelog_relative_path = relative(cwd, changelog_path);
@@ -173,7 +170,7 @@ export const generate_release = create_command({
         // Update component files
         // Components define parts that need version updates
         // We read current content from provider, update version, and write back
-        for (const component of rel.app.components) {
+        for (const component of rel.app.definition.components) {
           const component_result = component();
           for (const part of component_result.parts) {
             const part_relative_path = relative(cwd, part.path);
@@ -220,7 +217,6 @@ export const generate_release = create_command({
         const updated_changelog = generate_updated_changelog({
           existing_content: existing_changelog,
           app: rel.app,
-          app_name: rel.app_name,
           current_version: rel.current_version,
           next_version: rel.next_version,
           date: new Date(),
@@ -233,10 +229,10 @@ export const generate_release = create_command({
 
         // Delete change files - need to discover changes with metadata
         const changes_with_metadata = await discover_all_changes_with_metadata(
-          { [rel.app_name]: rel.app },
+          [rel.app],
           config.changes_dir
         );
-        const app_changes = changes_with_metadata.get(rel.app_name) || [];
+        const app_changes = changes_with_metadata.get(rel.app.name) || [];
         for (const change of app_changes) {
           const change_relative_path = relative(cwd, change.file_path);
           file_changes.push({
@@ -246,7 +242,7 @@ export const generate_release = create_command({
         }
 
         // Create or update branch
-        const commit_message = `chore: release ${rel.app_name} ${rel.next_version}`;
+        const commit_message = `chore: release ${rel.app.name} ${rel.next_version}`;
         await provider.create_or_update_branch(
           rel.release_branch,
           default_branch_sha,
@@ -256,10 +252,9 @@ export const generate_release = create_command({
         logger.success(`Updated branch: ${rel.release_branch}`);
 
         // Generate PR title and body
-        const pr_title = `chore: release ${rel.app_name} ${rel.next_version}`;
+        const pr_title = `chore: release ${rel.app.name} ${rel.next_version}`;
         const pr_body = generate_release_notes({
           app: rel.app,
-          app_name: rel.app_name,
           current_version: rel.current_version,
           next_version: rel.next_version,
           changes: rel.changes,
@@ -289,7 +284,7 @@ export const generate_release = create_command({
         }
       } catch (error: any) {
         errors.push(
-          `Failed to prepare release for ${rel.app_name}: ${error.message}`
+          `Failed to prepare release for ${rel.app.name}: ${error.message}`
         );
       }
     }

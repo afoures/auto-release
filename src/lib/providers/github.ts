@@ -51,11 +51,6 @@ export function github(options: GitHubOptions): GitProvider {
   }
 
   return {
-    async get_default_branch(): Promise<string> {
-      const repo_info = await api_request("");
-      return repo_info.default_branch;
-    },
-
     async get_branch_sha(branch: string): Promise<string> {
       const ref = await api_request(`/git/ref/heads/${branch}`);
       return ref.object.sha;

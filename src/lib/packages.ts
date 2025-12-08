@@ -13,13 +13,12 @@ export interface ResolvedPackage {
  * Resolve and read component files for an app
  */
 export async function resolve_packages(
-  app: AppDefinition,
-  app_name: string,
+  app: { name: string; definition: AppDefinition },
   cwd: string = process.cwd()
 ): Promise<ResolvedPackage[]> {
   const packages: ResolvedPackage[] = [];
 
-  for (const component of app.components) {
+  for (const component of app.definition.components) {
     const component_result = component();
     for (const part of component_result.parts) {
       const resolved_path = resolve(cwd, part.path);
@@ -39,23 +38,24 @@ export async function resolve_packages(
  * Get current version for an app (validates all components have same version)
  */
 export async function get_current_version(
-  app: AppDefinition,
-  app_name: string,
+  app: { name: string; definition: AppDefinition },
   cwd: string = process.cwd()
 ): Promise<string> {
-  const packages = await resolve_packages(app, app_name, cwd);
+  const packages = await resolve_packages(app, cwd);
 
   if (packages.length === 0) {
-    throw new Error(`App "${app_name}" has no components`);
+    throw new Error(`App "${app.name}" has no components`);
   }
 
   const versions = new Set(packages.map((pkg) => pkg.version));
 
   if (versions.size > 1) {
     throw new Error(
-      `App "${app_name}" has mismatched versions across components: ${Array.from(
-        versions
-      ).join(", ")}`
+      `App "${
+        app.name
+      }" has mismatched versions across components: ${Array.from(versions).join(
+        ", "
+      )}`
     );
   }
 
@@ -83,16 +83,16 @@ export async function write_version(
  * Validate that all packages exist and have matching versions
  */
 export async function validate_packages(
-  apps: Record<string, AppDefinition>,
+  apps: Array<{ name: string; definition: AppDefinition }>,
   cwd: string = process.cwd()
 ): Promise<{ valid: boolean; errors: string[] }> {
   const errors: string[] = [];
 
-  for (const [app_name, app] of Object.entries(apps)) {
+  for (const app of apps) {
     try {
       await get_current_version(app, cwd);
     } catch (error: any) {
-      errors.push(`App "${app_name}": ${error.message}`);
+      errors.push(`App "${app.name}": ${error.message}`);
     }
   }
 
