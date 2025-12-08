@@ -1,11 +1,11 @@
-import type { AppDefinition, Change } from "./types.js";
+import type { Change, ManagedApplication } from "./types.js";
 import { generate_changelog_section } from "./changelog.js";
 
 /**
  * Generate release notes for PR body
  */
 export function generate_release_notes(options: {
-  app: { name: string; definition: AppDefinition };
+  app: ManagedApplication;
   current_version: string;
   next_version: string;
   changes: Change<any>[];
@@ -21,7 +21,7 @@ export function generate_release_notes(options: {
   }
 
   // Use formatter to generate release notes
-  const formatter = app.definition.versioning.formatter;
+  const formatter = app.versioning.formatter;
   const release_note_lines = formatter.generate_release_notes({
     from_version: current_version,
     to_version: next_version,
@@ -38,7 +38,7 @@ export function generate_release_notes(options: {
  * Generate release body for GitHub/GitLab releases
  */
 export function generate_release_body(options: {
-  app: { name: string; definition: AppDefinition };
+  app: ManagedApplication;
   current_version: string;
   next_version: string;
   date: Date;

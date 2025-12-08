@@ -3,7 +3,7 @@ import { get_current_version } from "../packages.js";
 import { get_changelog_path } from "../changelog.js";
 import { create_logger } from "../utils/logger.js";
 import { create_command } from "../cli.js";
-import type { AppDefinition } from "../types.js";
+import type { ManagedApplication } from "../types.js";
 
 export const tag_release = create_command({
   name: "tag-release",
@@ -43,11 +43,13 @@ export const tag_release = create_command({
       };
     }
 
-    let target_apps: Array<{ name: string; definition: AppDefinition }> = [];
+    let target_apps: Array<ManagedApplication> = [];
 
     // If app is specified, use it
     if (app_filter) {
-      const app = config.apps.find((item) => item.name === app_filter);
+      const app = config.managed_applications.find(
+        (item) => item.name === app_filter
+      );
       if (!app) {
         return {
           status: "error" as const,
@@ -62,8 +64,8 @@ export const tag_release = create_command({
       if (branch_parts.length >= 2) {
         const app_name = branch_parts.slice(1).join("/"); // Handle nested app names
         const app =
-          config.apps.find((item) => item.name === app_name) ||
-          config.apps.find(
+          config.managed_applications.find((item) => item.name === app_name) ||
+          config.managed_applications.find(
             (item) => `${release_branch_prefix}/${item.name}` === branch_name
           );
         if (app) {
@@ -82,7 +84,7 @@ export const tag_release = create_command({
       logger.warn(
         "No app or branch specified. Publishing all apps (this may not be intended)"
       );
-      target_apps = config.apps;
+      target_apps = config.managed_applications;
     }
 
     // Process each app
@@ -97,7 +99,7 @@ export const tag_release = create_command({
         logger.info(`Version: ${current_version}`);
 
         // Get changelog content for release notes
-        const changelog_path = get_changelog_path(app.definition, cwd);
+        const changelog_path = get_changelog_path(app, cwd);
         const changelog_relative_path = relative(cwd, changelog_path);
         const changelog_content = await provider.get_file_content(
           changelog_relative_path,

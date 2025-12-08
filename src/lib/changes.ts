@@ -1,6 +1,6 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { Change, AppDefinition } from "./types.js";
+import type { Change, ManagedApplication } from "./types.js";
 import { regex } from "arkregex";
 
 const CHANGE_FILE_REGEX = regex(
@@ -126,14 +126,14 @@ export interface ChangeWithMetadata<change_kind extends string>
  * Discover changes for all apps (normalized config)
  */
 export async function discover_all_changes(
-  apps: Array<{ name: string; definition: AppDefinition }>,
+  apps: Array<ManagedApplication>,
   changes_dir: string
 ): Promise<Map<string, Change<any>[]>> {
   const changes_map = new Map<string, Change<any>[]>();
 
   for (const app of apps) {
     const app_name = app.name;
-    const valid_change_types = app.definition.versioning.allowed_changes;
+    const valid_change_types = app.versioning.allowed_changes;
 
     const changes = await discover_changes(
       app_name,
@@ -150,14 +150,14 @@ export async function discover_all_changes(
  * Discover changes with metadata for all apps
  */
 export async function discover_all_changes_with_metadata(
-  apps: Array<{ name: string; definition: AppDefinition }>,
+  apps: Array<ManagedApplication>,
   changes_dir: string
 ): Promise<Map<string, ChangeWithMetadata<any>[]>> {
   const changes_map = new Map<string, ChangeWithMetadata<any>[]>();
 
   for (const app of apps) {
     const app_name = app.name;
-    const valid_change_types = app.definition.versioning.allowed_changes;
+    const valid_change_types = app.versioning.allowed_changes;
     const app_changes_dir = join(changes_dir, app_name);
 
     let files: string[];

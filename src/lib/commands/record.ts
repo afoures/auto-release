@@ -45,7 +45,7 @@ export const record = create_command({
     // Determine app
     let app_name = args.app;
     if (!app_name) {
-      const app_names = config.apps.map((app) => app.name);
+      const app_names = config.managed_applications.map((app) => app.name);
       if (app_names.length === 1) {
         app_name = app_names[0];
         log.success(`Defaulting to app: ${app_name}`);
@@ -64,7 +64,9 @@ export const record = create_command({
       }
     }
 
-    const app = config.apps.find((item) => item.name === app_name);
+    const app = config.managed_applications.find(
+      (item) => item.name === app_name
+    );
     if (!app) {
       return {
         status: "error" as const,
@@ -73,7 +75,7 @@ export const record = create_command({
     }
 
     // Get valid change types from the versioning strategy
-    const valid_types = Array.from(app.definition.versioning.allowed_changes);
+    const valid_types = Array.from(app.versioning.allowed_changes);
 
     // Determine change type
     let change_type = args.type;

@@ -12,7 +12,7 @@ import { generate_release_notes } from "../release-notes.js";
 import { create_logger } from "../utils/logger.js";
 import { create_command } from "../cli.js";
 import type { FileChange } from "../providers/types.js";
-import type { AppDefinition } from "../types.js";
+import type { ManagedApplication } from "../types.js";
 
 export const generate_release = create_command({
   name: "generate-release",
@@ -45,7 +45,10 @@ export const generate_release = create_command({
     // Discover all changes
     let changes_map: Map<string, any>;
     try {
-      changes_map = await discover_all_changes(config.apps, config.changes_dir);
+      changes_map = await discover_all_changes(
+        config.managed_applications,
+        config.changes_dir
+      );
     } catch (error: any) {
       return {
         status: "error" as const,
@@ -55,8 +58,8 @@ export const generate_release = create_command({
 
     // Filter apps if specified
     const target_apps = app_filter
-      ? config.apps.filter((app) => app.name === app_filter)
-      : config.apps;
+      ? config.managed_applications.filter((app) => app.name === app_filter)
+      : config.managed_applications;
 
     if (app_filter && target_apps.length === 0) {
       return {
@@ -67,7 +70,7 @@ export const generate_release = create_command({
 
     // Process each app with pending changes
     const releases: Array<{
-      app: { name: string; definition: AppDefinition };
+      app: ManagedApplication;
       current_version: string;
       next_version: string;
       changes: typeof changes_map extends Map<string, infer C> ? C : never;
@@ -84,7 +87,7 @@ export const generate_release = create_command({
 
       try {
         const current_version = await get_current_version(app, cwd);
-        const strategy = app.definition.versioning;
+        const strategy = app.versioning;
 
         const next_version = strategy.bump({
           version: current_version,
@@ -155,7 +158,7 @@ export const generate_release = create_command({
 
       try {
         // Fetch current files from default branch
-        const changelog_path = get_changelog_path(rel.app.definition, cwd);
+        const changelog_path = get_changelog_path(rel.app, cwd);
 
         // Read current changelog
         const changelog_relative_path = relative(cwd, changelog_path);
@@ -170,7 +173,7 @@ export const generate_release = create_command({
         // Update component files
         // Components define parts that need version updates
         // We read current content from provider, update version, and write back
-        for (const component of rel.app.definition.components) {
+        for (const component of rel.app.components) {
           const component_result = component();
           for (const part of component_result.parts) {
             const part_relative_path = relative(cwd, part.path);
