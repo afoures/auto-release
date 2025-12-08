@@ -1,7 +1,81 @@
 import { validate_packages } from "../packages.js";
-import { discover_all_changes } from "../changes.js";
+import {
+  discover_all_changes,
+  parse_change_filename,
+  parse_change_markdown,
+} from "../changes.js";
 import { create_logger } from "../utils/logger.js";
 import { create_command } from "../cli.js";
+import type { Component, ManagedApplication } from "../types.js";
+import { join } from "node:path";
+import { readdirSync, readFileSync } from "node:fs";
+
+function verify_component_version_consistency(
+  app: ManagedApplication
+): { ok: true } | { ok: false; errors: string[] } {
+  const versions = new Set<string>();
+  for (const component of app.components) {
+    const component_result = component();
+    for (const part of component_result.parts) {
+      const version = part.get_current_version();
+      versions.add(version);
+    }
+  }
+
+  if (versions.size > 1) {
+    return {
+      ok: false,
+      errors: [
+        `Application ${app.name} has multiple versions: ${Array.from(
+          versions
+        ).join(", ")}`,
+      ],
+    };
+  }
+  return { ok: true };
+}
+
+function validate_changes_files_content(
+  changes_dir: string,
+  app: ManagedApplication
+): { ok: true } | { ok: false; errors: string[] } {
+  const changes_dir_path = join(changes_dir, app.name);
+  const changes_files = readdirSync(changes_dir_path);
+  const errors: string[] = [];
+  for (const change_file of changes_files) {
+    if (!change_file.endsWith(".md")) {
+      errors.push(`Change file ${change_file} is not a markdown file`);
+      continue;
+    }
+
+    const change_file_path = join(changes_dir_path, change_file);
+    const change_file_parsed = parse_change_filename(change_file);
+    if (!change_file_parsed) {
+      errors.push(`Change file ${change_file} has an invalid filename format`);
+    } else if (
+      !app.versioning.allowed_changes.includes(change_file_parsed.kind)
+    ) {
+      errors.push(`Change file ${change_file} has an invalid kind`);
+    }
+
+    const change_file_content = readFileSync(change_file_path, "utf-8");
+    const { title, description } = parse_change_markdown(change_file_content);
+    if (!title) {
+      errors.push(`Change file ${change_file} has no title`);
+    }
+    if (!description) {
+      errors.push(`Change file ${change_file} has no description`);
+    }
+    if (description.length === 0) {
+      errors.push(`Change file ${change_file} has no description`);
+    }
+  }
+
+  if (errors.length > 0) {
+    return { ok: false, errors };
+  }
+  return { ok: true };
+}
 
 export const check = create_command({
   name: "check",

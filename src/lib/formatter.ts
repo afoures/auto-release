@@ -1,4 +1,4 @@
-import type { Change, Formatter } from "./types.js";
+import type { Change, Formatter, ManagedApplication } from "./types.js";
 import type { ChangeKindDisplayMap } from "./versioning/types.js";
 
 export function default_formatter<change_kinds extends string>({
@@ -38,3 +38,8 @@ export function default_formatter<change_kinds extends string>({
     },
   };
 }
+
+export function update_changelog(
+  app: ManagedApplication,
+  changes: Change<any>[]
+) {}

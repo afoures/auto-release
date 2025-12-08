@@ -26,8 +26,9 @@ export type Formatter<
    */
   format_changelog(changelog: NoInfer<parsed_changelog>): Array<string>;
   generate_release_notes(args: {
-    from_version: string;
-    to_version: string;
+    app: { name: string };
+    current_version: string;
+    next_version: string;
     changes: Change<change_kinds>[];
   }): Array<string>;
 };

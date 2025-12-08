@@ -37,8 +37,9 @@ export function generate_changelog_section(options: {
 
   // Use formatter to generate release notes
   const release_notes = formatter.generate_release_notes({
-    from_version: options.current_version,
-    to_version: next_version,
+    app: { name: app.name },
+    current_version: options.current_version,
+    next_version: next_version,
     changes,
   });
 

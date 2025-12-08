@@ -23,8 +23,9 @@ export function generate_release_notes(options: {
   // Use formatter to generate release notes
   const formatter = app.versioning.formatter;
   const release_note_lines = formatter.generate_release_notes({
-    from_version: current_version,
-    to_version: next_version,
+    app: { name: app.name },
+    current_version: current_version,
+    next_version: next_version,
     changes,
   });
 
