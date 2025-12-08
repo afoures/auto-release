@@ -1,5 +1,6 @@
 import { regex } from "arkregex";
 import type { Change, Formatter, VersionManager } from "./types.js";
+import { default_changelog_formatter } from "../formatter.js";
 
 interface SemanticVersion {
   major: bigint;
@@ -42,15 +43,19 @@ export function semver<
 >({
   formatter,
 }: {
-  formatter: (
+  formatter?: (
     allowed_changes: readonly AllowedChangeKind[]
   ) => Formatter<AllowedChangeKind, parsed_changelog>;
-}): VersionManager<AllowedChangeKind> {
+} = {}): VersionManager<AllowedChangeKind> {
   const allowed_changes = ["major", "minor", "patch"] as const;
+  const formatter_fn = formatter || default_changelog_formatter();
 
   return {
     allowed_changes,
-    formatter: formatter(allowed_changes),
+    formatter: formatter_fn(allowed_changes) as Formatter<
+      AllowedChangeKind,
+      parsed_changelog
+    >,
     compare(version_a, version_b) {
       const a = parse(version_a);
       const b = parse(version_b);

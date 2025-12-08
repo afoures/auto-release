@@ -34,7 +34,7 @@ export interface AutoReleaseConfig {
   changes_dir?: string;
   git: {
     provider: GitProvider;
-    default_target_branch?: string;
+    default_target_branch?: string; // Optional, defaults to "main"
     default_release_branch_prefix?: string;
   };
   apps: Record<string, AppConfig<any>>;

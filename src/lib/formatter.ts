@@ -1,5 +1,17 @@
 import type { Change, Formatter } from "./types.js";
 
+export type ChangelogFormatter<change_kinds extends string = string> =
+  Formatter<
+    change_kinds,
+    {
+      root: { title: string; description: string[] };
+      releases: Array<{
+        version: string;
+        changes: Array<Change<change_kinds>>;
+      }>;
+    }
+  >;
+
 export function default_changelog_formatter<change_kinds extends string>({
   kind_map,
 }: {

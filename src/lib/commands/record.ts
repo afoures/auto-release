@@ -45,13 +45,14 @@ export const record = create_command({
     // Determine app
     let app_name = args.app;
     if (!app_name) {
-      if (config.apps.length === 1) {
-        app_name = config.apps[0].name;
+      const app_names = Object.keys(config.apps);
+      if (app_names.length === 1) {
+        app_name = app_names[0];
         log.success(`Defaulting to app: ${app_name}`);
       } else {
         const selected = await select({
           message: "Select app:",
-          options: config.apps.map((a) => ({ value: a.name, label: a.name })),
+          options: app_names.map((name) => ({ value: name, label: name })),
         });
         if (isCancel(selected)) {
           cancel("App selection cancelled");
@@ -63,7 +64,7 @@ export const record = create_command({
       }
     }
 
-    const app = config.apps.find((a) => a.name === app_name);
+    const app = config.apps[app_name];
     if (!app) {
       return {
         status: "error" as const,
@@ -72,7 +73,7 @@ export const record = create_command({
     }
 
     // Get valid change types from the versioning strategy
-    const valid_types = Array.from(app.versioning.change_types);
+    const valid_types = Array.from(app.versioning.allowed_changes);
 
     // Determine change type
     let change_type = args.type;

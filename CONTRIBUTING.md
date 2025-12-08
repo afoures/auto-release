@@ -35,29 +35,84 @@ pnpm typecheck
 ```
 auto-release/
 ├── src/
-│   ├── index.ts              # Public API exports
-│   ├── cli.ts                # CLI entry point
-│   ├── types.ts              # Core type definitions
-│   ├── config.ts             # Config loading
-│   ├── changes.ts            # Change file handling
-│   ├── packages.ts           # Package.json management
-│   ├── changelog.ts          # Changelog generation
-│   ├── strategies/
-│   │   ├── semver.ts         # Semver strategy
-│   │   └── calver.ts         # Calver strategy
-│   ├── commands/
-│   │   ├── check.ts          # Check command
-│   │   ├── record.ts         # Record command
-│   │   ├── generate-release.ts # Generate release command
-│   │   └── tag-release.ts # Tag release command
-│   └── utils/
-│       ├── logger.ts         # Logging utilities
-│       ├── exec.ts           # Command execution
-│       └── prompts.ts        # User prompts
-├── tests/                    # Test files
-├── examples/                 # Example configurations
-└── README.md                 # Documentation
+│   ├── index.ts                    # Public API exports
+│   ├── bin.ts                      # CLI entry point
+│   ├── lib/
+│   │   ├── types.ts                # Core type definitions
+│   │   ├── config.ts               # Config loading & validation
+│   │   ├── changes.ts              # Change file discovery & parsing
+│   │   ├── packages.ts             # Component version management
+│   │   ├── changelog.ts            # Changelog generation
+│   │   ├── release-notes.ts        # Release notes generation
+│   │   ├── formatter.ts            # Default formatter implementation
+│   │   ├── cli.ts                  # CLI framework
+│   │   ├── commands/
+│   │   │   ├── check.ts            # Check command
+│   │   │   ├── record.ts           # Record command
+│   │   │   ├── generate-release.ts # Generate release PRs
+│   │   │   ├── tag-release.ts     # Tag releases
+│   │   │   └── init.ts             # Init command
+│   │   ├── components/
+│   │   │   ├── types.ts            # Component interfaces
+│   │   │   ├── node.ts             # Node.js component
+│   │   │   ├── expo.ts             # Expo component
+│   │   │   └── php.ts              # PHP component
+│   │   ├── providers/
+│   │   │   ├── types.ts            # Git provider interface
+│   │   │   ├── github.ts           # GitHub provider
+│   │   │   └── gitlab.ts           # GitLab provider
+│   │   ├── versioning/
+│   │   │   ├── types.ts            # VersionManager & Formatter types
+│   │   │   ├── semantic.ts         # Semver strategy
+│   │   │   ├── calendar.ts         # Calver strategy
+│   │   │   └── marketing.ts        # Marketing versioning
+│   │   └── utils/
+│   │       ├── logger.ts           # Logging utilities
+│   │       └── exec.ts             # Command execution
+├── tests/                          # Test files
+├── examples/                       # Example configurations
+└── README.md                      # Documentation
 ```
+
+## Key Architecture Concepts
+
+### Record-Based Config
+
+Apps are configured as a **record** (object) keyed by app name, not an array:
+
+```typescript
+apps: {
+  'app-name': { /* config */ }
+}
+```
+
+This allows direct lookup by name and clearer organization.
+
+### Component Model
+
+Apps use **components** to define version sources. Components are functions that return:
+- `path`: Base path
+- `parts`: Array of versioned files/parts
+
+Each part has `get_current_version()` and `update_version()` methods.
+
+### Formatter-Driven Versioning
+
+Versioning strategies (`semver()`, `calver()`) require a **formatter** that controls:
+- How changelogs are parsed from markdown
+- How changelog sections are formatted
+- How release notes are generated
+
+The `default_changelog_formatter()` provides a simple default, but custom formatters can fully customize output.
+
+### Git Provider Abstraction
+
+Git operations are abstracted through the `GitProvider` interface, supporting:
+- GitHub (via REST API)
+- GitLab (via REST API)
+- Extensible for other providers
+
+All provider calls use `config.git.default_target_branch` consistently.
 
 ## Development Workflow
 
@@ -102,6 +157,12 @@ git commit -m "feat: add your feature"
 - ESM modules only (no CommonJS)
 - Descriptive variable and function names
 - Comments for complex logic
+- **Naming conventions**:
+  - Files: kebab-case (e.g., `user-service.ts`)
+  - Variables & Functions: snake_case (e.g., `user_name`, `get_user_data()`)
+  - Constants: UPPER_SNAKE_CASE (e.g., `MAX_TIMEOUT`)
+- **Error handling**: Prefer returning values over throwing errors when possible
+- Always update tests when making changes
 
 ## Pull Request Guidelines
 

@@ -3,7 +3,9 @@ import { join } from "node:path";
 import type { Change, AppConfig } from "./types.js";
 import { regex } from "arkregex";
 
-const CHANGE_FILE_REGEX = regex("^(?<kind>[a-z0-9-]+).(?<slug>[a-z0-9-]+).md$");
+const CHANGE_FILE_REGEX = regex(
+  "^(?<kind>[a-z0-9-]+)\\.(?<slug>[a-z0-9-]+)\\.md$"
+);
 
 /**
  * Parse change filename and validate format
@@ -112,23 +114,98 @@ export async function discover_changes<change_kind extends string>(
 }
 
 /**
- * Discover changes for all apps
+ * Change with metadata (file path and app name)
+ */
+export interface ChangeWithMetadata<change_kind extends string>
+  extends Change<change_kind> {
+  file_path: string;
+  app_name: string;
+}
+
+/**
+ * Discover changes for all apps (record-based)
  */
 export async function discover_all_changes(
-  apps: AppConfig<any>[],
+  apps: Record<string, AppConfig<any>>,
   changes_dir: string
 ): Promise<Map<string, Change<any>[]>> {
   const changes_map = new Map<string, Change<any>[]>();
 
-  for (const app of apps) {
+  for (const [app_name, app] of Object.entries(apps)) {
     const valid_change_types = app.versioning.allowed_changes;
 
     const changes = await discover_changes(
-      app.name,
+      app_name,
       changes_dir,
       valid_change_types
     );
-    changes_map.set(app.name, changes);
+    changes_map.set(app_name, changes);
+  }
+
+  return changes_map;
+}
+
+/**
+ * Discover changes with metadata for all apps
+ */
+export async function discover_all_changes_with_metadata(
+  apps: Record<string, AppConfig<any>>,
+  changes_dir: string
+): Promise<Map<string, ChangeWithMetadata<any>[]>> {
+  const changes_map = new Map<string, ChangeWithMetadata<any>[]>();
+
+  for (const [app_name, app] of Object.entries(apps)) {
+    const valid_change_types = app.versioning.allowed_changes;
+    const app_changes_dir = join(changes_dir, app_name);
+
+    let files: string[];
+    try {
+      files = await readdir(app_changes_dir);
+    } catch (error: any) {
+      // Directory doesn't exist or can't be read - no changes
+      if (error.code === "ENOENT") {
+        changes_map.set(app_name, []);
+        continue;
+      }
+      throw error;
+    }
+
+    const changes: ChangeWithMetadata<any>[] = [];
+
+    for (const file of files) {
+      if (!file.endsWith(".md")) {
+        continue;
+      }
+
+      const parsed = parse_change_filename(file);
+      if (!parsed) {
+        throw new Error(
+          `Invalid change filename format: ${file} (expected: type.slug-words.md)`
+        );
+      }
+
+      if (!valid_change_types.includes(parsed.kind)) {
+        throw new Error(
+          `Invalid change kind "${
+            parsed.kind
+          }" in file ${file}. Valid kinds: ${valid_change_types.join(", ")}`
+        );
+      }
+
+      const file_path = join(app_changes_dir, file);
+      const content = await readFile(file_path, "utf-8");
+      const { title, description } = parse_change_markdown(content);
+
+      changes.push({
+        kind: parsed.kind,
+        title,
+        description,
+        file_path,
+        app_name,
+      });
+    }
+
+    changes_map.set(app_name, changes);
   }
 
   return changes_map;
