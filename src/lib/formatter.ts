@@ -1,10 +1,13 @@
 import type { Change, Formatter } from "./types.js";
+import type { ChangeKindDisplayMap } from "./versioning/types.js";
 
-export function default_changelog_formatter<change_kinds extends string>({
-  kind_map,
+export function default_formatter<change_kinds extends string>({
+  allowed_changes,
+  display_map,
 }: {
-  kind_map?: Record<NoInfer<change_kinds>, string>;
-} = {}): (allowed_changes: readonly change_kinds[]) => Formatter<
+  allowed_changes: readonly change_kinds[];
+  display_map?: ChangeKindDisplayMap<change_kinds>;
+}): Formatter<
   change_kinds,
   {
     root: { title: string; description: string[] };
@@ -14,7 +17,7 @@ export function default_changelog_formatter<change_kinds extends string>({
     }>;
   }
 > {
-  return (allowed_changes) => ({
+  return {
     transform_markdown(tree) {
       return {
         root: { title: "", description: [] },
@@ -33,5 +36,5 @@ export function default_changelog_formatter<change_kinds extends string>({
         return `- ${change.title}`;
       });
     },
-  });
+  };
 }

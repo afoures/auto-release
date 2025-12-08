@@ -1,6 +1,11 @@
 import { regex } from "arkregex";
-import type { Change, Formatter, VersionManager } from "./types.js";
-import { default_changelog_formatter } from "../formatter.js";
+import type {
+  Change,
+  ChangeKindDisplayMap,
+  Formatter,
+  VersionManager,
+} from "./types.js";
+import { default_formatter } from "../formatter.js";
 
 interface SemanticVersion {
   major: bigint;
@@ -26,7 +31,7 @@ function format(parsed: SemanticVersion): string {
   return `${parsed.major}.${parsed.minor}.${parsed.patch}`;
 }
 
-type AllowedChangeKind = "major" | "minor" | "patch";
+type SemanticChangeKind = "major" | "minor" | "patch";
 
 /**
  * Semantic versioning strategy factory
@@ -37,25 +42,36 @@ export function semver<
   parsed_changelog extends {
     releases: Array<{
       version: string;
-      changes: Array<Change<AllowedChangeKind>>;
+      changes: Array<Change<SemanticChangeKind>>;
     }>;
   }
 >({
-  formatter,
-}: {
-  formatter?: (
-    allowed_changes: readonly AllowedChangeKind[]
-  ) => Formatter<AllowedChangeKind, parsed_changelog>;
-} = {}): VersionManager<AllowedChangeKind> {
+  formatter: custom_formatter,
+  display_map: custom_display_map,
+}:
+  | {
+      formatter: Formatter<SemanticChangeKind, parsed_changelog>;
+      display_map?: ChangeKindDisplayMap<SemanticChangeKind>;
+    }
+  | {
+      formatter?: never;
+      display_map?: ChangeKindDisplayMap<SemanticChangeKind>;
+    } = {}): VersionManager<SemanticChangeKind, any> {
   const allowed_changes = ["major", "minor", "patch"] as const;
-  const formatter_fn = formatter || default_changelog_formatter();
+  const display_map =
+    custom_display_map ??
+    ({
+      major: { singular: "Breaking Change", plural: "Breaking Changes" },
+      minor: { singular: "Feature", plural: "Features" },
+      patch: { singular: "Bug Fix", plural: "Bug Fixes" },
+    } satisfies ChangeKindDisplayMap<SemanticChangeKind>);
+  const formatter =
+    custom_formatter || default_formatter({ allowed_changes, display_map });
 
   return {
     allowed_changes,
-    formatter: formatter_fn(allowed_changes) as Formatter<
-      AllowedChangeKind,
-      parsed_changelog
-    >,
+    formatter,
+    display_map,
     compare(version_a, version_b) {
       const a = parse(version_a);
       const b = parse(version_b);
@@ -77,9 +93,9 @@ export function semver<
       const parsed = parse(version);
 
       // Determine highest precedence change type
-      let highest_type: AllowedChangeKind = "patch";
+      let highest_type: SemanticChangeKind = "patch";
       const precedence = { major: 3, minor: 2, patch: 1 } satisfies Record<
-        AllowedChangeKind,
+        SemanticChangeKind,
         number
       >;
 

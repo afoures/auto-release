@@ -1,5 +1,11 @@
 import { regex } from "arkregex";
-import type { Change, Formatter, VersionManager } from "./types.js";
+import type {
+  Change,
+  ChangeKindDisplayMap,
+  Formatter,
+  VersionManager,
+} from "./types.js";
+import { default_formatter } from "../formatter.js";
 
 interface MarketingVersion {
   marketing: bigint;
@@ -27,7 +33,7 @@ function format(parsed: MarketingVersion): string {
   return `${parsed.marketing}.${parsed.minor}.${parsed.patch}`;
 }
 
-type AllowedChangeKind = "marketing" | "feature" | "fix";
+type MarketingChangeKind = "marketing" | "feature" | "fix";
 
 /**
  * Marketing versioning strategy factory
@@ -38,21 +44,36 @@ export function markver<
   parsed_changelog extends {
     releases: Array<{
       version: string;
-      changes: Array<Change<AllowedChangeKind>>;
+      changes: Array<Change<MarketingChangeKind>>;
     }>;
   }
 >({
-  formatter,
-}: {
-  formatter: (
-    allowed_changes: readonly AllowedChangeKind[]
-  ) => Formatter<AllowedChangeKind, parsed_changelog>;
-}): VersionManager<AllowedChangeKind> {
+  formatter: custom_formatter,
+  display_map: custom_display_map,
+}:
+  | {
+      formatter: Formatter<MarketingChangeKind, parsed_changelog>;
+      display_map?: ChangeKindDisplayMap<MarketingChangeKind>;
+    }
+  | {
+      formatter?: never;
+      display_map?: ChangeKindDisplayMap<MarketingChangeKind>;
+    } = {}): VersionManager<MarketingChangeKind, any> {
   const allowed_changes = ["marketing", "feature", "fix"] as const;
+  const display_map =
+    custom_display_map ??
+    ({
+      marketing: { singular: "Marketing", plural: "Marketing" },
+      feature: { singular: "Feature", plural: "Features" },
+      fix: { singular: "Bug Fix", plural: "Bug Fixes" },
+    } satisfies ChangeKindDisplayMap<MarketingChangeKind>);
+  const formatter =
+    custom_formatter || default_formatter({ allowed_changes, display_map });
 
   return {
     allowed_changes,
-    formatter: formatter(allowed_changes),
+    formatter,
+    display_map,
     compare(version_a, version_b) {
       const a = parse(version_a);
       const b = parse(version_b);
@@ -68,9 +89,9 @@ export function markver<
     bump({ version, changes, date }): string {
       const parsed = parse(version);
       // will always increase patch version if no other change type is present
-      let highest_type: AllowedChangeKind = "fix";
+      let highest_type: MarketingChangeKind = "fix";
       const precedence = { marketing: 3, feature: 2, fix: 1 } satisfies Record<
-        AllowedChangeKind,
+        MarketingChangeKind,
         number
       >;
 

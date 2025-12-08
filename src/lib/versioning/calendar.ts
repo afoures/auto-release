@@ -1,6 +1,11 @@
 import { regex } from "arkregex";
-import type { Change, Formatter, VersionManager } from "./types.js";
-import { default_changelog_formatter } from "../formatter.js";
+import type {
+  Change,
+  ChangeKindDisplayMap,
+  Formatter,
+  VersionManager,
+} from "./types.js";
+import { default_formatter } from "../formatter.js";
 
 interface CalendarVersion {
   year: bigint;
@@ -26,7 +31,7 @@ function format(parsed: CalendarVersion): string {
   return `${parsed.year}.${parsed.minor}.${parsed.patch}`;
 }
 
-type AllowedChangeKind = "feature" | "fix";
+type CalendarChangeKind = "feature" | "fix";
 
 /**
  * Create a calendar versioning manager
@@ -37,25 +42,35 @@ export function calver<
   parsed_changelog extends {
     releases: Array<{
       version: string;
-      changes: Array<Change<AllowedChangeKind>>;
+      changes: Array<Change<CalendarChangeKind>>;
     }>;
   }
 >({
-  formatter,
-}: {
-  formatter?: (
-    allowed_changes: readonly AllowedChangeKind[]
-  ) => Formatter<AllowedChangeKind, parsed_changelog>;
-} = {}): VersionManager<AllowedChangeKind, parsed_changelog> {
+  formatter: custom_formatter,
+  display_map: custom_display_map,
+}:
+  | {
+      formatter: Formatter<CalendarChangeKind, parsed_changelog>;
+      display_map?: ChangeKindDisplayMap<CalendarChangeKind>;
+    }
+  | {
+      formatter?: never;
+      display_map?: ChangeKindDisplayMap<CalendarChangeKind>;
+    } = {}): VersionManager<CalendarChangeKind, any> {
   const allowed_changes = ["feature", "fix"] as const;
-  const formatter_fn = formatter || default_changelog_formatter();
+  const display_map =
+    custom_display_map ??
+    ({
+      feature: { singular: "Feature", plural: "Features" },
+      fix: { singular: "Bug Fix", plural: "Bug Fixes" },
+    } satisfies ChangeKindDisplayMap<CalendarChangeKind>);
+  const formatter =
+    custom_formatter || default_formatter({ allowed_changes, display_map });
 
   return {
     allowed_changes,
-    formatter: formatter_fn(allowed_changes) as Formatter<
-      AllowedChangeKind,
-      parsed_changelog
-    >,
+    formatter,
+    display_map,
     compare(version_a, version_b) {
       const a = parse(version_a);
       const b = parse(version_b);
@@ -77,9 +92,9 @@ export function calver<
       const parsed = parse(version);
       const current_year = BigInt(date.getFullYear());
 
-      let highest_type: AllowedChangeKind = "fix";
+      let highest_type: CalendarChangeKind = "fix";
       const precedence = { feature: 2, fix: 1 } satisfies Record<
-        AllowedChangeKind,
+        CalendarChangeKind,
         number
       >;
 

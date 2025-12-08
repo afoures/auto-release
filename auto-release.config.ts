@@ -1,4 +1,4 @@
-import { define_config, default_changelog_formatter } from "./dist/index.mjs";
+import { define_config } from "./dist/index.mjs";
 import { semver } from "./dist/semantic-versioning.mjs";
 import { github } from "./dist/github-provider.mjs";
 import { node } from "./dist/components.mjs";
@@ -15,13 +15,11 @@ export default define_config({
       components: [node(".")],
       changelog: "CHANGELOG.md",
       versioning: semver({
-        formatter: default_changelog_formatter({
-          kind_map: {
-            major: "Breaking Changes",
-            minor: "Features",
-            patch: "Bug Fixes",
-          },
-        }),
+        display_map: {
+          major: { singular: "Major", plural: "Major" },
+          minor: { singular: "Minor", plural: "Minor" },
+          patch: { singular: "Patch", plural: "Patch" },
+        },
       }),
     },
   },
