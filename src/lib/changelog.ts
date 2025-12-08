@@ -1,6 +1,6 @@
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
-import type { AppDefinition, Change } from "./types.js";
+import type { AppDefinition, Change, ManagedApplication } from "./types.js";
 
 /**
  * Get changelog path for an app
@@ -26,14 +26,14 @@ function format_date(date: Date): string {
  * Generate changelog section for a release
  */
 export function generate_changelog_section(options: {
-  app: { name: string; definition: AppDefinition };
+  app: ManagedApplication;
   current_version: string;
   next_version: string;
   date: Date;
   changes: Change<any>[];
 }): string {
   const { app, next_version, date, changes } = options;
-  const formatter = app.definition.versioning.formatter;
+  const formatter = app.versioning.formatter;
 
   // Use formatter to generate release notes
   const release_notes = formatter.generate_release_notes({
@@ -56,7 +56,7 @@ export function generate_changelog_section(options: {
  */
 export function generate_updated_changelog(options: {
   existing_content: string | null;
-  app: { name: string; definition: AppDefinition };
+  app: ManagedApplication;
   current_version: string;
   next_version: string;
   date: Date;
@@ -100,7 +100,7 @@ export function generate_updated_changelog(options: {
  * Write or update changelog file
  */
 export async function write_changelog(options: {
-  app: { name: string; definition: AppDefinition };
+  app: ManagedApplication;
   current_version: string;
   next_version: string;
   date: Date;

@@ -1,6 +1,10 @@
 import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
-import type { AppDefinition, AutoReleaseConfig, GitProvider } from "./types.js";
+import type {
+  AutoReleaseConfig,
+  GitProvider,
+  ManagedApplication,
+} from "./types.js";
 
 export function define_config<const config extends AutoReleaseConfig>(
   config: config
@@ -32,10 +36,10 @@ export class InternalConfig {
     };
   }
 
-  get apps(): Array<{ name: string; definition: AppDefinition }> {
+  get managed_applications(): Array<ManagedApplication> {
     return Object.entries(this.#config.apps).map(([name, definition]) => ({
       name,
-      definition,
+      ...definition,
     }));
   }
 }

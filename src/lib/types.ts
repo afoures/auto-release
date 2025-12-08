@@ -39,3 +39,7 @@ export interface AppDefinition {
   versioning: VersionManager;
   changelog: string;
 }
+
+export type ManagedApplication = {
+  name: string;
+} & AppDefinition;

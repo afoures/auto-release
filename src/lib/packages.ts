@@ -1,5 +1,5 @@
 import { resolve } from "node:path";
-import type { AppDefinition } from "./types.js";
+import type { ManagedApplication } from "./types.js";
 
 /**
  * Resolved component part information
@@ -13,12 +13,12 @@ export interface ResolvedPackage {
  * Resolve and read component files for an app
  */
 export async function resolve_packages(
-  app: { name: string; definition: AppDefinition },
+  app: ManagedApplication,
   cwd: string = process.cwd()
 ): Promise<ResolvedPackage[]> {
   const packages: ResolvedPackage[] = [];
 
-  for (const component of app.definition.components) {
+  for (const component of app.components) {
     const component_result = component();
     for (const part of component_result.parts) {
       const resolved_path = resolve(cwd, part.path);
@@ -38,7 +38,7 @@ export async function resolve_packages(
  * Get current version for an app (validates all components have same version)
  */
 export async function get_current_version(
-  app: { name: string; definition: AppDefinition },
+  app: ManagedApplication,
   cwd: string = process.cwd()
 ): Promise<string> {
   const packages = await resolve_packages(app, cwd);
@@ -66,10 +66,8 @@ export async function get_current_version(
  * Write new version to all component files for an app
  */
 export async function write_version(
-  app: AppDefinition,
-  app_name: string,
-  new_version: string,
-  cwd: string = process.cwd()
+  app: ManagedApplication,
+  new_version: string
 ): Promise<void> {
   for (const component of app.components) {
     const component_result = component();
@@ -83,7 +81,7 @@ export async function write_version(
  * Validate that all packages exist and have matching versions
  */
 export async function validate_packages(
-  apps: Array<{ name: string; definition: AppDefinition }>,
+  apps: Array<ManagedApplication>,
   cwd: string = process.cwd()
 ): Promise<{ valid: boolean; errors: string[] }> {
   const errors: string[] = [];

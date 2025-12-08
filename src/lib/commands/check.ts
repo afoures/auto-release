@@ -28,13 +28,19 @@ export const check = create_command({
 
     // Validate packages
     logger.info("Validating packages...");
-    const package_validation = await validate_packages(config.apps, cwd);
+    const package_validation = await validate_packages(
+      config.managed_applications,
+      cwd
+    );
     errors.push(...package_validation.errors);
 
     // Validate change files
     logger.info("Validating change files...");
     try {
-      await discover_all_changes(config.apps, config.changes_dir);
+      await discover_all_changes(
+        config.managed_applications,
+        config.changes_dir
+      );
     } catch (error: any) {
       errors.push(error.message);
     }
