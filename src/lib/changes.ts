@@ -1,6 +1,6 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { Change, AppConfig } from "./types.js";
+import type { Change, AppDefinition } from "./types.js";
 import { regex } from "arkregex";
 
 const CHANGE_FILE_REGEX = regex(
@@ -126,7 +126,7 @@ export interface ChangeWithMetadata<change_kind extends string>
  * Discover changes for all apps (record-based)
  */
 export async function discover_all_changes(
-  apps: Record<string, AppConfig<any>>,
+  apps: Record<string, AppDefinition>,
   changes_dir: string
 ): Promise<Map<string, Change<any>[]>> {
   const changes_map = new Map<string, Change<any>[]>();
@@ -149,7 +149,7 @@ export async function discover_all_changes(
  * Discover changes with metadata for all apps
  */
 export async function discover_all_changes_with_metadata(
-  apps: Record<string, AppConfig<any>>,
+  apps: Record<string, AppDefinition>,
   changes_dir: string
 ): Promise<Map<string, ChangeWithMetadata<any>[]>> {
   const changes_map = new Map<string, ChangeWithMetadata<any>[]>();

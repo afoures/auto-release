@@ -1,5 +1,5 @@
 import { resolve } from "node:path";
-import type { AppConfig } from "./types.js";
+import type { AppDefinition } from "./types.js";
 
 /**
  * Resolved component part information
@@ -13,7 +13,7 @@ export interface ResolvedPackage {
  * Resolve and read component files for an app
  */
 export async function resolve_packages(
-  app: AppConfig<any>,
+  app: AppDefinition,
   app_name: string,
   cwd: string = process.cwd()
 ): Promise<ResolvedPackage[]> {
@@ -39,7 +39,7 @@ export async function resolve_packages(
  * Get current version for an app (validates all components have same version)
  */
 export async function get_current_version(
-  app: AppConfig<any>,
+  app: AppDefinition,
   app_name: string,
   cwd: string = process.cwd()
 ): Promise<string> {
@@ -66,7 +66,7 @@ export async function get_current_version(
  * Write new version to all component files for an app
  */
 export async function write_version(
-  app: AppConfig<any>,
+  app: AppDefinition,
   app_name: string,
   new_version: string,
   cwd: string = process.cwd()
@@ -83,7 +83,7 @@ export async function write_version(
  * Validate that all packages exist and have matching versions
  */
 export async function validate_packages(
-  apps: Record<string, AppConfig<any>>,
+  apps: Record<string, AppDefinition>,
   cwd: string = process.cwd()
 ): Promise<{ valid: boolean; errors: string[] }> {
   const errors: string[] = [];

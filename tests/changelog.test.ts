@@ -1,11 +1,11 @@
 import { describe, it, expect } from "vitest";
 import { generate_changelog_section } from "../src/lib/changelog.js";
 import { semver } from "../src/lib/versioning/semantic.js";
-import type { AppConfig, Change } from "../src/lib/types.js";
+import type { AppDefinition, Change } from "../src/lib/types.js";
 
 describe("generate_changelog_section", () => {
   const strategy = semver();
-  const app: AppConfig<any> = {
+  const app: AppDefinition = {
     components: [],
     versioning: strategy,
     changelog: "CHANGELOG.md",

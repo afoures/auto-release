@@ -12,7 +12,7 @@ import { generate_release_notes } from "../release-notes.js";
 import { create_logger } from "../utils/logger.js";
 import { create_command } from "../cli.js";
 import type { FileChange } from "../providers/types.js";
-import type { AppConfig } from "../types.js";
+import type { AppDefinition } from "../types.js";
 
 export const generate_release = create_command({
   name: "generate-release",
@@ -70,7 +70,7 @@ export const generate_release = create_command({
     // Process each app with pending changes
     const releases: Array<{
       app_name: string;
-      app: AppConfig<any>;
+      app: AppDefinition;
       current_version: string;
       next_version: string;
       changes: typeof changes_map extends Map<string, infer C> ? C : never;
