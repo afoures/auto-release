@@ -4,11 +4,8 @@ export default defineConfig({
   entry: [
     "src/index.ts",
     "src/bin.ts",
-    "src/semantic-versioning.ts",
-    "src/calendar-versioning.ts",
-    "src/marketing-versioning.ts",
-    "src/github-provider.ts",
-    "src/gitlab-provider.ts",
+    "src/versioning.ts",
+    "src/git-providers.ts",
     "src/components.ts",
   ],
   format: ["esm"],

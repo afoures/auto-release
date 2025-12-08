@@ -4,8 +4,8 @@ import {
   Formatter,
   ChangeKindDisplayMap,
 } from "../src/index.js";
-import { github } from "../src/lib/providers/github.js";
-import { node } from "../src/lib/components/node.js";
+import { github } from "../src/git-providers.js";
+import { node } from "../src/components.js";
 
 type AllowedChangeKind = "breaking" | "feature" | "fix";
 /**
