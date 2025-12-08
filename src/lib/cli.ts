@@ -1,8 +1,7 @@
 import { parseArgs } from "node:util";
 import type { ParseArgsOptionDescriptor } from "node:util";
 import { log, cancel } from "@clack/prompts";
-import { load_config } from "./config.js";
-import type { NormalizedConfig } from "./types.js";
+import { load_config, InternalConfig } from "./config.js";
 
 /**
  * Extended option schema with description for help generation
@@ -28,7 +27,7 @@ type convert_to_values<args extends Record<string, Option>> = {
  */
 type CommandRunContext<args extends Record<string, Option>> = {
   args: convert_to_values<args>;
-  get_config: () => Promise<NormalizedConfig>;
+  get_config: () => Promise<InternalConfig>;
 };
 
 export interface Command<
@@ -257,7 +256,7 @@ export function create_cli(options: CreateCliOptions) {
       process.exit(0);
     }
 
-    let cached_config: NormalizedConfig | undefined;
+    let cached_config: InternalConfig | undefined;
 
     async function get_config() {
       if (cached_config) {

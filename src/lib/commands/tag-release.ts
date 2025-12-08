@@ -3,6 +3,7 @@ import { get_current_version } from "../packages.js";
 import { get_changelog_path } from "../changelog.js";
 import { create_logger } from "../utils/logger.js";
 import { create_command } from "../cli.js";
+import type { AppDefinition } from "../types.js";
 
 export const tag_release = create_command({
   name: "tag-release",
@@ -42,38 +43,34 @@ export const tag_release = create_command({
       };
     }
 
-    let target_app_entries: Array<[string, (typeof config.apps)[string]]> = [];
+    let target_apps: Array<{ name: string; definition: AppDefinition }> = [];
 
     // If app is specified, use it
     if (app_filter) {
-      const app = config.apps[app_filter];
+      const app = config.apps.find((item) => item.name === app_filter);
       if (!app) {
         return {
           status: "error" as const,
           error: `App "${app_filter}" not found in config`,
         };
       }
-      target_app_entries = [[app_filter, app]];
+      target_apps = [app];
     } else if (branch_name) {
       // Try to detect app from branch name
       // Expected format: release/{app_name} or custom/{app_name}
       const branch_parts = branch_name.split("/");
       if (branch_parts.length >= 2) {
         const app_name = branch_parts.slice(1).join("/"); // Handle nested app names
-        const app = config.apps[app_name];
+        const app =
+          config.apps.find((item) => item.name === app_name) ||
+          config.apps.find(
+            (item) => `${release_branch_prefix}/${item.name}` === branch_name
+          );
         if (app) {
-          target_app_entries = [[app_name, app]];
-        } else {
-          // Try matching by release branch name
-          for (const [name, app_config] of Object.entries(config.apps)) {
-            if (`${release_branch_prefix}/${name}` === branch_name) {
-              target_app_entries = [[name, app_config]];
-              break;
-            }
-          }
+          target_apps = [app];
         }
       }
-      if (target_app_entries.length === 0) {
+      if (target_apps.length === 0) {
         return {
           status: "error" as const,
           error: `Could not detect app from branch "${branch_name}". Please specify --app`,
@@ -85,21 +82,22 @@ export const tag_release = create_command({
       logger.warn(
         "No app or branch specified. Publishing all apps (this may not be intended)"
       );
-      target_app_entries = Object.entries(config.apps);
+      target_apps = config.apps;
     }
 
     // Process each app
     const errors: string[] = [];
-    for (const [app_name, app] of target_app_entries) {
+    for (const app of target_apps) {
+      const app_name = app.name;
       logger.info(`\nPublishing release for ${app_name}...`);
 
       try {
         // Get current version from components
-        const current_version = await get_current_version(app, app_name, cwd);
+        const current_version = await get_current_version(app, cwd);
         logger.info(`Version: ${current_version}`);
 
         // Get changelog content for release notes
-        const changelog_path = get_changelog_path(app, app_name, cwd);
+        const changelog_path = get_changelog_path(app.definition, cwd);
         const changelog_relative_path = relative(cwd, changelog_path);
         const changelog_content = await provider.get_file_content(
           changelog_relative_path,

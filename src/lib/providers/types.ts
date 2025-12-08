@@ -21,11 +21,6 @@ export interface PullRequest {
  */
 export interface GitProvider {
   /**
-   * Get the default branch name (e.g., "main", "master")
-   */
-  get_default_branch(): Promise<string>;
-
-  /**
    * Get the SHA of a branch
    */
   get_branch_sha(branch: string): Promise<string>;

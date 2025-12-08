@@ -5,15 +5,14 @@ import { generate_changelog_section } from "./changelog.js";
  * Generate release notes for PR body
  */
 export function generate_release_notes(options: {
-  app: AppDefinition;
-  app_name: string;
+  app: { name: string; definition: AppDefinition };
   current_version: string;
   next_version: string;
   changes: Change<any>[];
 }): string {
-  const { app, app_name, current_version, next_version, changes } = options;
+  const { app, current_version, next_version, changes } = options;
 
-  let notes = `## Release ${app_name} ${next_version}\n\n`;
+  let notes = `## Release ${app.name} ${next_version}\n\n`;
   notes += `**Version bump:** ${current_version} → ${next_version}\n\n`;
 
   if (changes.length === 0) {
@@ -22,7 +21,7 @@ export function generate_release_notes(options: {
   }
 
   // Use formatter to generate release notes
-  const formatter = app.versioning.formatter;
+  const formatter = app.definition.versioning.formatter;
   const release_note_lines = formatter.generate_release_notes({
     from_version: current_version,
     to_version: next_version,
@@ -39,8 +38,7 @@ export function generate_release_notes(options: {
  * Generate release body for GitHub/GitLab releases
  */
 export function generate_release_body(options: {
-  app: AppDefinition;
-  app_name: string;
+  app: { name: string; definition: AppDefinition };
   current_version: string;
   next_version: string;
   date: Date;

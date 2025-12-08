@@ -123,16 +123,17 @@ export interface ChangeWithMetadata<change_kind extends string>
 }
 
 /**
- * Discover changes for all apps (record-based)
+ * Discover changes for all apps (normalized config)
  */
 export async function discover_all_changes(
-  apps: Record<string, AppDefinition>,
+  apps: Array<{ name: string; definition: AppDefinition }>,
   changes_dir: string
 ): Promise<Map<string, Change<any>[]>> {
   const changes_map = new Map<string, Change<any>[]>();
 
-  for (const [app_name, app] of Object.entries(apps)) {
-    const valid_change_types = app.versioning.allowed_changes;
+  for (const app of apps) {
+    const app_name = app.name;
+    const valid_change_types = app.definition.versioning.allowed_changes;
 
     const changes = await discover_changes(
       app_name,
@@ -149,13 +150,14 @@ export async function discover_all_changes(
  * Discover changes with metadata for all apps
  */
 export async function discover_all_changes_with_metadata(
-  apps: Record<string, AppDefinition>,
+  apps: Array<{ name: string; definition: AppDefinition }>,
   changes_dir: string
 ): Promise<Map<string, ChangeWithMetadata<any>[]>> {
   const changes_map = new Map<string, ChangeWithMetadata<any>[]>();
 
-  for (const [app_name, app] of Object.entries(apps)) {
-    const valid_change_types = app.versioning.allowed_changes;
+  for (const app of apps) {
+    const app_name = app.name;
+    const valid_change_types = app.definition.versioning.allowed_changes;
     const app_changes_dir = join(changes_dir, app_name);
 
     let files: string[];

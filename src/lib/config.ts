@@ -1,29 +1,43 @@
 import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
-import type { AutoReleaseConfig, NormalizedConfig } from "./types.js";
+import type { AppDefinition, AutoReleaseConfig, GitProvider } from "./types.js";
 
 export function define_config<const config extends AutoReleaseConfig>(
   config: config
-): NormalizedConfig {
+): InternalConfig {
   validate_config(config);
+  return new InternalConfig(config);
+}
 
-  return Object.freeze({
-    __internal: {
-      type: "auto-release-config",
-      valid: true,
-    },
-    changes_dir: config.changes_dir || ".changes",
-    git: {
-      provider: config.git.provider,
-      default_target_branch: config.git.default_target_branch || "main",
+export class InternalConfig {
+  #config: AutoReleaseConfig;
+  constructor(config: AutoReleaseConfig) {
+    this.#config = config;
+  }
+
+  get changes_dir(): string {
+    return this.#config.changes_dir || ".changes";
+  }
+
+  get git(): {
+    provider: GitProvider;
+    default_target_branch: string;
+    default_release_branch_prefix: string;
+  } {
+    return {
+      provider: this.#config.git.provider,
+      default_target_branch: this.#config.git.default_target_branch || "main",
       default_release_branch_prefix:
-        config.git.default_release_branch_prefix || "release",
-    },
-    apps: Object.entries(config.apps).map(([name, app]) => ({
+        this.#config.git.default_release_branch_prefix || "release",
+    };
+  }
+
+  get apps(): Array<{ name: string; definition: AppDefinition }> {
+    return Object.entries(this.#config.apps).map(([name, definition]) => ({
       name,
-      ...app,
-    })),
-  });
+      definition,
+    }));
+  }
 }
 
 /**
@@ -32,7 +46,7 @@ export function define_config<const config extends AutoReleaseConfig>(
 export async function load_config(
   config_path: string = "auto-release.config.ts",
   cwd: string = process.cwd()
-): Promise<NormalizedConfig> {
+): Promise<InternalConfig> {
   const resolved_path = resolve(cwd, config_path);
   const file_url = pathToFileURL(resolved_path).href;
 
@@ -51,18 +65,9 @@ export async function load_config(
     );
   }
 
-  const config = module.default as NormalizedConfig;
+  const config = module.default;
 
-  if (
-    !("__internal" in config) ||
-    typeof config.__internal !== "object" ||
-    config.__internal === null ||
-    !("type" in config.__internal) ||
-    config.__internal.type !== "auto-release-config" ||
-    !("valid" in config.__internal) ||
-    typeof config.__internal.valid !== "boolean" ||
-    !config.__internal.valid
-  ) {
+  if (!(config instanceof InternalConfig)) {
     throw new Error("Auto-release config is invalid");
   }
 

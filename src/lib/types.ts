@@ -39,20 +39,3 @@ export interface AppDefinition {
   versioning: VersionManager;
   changelog: string;
 }
-
-/**
- * Normalized auto-release configuration
- */
-export type NormalizedConfig = {
-  changes_dir: string;
-  git: {
-    provider: GitProvider;
-    default_target_branch: string;
-    default_release_branch_prefix: string;
-  };
-  apps: Array<InternalAppDefinition>;
-};
-
-export type InternalAppDefinition = AppDefinition & {
-  name: string;
-};

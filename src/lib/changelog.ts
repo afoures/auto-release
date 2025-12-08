@@ -7,7 +7,6 @@ import type { AppDefinition, Change } from "./types.js";
  */
 export function get_changelog_path(
   app: AppDefinition,
-  app_name: string,
   cwd: string = process.cwd()
 ): string {
   return resolve(cwd, app.changelog);
@@ -27,15 +26,14 @@ function format_date(date: Date): string {
  * Generate changelog section for a release
  */
 export function generate_changelog_section(options: {
-  app: AppDefinition;
-  app_name: string;
+  app: { name: string; definition: AppDefinition };
   current_version: string;
   next_version: string;
   date: Date;
   changes: Change<any>[];
 }): string {
   const { app, next_version, date, changes } = options;
-  const formatter = app.versioning.formatter;
+  const formatter = app.definition.versioning.formatter;
 
   // Use formatter to generate release notes
   const release_notes = formatter.generate_release_notes({
@@ -58,14 +56,13 @@ export function generate_changelog_section(options: {
  */
 export function generate_updated_changelog(options: {
   existing_content: string | null;
-  app: AppDefinition;
-  app_name: string;
+  app: { name: string; definition: AppDefinition };
   current_version: string;
   next_version: string;
   date: Date;
   changes: Change<any>[];
 }): string {
-  const { existing_content, app_name } = options;
+  const { existing_content, app } = options;
 
   // Generate new section
   const new_section = generate_changelog_section(options);
@@ -75,7 +72,7 @@ export function generate_updated_changelog(options: {
 
   if (!existing_content || existing_content.trim() === "") {
     // New changelog file
-    new_content = `# ${app_name}\n\n${new_section}\n`;
+    new_content = `# ${app.name}\n\n${new_section}\n`;
   } else {
     // Existing changelog - insert after title or at beginning
     const lines = existing_content.split("\n");
@@ -103,8 +100,7 @@ export function generate_updated_changelog(options: {
  * Write or update changelog file
  */
 export async function write_changelog(options: {
-  app: AppDefinition;
-  app_name: string;
+  app: { name: string; definition: AppDefinition };
   current_version: string;
   next_version: string;
   date: Date;

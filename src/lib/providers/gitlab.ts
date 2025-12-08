@@ -11,7 +11,9 @@ interface GitLabOptions {
  */
 export function gitlab(options: GitLabOptions): GitProvider {
   const { token, project_id, host = "gitlab.com" } = options;
-  const api_base = `https://${host}/api/v4/projects/${encodeURIComponent(project_id)}`;
+  const api_base = `https://${host}/api/v4/projects/${encodeURIComponent(
+    project_id
+  )}`;
 
   async function api_request(
     endpoint: string,
@@ -42,19 +44,21 @@ export function gitlab(options: GitLabOptions): GitProvider {
   }
 
   return {
-    async get_default_branch(): Promise<string> {
-      const project = await api_request("");
-      return project.default_branch;
-    },
-
     async get_branch_sha(branch: string): Promise<string> {
-      const ref = await api_request(`/repository/branches/${encodeURIComponent(branch)}`);
+      const ref = await api_request(
+        `/repository/branches/${encodeURIComponent(branch)}`
+      );
       return ref.commit.id;
     },
 
-    async get_file_content(path: string, branch: string): Promise<string | null> {
+    async get_file_content(
+      path: string,
+      branch: string
+    ): Promise<string | null> {
       try {
-        const url = `${api_base}/repository/files/${encodeURIComponent(path)}/raw?ref=${encodeURIComponent(branch)}`;
+        const url = `${api_base}/repository/files/${encodeURIComponent(
+          path
+        )}/raw?ref=${encodeURIComponent(branch)}`;
         const response = await fetch(url, {
           headers: {
             "PRIVATE-TOKEN": token,
@@ -130,7 +134,9 @@ export function gitlab(options: GitLabOptions): GitProvider {
     async find_pull_request(head_branch: string): Promise<PullRequest | null> {
       // GitLab calls them "merge requests"
       const mrs = await api_request(
-        `/merge_requests?state=opened&source_branch=${encodeURIComponent(head_branch)}`
+        `/merge_requests?state=opened&source_branch=${encodeURIComponent(
+          head_branch
+        )}`
       );
       if (mrs.length === 0) {
         return null;
@@ -181,7 +187,11 @@ export function gitlab(options: GitLabOptions): GitProvider {
       });
     },
 
-    async create_tag(name: string, sha: string, message: string): Promise<void> {
+    async create_tag(
+      name: string,
+      sha: string,
+      message: string
+    ): Promise<void> {
       await api_request("/repository/tags", {
         method: "POST",
         body: JSON.stringify({
@@ -208,4 +218,3 @@ export function gitlab(options: GitLabOptions): GitProvider {
     },
   };
 }
-
