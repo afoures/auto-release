@@ -1,6 +1,6 @@
 import { define_config } from "./dist/index.mjs";
-import { semver } from "./dist/semantic-versioning.mjs";
-import { github } from "./dist/github-provider.mjs";
+import { semver } from "./dist/versioning.mjs";
+import { github } from "./dist/git-providers.mjs";
 import { node } from "./dist/components.mjs";
 
 /**

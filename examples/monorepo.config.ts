@@ -1,8 +1,7 @@
 import { define_config } from "../src/index.js";
-import { semver } from "../src/lib/versioning/semantic.js";
-import { github } from "../src/lib/providers/github.js";
-import { calver } from "../src/lib/versioning/calendar.js";
-import { node } from "../src/lib/components/node.js";
+import { semver, calver } from "../src/versioning.js";
+import { github } from "../src/git-providers.js";
+import { node } from "../src/components.js";
 
 /**
  * Example configuration for a monorepo with multiple apps

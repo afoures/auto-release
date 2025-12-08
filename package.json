@@ -27,25 +27,13 @@
       "import": "./dist/index.mjs",
       "types": "./dist/index.d.mts"
     },
-    "./versioning/semver": {
-      "import": "./dist/semantic-versioning.mjs",
-      "types": "./dist/semantic-versioning.d.mts"
+    "./versioning": {
+      "import": "./dist/versioning.mjs",
+      "types": "./dist/versioning.d.mts"
     },
-    "./versioning/calver": {
-      "import": "./dist/calendar-versioning.mjs",
-      "types": "./dist/calendar-versioning.d.mts"
-    },
-    "./versioning/markver": {
-      "import": "./dist/marketing-versioning.mjs",
-      "types": "./dist/marketing-versioning.d.mts"
-    },
-    "./git/github": {
-      "import": "./dist/github-provider.mjs",
-      "types": "./dist/github-provider.d.mts"
-    },
-    "./git/gitlab": {
-      "import": "./dist/gitlab-provider.mjs",
-      "types": "./dist/gitlab-provider.d.mts"
+    "./providers": {
+      "import": "./dist/git-providers.mjs",
+      "types": "./dist/git-providers.d.mts"
     },
     "./components": {
       "import": "./dist/components.mjs",

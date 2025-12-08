@@ -1,7 +1,7 @@
 import { define_config } from "../src/index.js";
-import { calver } from "../src/lib/versioning/calendar.js";
-import { gitlab } from "../src/lib/providers/gitlab.js";
-import { node } from "../src/lib/components/node.js";
+import { calver } from "../src/versioning.js";
+import { gitlab } from "../src/git-providers.js";
+import { node } from "../src/components.js";
 
 /**
  * Example configuration using calver versioning
