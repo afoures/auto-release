@@ -33,7 +33,7 @@ export type Formatter<
 };
 
 export type VersionManager<
-  change_kind extends string,
+  change_kind extends string = string,
   parsed_changelog extends {
     releases: Array<{
       version: string;

@@ -1,11 +1,11 @@
-import type { AppConfig, Change } from "./types.js";
+import type { AppDefinition, Change } from "./types.js";
 import { generate_changelog_section } from "./changelog.js";
 
 /**
  * Generate release notes for PR body
  */
 export function generate_release_notes(options: {
-  app: AppConfig<any>;
+  app: AppDefinition;
   app_name: string;
   current_version: string;
   next_version: string;
@@ -39,7 +39,7 @@ export function generate_release_notes(options: {
  * Generate release body for GitHub/GitLab releases
  */
 export function generate_release_body(options: {
-  app: AppConfig<any>;
+  app: AppDefinition;
   app_name: string;
   current_version: string;
   next_version: string;

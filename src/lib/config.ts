@@ -2,13 +2,28 @@ import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
 import type { AutoReleaseConfig, NormalizedConfig } from "./types.js";
 
-/**
- * Helper function for users to define their config
- */
 export function define_config<const config extends AutoReleaseConfig>(
   config: config
-): config {
-  return config;
+): NormalizedConfig {
+  validate_config(config);
+
+  return Object.freeze({
+    __internal: {
+      type: "auto-release-config",
+      valid: true,
+    },
+    changes_dir: config.changes_dir || ".changes",
+    git: {
+      provider: config.git.provider,
+      default_target_branch: config.git.default_target_branch || "main",
+      default_release_branch_prefix:
+        config.git.default_release_branch_prefix || "release",
+    },
+    apps: Object.entries(config.apps).map(([name, app]) => ({
+      name,
+      ...app,
+    })),
+  });
 }
 
 /**
@@ -31,16 +46,27 @@ export async function load_config(
   }
 
   if (!module.default) {
-    throw new Error(`Config file ${config_path} must have a default export`);
+    throw new Error(
+      `Auto-release config file ${config_path} must have a default export`
+    );
   }
 
-  const config = module.default as AutoReleaseConfig;
+  const config = module.default as NormalizedConfig;
 
-  // Validate config structure
-  validate_config(config);
+  if (
+    !("__internal" in config) ||
+    typeof config.__internal !== "object" ||
+    config.__internal === null ||
+    !("type" in config.__internal) ||
+    config.__internal.type !== "auto-release-config" ||
+    !("valid" in config.__internal) ||
+    typeof config.__internal.valid !== "boolean" ||
+    !config.__internal.valid
+  ) {
+    throw new Error("Auto-release config is invalid");
+  }
 
-  // Normalize config
-  return normalize_config(config);
+  return config;
 }
 
 /**
@@ -49,7 +75,7 @@ export async function load_config(
 function validate_config(config: AutoReleaseConfig): void {
   if (!config.git) {
     throw new Error(
-      'Config must have a "git" provider. Use github() or gitlab() from "auto-release/providers"'
+      'Auto-release config must have a "git" provider. Use github() or gitlab() from "auto-release/providers"'
     );
   }
 
@@ -59,31 +85,31 @@ function validate_config(config: AutoReleaseConfig): void {
     Array.isArray(config.apps)
   ) {
     throw new Error(
-      'Config must have an "apps" record (object keyed by app name)'
+      'Auto-release config must have an "apps" record (object keyed by app name)'
     );
   }
 
   const app_entries = Object.entries(config.apps);
   if (app_entries.length === 0) {
-    throw new Error("Config must have at least one app");
+    throw new Error("Auto-release config must have at least one app");
   }
 
-  for (const [app_name, app] of app_entries) {
+  for (const [name, app] of app_entries) {
     if (!app.components || !Array.isArray(app.components)) {
-      throw new Error(`App "${app_name}" must have a "components" array`);
+      throw new Error(`App "${name}" must have a "components" array`);
     }
 
     if (app.components.length === 0) {
-      throw new Error(`App "${app_name}" must have at least one component`);
+      throw new Error(`App "${name}" must have at least one component`);
     }
 
     if (!app.versioning) {
-      throw new Error(`App "${app_name}" must have a "versioning" config`);
+      throw new Error(`App "${name}" must have a "versioning" config`);
     }
 
     if (typeof app.versioning.bump !== "function") {
       throw new Error(
-        `App "${app_name}" versioning must have a "bump" function. Did you forget to call the strategy function?`
+        `App "${name}" versioning must have a "bump" function. Did you forget to call the strategy function?`
       );
     }
 
@@ -92,36 +118,12 @@ function validate_config(config: AutoReleaseConfig): void {
       !Array.isArray(app.versioning.allowed_changes)
     ) {
       throw new Error(
-        `App "${app_name}" versioning must have an "allowed_changes" array`
+        `App "${name}" versioning must have an "allowed_changes" array`
       );
     }
 
     if (!app.changelog || typeof app.changelog !== "string") {
-      throw new Error(`App "${app_name}" must have a changelog path (string)`);
+      throw new Error(`App "${name}" must have a changelog path (string)`);
     }
   }
-}
-
-/**
- * Normalize and freeze config for internal use
- */
-function normalize_config(config: AutoReleaseConfig): NormalizedConfig {
-  if (!config.git) {
-    throw new Error(
-      'Config must have a "git" provider (use github() or gitlab())'
-    );
-  }
-
-  const normalized: NormalizedConfig = {
-    apps: config.apps,
-    changes_dir: config.changes_dir || ".changes",
-    git: {
-      provider: config.git.provider,
-      default_target_branch: config.git.default_target_branch || "main",
-      default_release_branch_prefix:
-        config.git.default_release_branch_prefix || "release",
-    },
-  };
-
-  return Object.freeze(normalized);
 }

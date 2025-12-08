@@ -1,12 +1,12 @@
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
-import type { AppConfig, Change } from "./types.js";
+import type { AppDefinition, Change } from "./types.js";
 
 /**
  * Get changelog path for an app
  */
 export function get_changelog_path(
-  app: AppConfig<any>,
+  app: AppDefinition,
   app_name: string,
   cwd: string = process.cwd()
 ): string {
@@ -27,7 +27,7 @@ function format_date(date: Date): string {
  * Generate changelog section for a release
  */
 export function generate_changelog_section(options: {
-  app: AppConfig<any>;
+  app: AppDefinition;
   app_name: string;
   current_version: string;
   next_version: string;
@@ -58,7 +58,7 @@ export function generate_changelog_section(options: {
  */
 export function generate_updated_changelog(options: {
   existing_content: string | null;
-  app: AppConfig<any>;
+  app: AppDefinition;
   app_name: string;
   current_version: string;
   next_version: string;
@@ -103,7 +103,7 @@ export function generate_updated_changelog(options: {
  * Write or update changelog file
  */
 export async function write_changelog(options: {
-  app: AppConfig<any>;
+  app: AppDefinition;
   app_name: string;
   current_version: string;
   next_version: string;

@@ -19,27 +19,30 @@ export interface Logger {
 }
 
 /**
- * App configuration
- */
-export interface AppConfig<change_kind extends string> {
-  components: Array<Component>;
-  versioning: VersionManager<change_kind>;
-  changelog: string;
-}
-
-/**
  * Auto-release configuration
  */
 export interface AutoReleaseConfig {
   changes_dir?: string;
   git: {
     provider: GitProvider;
-    default_target_branch?: string; // Optional, defaults to "main"
+    default_target_branch?: string;
     default_release_branch_prefix?: string;
   };
-  apps: Record<string, AppConfig<any>>;
+  apps: Record<string, AppDefinition>;
 }
 
+/**
+ * App definition
+ */
+export interface AppDefinition {
+  components: Array<Component>;
+  versioning: VersionManager;
+  changelog: string;
+}
+
+/**
+ * Normalized auto-release configuration
+ */
 export type NormalizedConfig = {
   changes_dir: string;
   git: {
@@ -47,14 +50,9 @@ export type NormalizedConfig = {
     default_target_branch: string;
     default_release_branch_prefix: string;
   };
-  apps: Record<string, AppConfig<any>>;
+  apps: Array<InternalAppDefinition>;
 };
 
-/**
- * Validation result
- */
-export interface ValidationResult {
-  valid: boolean;
-  errors: string[];
-  warnings: string[];
-}
+export type InternalAppDefinition = AppDefinition & {
+  name: string;
+};
