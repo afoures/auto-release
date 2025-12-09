@@ -1,7 +1,7 @@
 import { parseArgs } from "node:util";
 import type { ParseArgsOptionDescriptor } from "node:util";
 import { log, cancel } from "@clack/prompts";
-import { load_config, InternalConfig } from "./config.js";
+import type { InternalConfig } from "./config.js";
 
 /**
  * Extended option schema with description for help generation
@@ -25,14 +25,32 @@ type convert_to_values<args extends Record<string, Option>> = {
 /**
  * Command definition interface
  */
-type CommandRunContext<args extends Record<string, Option>> = {
-  args: convert_to_values<args>;
-  get_config: () => Promise<InternalConfig>;
+type ParsedCommandArgs<args extends Record<string, Option>> =
+  convert_to_values<args> & {
+    config?: string;
+  };
+
+type CommandExecutionContext = {
+  config: InternalConfig;
   root_dir: string;
 };
 
+type CommandGetContextArgs<args extends Record<string, Option>> = {
+  args: ParsedCommandArgs<args>;
+  cwd: string;
+};
+
+type CommandRunContext<
+  args extends Record<string, Option>,
+  context = CommandExecutionContext
+> = {
+  args: ParsedCommandArgs<args>;
+  context: context;
+};
+
 export interface Command<
-  args extends Record<string, Option> = Record<string, Option>
+  args extends Record<string, Option> = Record<string, Option>,
+  context = CommandExecutionContext
 > {
   /**
    * Command name (e.g., "check", "record")
@@ -53,10 +71,14 @@ export interface Command<
    * Run the command with parsed arguments and config
    */
   run: (
-    args: CommandRunContext<args>
+    args: CommandRunContext<args, context>
   ) => Promise<
     { status: "success"; message?: string } | { status: "error"; error: string }
   >;
+  /**
+   * Build the execution context (loads config, resolves root, etc.)
+   */
+  get_context: (args: CommandGetContextArgs<args>) => Promise<context>;
 }
 
 /**
@@ -64,7 +86,15 @@ export interface Command<
  */
 export function create_command<args extends Record<string, Option>>(
   command: Command<args>
-): Command<args> {
+): Command<args>;
+export function create_command<
+  args extends Record<string, Option>,
+  context = CommandExecutionContext
+>(command: Command<args, context>): Command<args, context>;
+export function create_command<
+  args extends Record<string, Option>,
+  context = CommandExecutionContext
+>(command: Command<args, context>): Command<args, context> {
   return command;
 }
 
@@ -154,12 +184,7 @@ export interface CreateCliOptions {
   /**
    * Commands available in the CLI
    */
-  commands: Record<string, Command<any>>;
-
-  /**
-   * Default config file path
-   */
-  default_config_path?: string;
+  commands: Record<string, Command<any, any>>;
 }
 
 /**
@@ -194,7 +219,7 @@ Commands:
 ${command_list}
 
 Options:
-  --config <path>    Path to config file (default: auto-release.config.ts)
+  --config <path>    Path to config file (default: search auto-release.config.{ts,js} upward to .git)
   --help             Show help
 
 Run '${name} <command> --help' for command-specific help.
@@ -209,12 +234,7 @@ Run '${name} <command> --help' for command-specific help.
  * Create a CLI handler function
  */
 export function create_cli(options: CreateCliOptions) {
-  const {
-    name,
-    description,
-    commands,
-    default_config_path = "auto-release.config.ts",
-  } = options;
+  const { name, description, commands } = options;
 
   /**
    * Main CLI entry point
@@ -245,11 +265,7 @@ export function create_cli(options: CreateCliOptions) {
       },
       allowPositionals: true,
     }) as {
-      values: {
-        config?: string;
-        help?: boolean;
-        [key: string]: string | boolean | (string | boolean)[] | undefined;
-      };
+      values: ParsedCommandArgs<typeof command.schema> & { help?: boolean };
     };
 
     if (values.help) {
@@ -257,41 +273,34 @@ export function create_cli(options: CreateCliOptions) {
       process.exit(0);
     }
 
-    let cached_config: InternalConfig | undefined;
+    try {
+      const command_context = await command.get_context({
+        args: values,
+        cwd: process.cwd(),
+      });
+      const run_args: CommandRunContext<any, any> = {
+        args: values,
+        context: command_context,
+      };
 
-    async function get_config() {
-      if (cached_config) {
-        return cached_config;
-      }
-      try {
-        cached_config = await load_config(values.config || default_config_path);
-        return cached_config;
-      } catch (error: any) {
-        log.error(`Failed to load config: ${error.message}`);
-        cancel("Config loading failed");
+      // Execute command
+      const result = await command.run(run_args);
+
+      // Handle exit code based on result
+      if (result.status === "error") {
+        log.error(result.error);
+        cancel("Command failed");
         process.exit(1);
       }
-    }
 
-    const run_args: CommandRunContext<any> = {
-      args: values,
-      get_config,
-      root_dir: process.cwd(),
-    };
-
-    // Execute command
-    const result = await command.run(run_args);
-
-    // Handle exit code based on result
-    if (result.status === "error") {
-      log.error(result.error);
-      cancel("Command failed");
+      if (result.status === "success") {
+        // Success - command completed successfully
+        // Message is already displayed by the command if needed
+      }
+    } catch (error: any) {
+      log.error(`Failed to run command: ${error.message}`);
+      cancel("Command execution failed");
       process.exit(1);
-    }
-
-    if (result.status === "success") {
-      // Success - command completed successfully
-      // Message is already displayed by the command if needed
     }
   };
 }

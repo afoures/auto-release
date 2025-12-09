@@ -17,6 +17,10 @@ import { exec } from "../utils/exec.js";
 
 type PackageManager = "npm" | "pnpm" | "yarn" | "bun";
 
+interface InitCommandContext {
+  root_dir: string;
+}
+
 interface PackageJson {
   name?: string;
   version?: string;
@@ -194,7 +198,7 @@ async function ensure_package_json(path: string): Promise<PackageJson> {
     return JSON.parse(content) as PackageJson;
   }
 
-  const project_name = basename(process.cwd()).replace(/[^a-zA-Z0-9-_]/g, "-");
+  const project_name = basename(dirname(path)).replace(/[^a-zA-Z0-9-_]/g, "-");
   const template: PackageJson = {
     name: project_name.toLowerCase(),
     version: "0.1.0",
@@ -238,13 +242,16 @@ function sanitize_env_var(value: string, fallback: string): string {
 
 const INIT_SCHEMA: Record<string, Option> = {};
 
-export const init = create_command({
+export const init = create_command<typeof INIT_SCHEMA, InitCommandContext>({
   name: "init",
   description: "Set up auto-release in the current repository",
   schema: INIT_SCHEMA,
-  run: async () => {
+  get_context: async ({ cwd }) => {
+    return { root_dir: cwd };
+  },
+  run: async ({ context }) => {
     intro("auto-release init");
-    const cwd = process.cwd();
+    const cwd = context.root_dir;
 
     try {
       const package_json_path = join(cwd, "package.json");

@@ -10,6 +10,7 @@ import {
   cancel,
 } from "@clack/prompts";
 import { create_command } from "../cli.js";
+import { load_config_with_discovery } from "../config.js";
 
 export const record = create_command({
   name: "record",
@@ -36,11 +37,18 @@ export const record = create_command({
       description: "Path to config file",
     },
   },
-  run: async ({ args, get_config }) => {
-    const cwd = process.cwd();
+  get_context: async ({ args, cwd }) => {
+    const { config, root_dir } = await load_config_with_discovery({
+      config_path: args.config,
+      cwd,
+    });
+    return { config, root_dir };
+  },
+  run: async ({ args, context }) => {
+    const cwd = context.root_dir;
     intro(`record a new change`);
 
-    const config = await get_config();
+    const config = context.config;
 
     // Determine app
     let app_name = args.app;
