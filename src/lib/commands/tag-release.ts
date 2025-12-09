@@ -4,6 +4,7 @@ import { get_changelog_path } from "../changelog.js";
 import { create_logger } from "../utils/logger.js";
 import { create_command } from "../cli.js";
 import type { ManagedApplication } from "../types.js";
+import { load_config_with_discovery } from "../config.js";
 
 export const tag_release = create_command({
   name: "tag-release",
@@ -22,11 +23,18 @@ export const tag_release = create_command({
       description: "Path to config file",
     },
   },
-  run: async ({ args, get_config }) => {
-    const cwd = process.cwd();
+  get_context: async ({ args, cwd }) => {
+    const { config, root_dir } = await load_config_with_discovery({
+      config_path: args.config,
+      cwd,
+    });
+    return { config, root_dir };
+  },
+  run: async ({ args, context }) => {
+    const cwd = context.root_dir;
     const app_filter = args.app;
     const branch_name = args.branch;
-    const config = await get_config();
+    const config = context.config;
     const logger = create_logger();
     const provider = config.git.provider;
     const release_branch_prefix = config.git.default_release_branch_prefix;

@@ -1,5 +1,7 @@
+import { constants } from "node:fs";
+import { access } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import type {
   AutoReleaseConfig,
   GitProvider,
@@ -76,6 +78,111 @@ export async function load_config(
   }
 
   return config;
+}
+
+const CONFIG_CANDIDATES = [
+  "auto-release.config.ts",
+  "auto-release.config.js",
+] as const;
+
+async function path_exists(path: string): Promise<boolean> {
+  try {
+    await access(path, constants.F_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function find_git_root(start_dir: string): Promise<string | undefined> {
+  let current_dir = start_dir;
+  while (true) {
+    const git_dir = resolve(current_dir, ".git");
+    if (await path_exists(git_dir)) {
+      return current_dir;
+    }
+    const parent_dir = dirname(current_dir);
+    if (parent_dir === current_dir) {
+      return undefined;
+    }
+    current_dir = parent_dir;
+  }
+}
+
+async function find_config_candidate(
+  start_dir: string,
+  stop_dir?: string
+): Promise<string | undefined> {
+  let current_dir = start_dir;
+  while (true) {
+    for (const candidate of CONFIG_CANDIDATES) {
+      const candidate_path = resolve(current_dir, candidate);
+      if (await path_exists(candidate_path)) {
+        return candidate_path;
+      }
+    }
+
+    if (stop_dir && current_dir === stop_dir) {
+      return undefined;
+    }
+
+    const parent_dir = dirname(current_dir);
+    if (parent_dir === current_dir) {
+      return undefined;
+    }
+    current_dir = parent_dir;
+  }
+}
+
+export interface ResolvedConfigPath {
+  config_path: string;
+  root_dir: string;
+}
+
+export async function resolve_config_path(options?: {
+  config_path?: string;
+  cwd?: string;
+}): Promise<ResolvedConfigPath> {
+  const cwd = options?.cwd ? resolve(options.cwd) : process.cwd();
+  const explicit_path = options?.config_path;
+
+  if (explicit_path) {
+    const resolved_explicit = resolve(cwd, explicit_path);
+    const exists = await path_exists(resolved_explicit);
+    if (!exists) {
+      throw new Error(`Config file not found at ${resolved_explicit}`);
+    }
+    return {
+      config_path: resolved_explicit,
+      root_dir: dirname(resolved_explicit),
+    };
+  }
+
+  const git_root = await find_git_root(cwd);
+  const config_candidate = await find_config_candidate(cwd, git_root);
+
+  if (!config_candidate) {
+    const stop_point = git_root || "filesystem root";
+    throw new Error(
+      `Could not find config (searched for ${CONFIG_CANDIDATES.join(
+        ", "
+      )}) from ${cwd} up to ${stop_point}`
+    );
+  }
+
+  return {
+    config_path: config_candidate,
+    root_dir: dirname(config_candidate),
+  };
+}
+
+export async function load_config_with_discovery(options?: {
+  config_path?: string;
+  cwd?: string;
+}): Promise<{ config: InternalConfig; root_dir: string }> {
+  const { config_path, root_dir } = await resolve_config_path(options);
+  const config = await load_config(config_path, root_dir);
+  return { config, root_dir };
 }
 
 /**

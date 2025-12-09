@@ -1,6 +1,7 @@
 import { parse_change_filename, parse_change_markdown } from "../changes.js";
 import { create_logger } from "../utils/logger.js";
 import { create_command } from "../cli.js";
+import { load_config_with_discovery } from "../config.js";
 import type { ManagedApplication } from "../types.js";
 import { join } from "node:path";
 import { readdirSync, readFileSync } from "node:fs";
@@ -85,14 +86,21 @@ export const check = create_command({
       description: "Output as JSON",
     },
   },
-  run: async ({ args, get_config }) => {
+  get_context: async ({ args, cwd }) => {
+    const { config, root_dir } = await load_config_with_discovery({
+      config_path: args.config,
+      cwd,
+    });
+    return { config, root_dir };
+  },
+  run: async ({ args, context }) => {
     const json = args.json ?? false;
     const logger = create_logger(json);
 
     const errors: string[] = [];
     const warnings: string[] = [];
 
-    const config = await get_config();
+    const config = context.config;
 
     for (const app of config.managed_applications) {
       const component_validation = verify_component_version_consistency(app);

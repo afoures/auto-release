@@ -13,6 +13,7 @@ import { create_logger } from "../utils/logger.js";
 import { create_command } from "../cli.js";
 import type { FileChange } from "../providers/types.js";
 import type { ManagedApplication } from "../types.js";
+import { load_config_with_discovery } from "../config.js";
 
 export const generate_release = create_command({
   name: "generate-release",
@@ -31,12 +32,19 @@ export const generate_release = create_command({
       description: "Path to config file",
     },
   },
-  run: async ({ args, get_config }) => {
-    const cwd = process.cwd();
+  get_context: async ({ args, cwd }) => {
+    const { config, root_dir } = await load_config_with_discovery({
+      config_path: args.config,
+      cwd,
+    });
+    return { config, root_dir };
+  },
+  run: async ({ args, context }) => {
+    const cwd = context.root_dir;
     const app_filter = args.app;
     const dry_run = args["dry-run"] ?? false;
 
-    const config = await get_config();
+    const config = context.config;
 
     const logger = create_logger();
     const provider = config.git.provider;
