@@ -3,6 +3,7 @@ import { define_config } from "../src/lib/config.js";
 import { semver } from "../src/lib/versioning/semantic.js";
 import { github } from "../src/lib/providers/github.js";
 import { node } from "../src/lib/components/node.js";
+import type { Formatter, VersionManager } from "../src/lib/types.js";
 
 describe("define_config", () => {
   it("should return config as-is", () => {
@@ -20,17 +21,33 @@ describe("define_config", () => {
       },
     });
 
-    expect(Object.keys(config.apps)).toHaveLength(1);
-    expect(config.apps["my-app"]).toBeDefined();
+    const managed_apps = config.managed_applications;
+
+    expect(managed_apps).toHaveLength(1);
+    const managed_app = managed_apps.find((item) => item.name === "my-app");
+    expect(managed_app).toBeDefined();
   });
 
   it("should support custom strategies", () => {
-    const custom_strategy = {
+    const formatter: Formatter<"breaking" | "feature" | "fix"> = {
+      transform_markdown: () => ({
+        releases: [],
+      }),
+      format_changelog: () => [],
+      generate_release_notes: () => [],
+    };
+
+    const custom_strategy: VersionManager<"breaking" | "feature" | "fix"> = {
       allowed_changes: ["breaking", "feature", "fix"] as const,
-      compare: () => 0 as const,
+      compare: () => 0,
       validate: () => true,
       bump: () => "1.0.0",
-      formatter: {} as any,
+      formatter,
+      display_map: {
+        breaking: { singular: "breaking change", plural: "breaking changes" },
+        feature: { singular: "feature", plural: "features" },
+        fix: { singular: "fix", plural: "fixes" },
+      },
     };
 
     const config = define_config({
@@ -47,7 +64,11 @@ describe("define_config", () => {
       },
     });
 
-    expect(config.apps["my-app"].versioning.allowed_changes).toEqual([
+    const managed_app = config.managed_applications.find(
+      (item) => item.name === "my-app"
+    );
+
+    expect(managed_app?.versioning.allowed_changes).toEqual([
       "breaking",
       "feature",
       "fix",
