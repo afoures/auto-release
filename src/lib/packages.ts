@@ -1,4 +1,3 @@
-import { resolve } from "node:path";
 import type { ManagedApplication } from "./types.js";
 
 /**
@@ -14,18 +13,16 @@ export interface ResolvedPackage {
  */
 export async function resolve_packages(
   app: ManagedApplication,
-  cwd: string = process.cwd()
+  _cwd: string = process.cwd()
 ): Promise<ResolvedPackage[]> {
   const packages: ResolvedPackage[] = [];
 
   for (const component of app.components) {
-    const component_result = component();
-    for (const part of component_result.parts) {
-      const resolved_path = resolve(cwd, part.path);
+    for (const part of component.parts) {
       const version = part.get_current_version();
 
       packages.push({
-        path: resolved_path,
+        path: part.path,
         version,
       });
     }
@@ -70,8 +67,7 @@ export async function write_version(
   new_version: string
 ): Promise<void> {
   for (const component of app.components) {
-    const component_result = component();
-    for (const part of component_result.parts) {
+    for (const part of component.parts) {
       part.update_version(new_version);
     }
   }

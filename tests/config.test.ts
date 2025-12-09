@@ -1,3 +1,4 @@
+import { isAbsolute, resolve } from "node:path";
 import { describe, it, expect } from "vitest";
 import { define_config } from "../src/lib/config.js";
 import { semver } from "../src/lib/versioning/semantic.js";
@@ -26,6 +27,38 @@ describe("define_config", () => {
     expect(managed_apps).toHaveLength(1);
     const managed_app = managed_apps.find((item) => item.name === "my-app");
     expect(managed_app).toBeDefined();
+  });
+
+  it("resolves relative paths to absolute locations", () => {
+    const config = define_config({
+      changes_dir: ".changes",
+      apps: {
+        "my-app": {
+          components: [node(".")],
+          versioning: semver(),
+          changelog: "CHANGELOG.md",
+        },
+      },
+      git: {
+        provider: github({ token: "test", owner: "test", repo: "test" }),
+        default_target_branch: "main",
+      },
+    });
+
+    const managed_app = config.managed_applications.find(
+      (item) => item.name === "my-app"
+    );
+
+    expect(managed_app).toBeDefined();
+    const resolved_app = managed_app!;
+
+    expect(config.changes_dir).toBe(resolve(process.cwd(), ".changes"));
+
+    const component_result = resolved_app.components[0];
+    expect(isAbsolute(component_result.path)).toBe(true);
+    expect(component_result.parts.every((part) => isAbsolute(part.path))).toBe(
+      true
+    );
   });
 
   it("should support custom strategies", () => {

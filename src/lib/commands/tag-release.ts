@@ -4,7 +4,7 @@ import { get_changelog_path } from "../changelog.js";
 import { create_logger } from "../utils/logger.js";
 import { create_command } from "../cli.js";
 import type { ManagedApplication } from "../types.js";
-import { load_config_with_discovery } from "../config.js";
+import { find_nearest_config } from "../config.js";
 
 export const tag_release = create_command({
   name: "tag-release",
@@ -24,7 +24,7 @@ export const tag_release = create_command({
     },
   },
   get_context: async ({ args, cwd }) => {
-    const { config, root_dir } = await load_config_with_discovery({
+    const { config, root_dir } = await find_nearest_config({
       config_path: args.config,
       cwd,
     });

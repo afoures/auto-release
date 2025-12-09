@@ -1,7 +1,7 @@
 import { parse_change_filename, parse_change_markdown } from "../changes.js";
 import { create_logger } from "../utils/logger.js";
 import { create_command } from "../cli.js";
-import { load_config_with_discovery } from "../config.js";
+import { find_nearest_config } from "../config.js";
 import type { ManagedApplication } from "../types.js";
 import { join } from "node:path";
 import { readdirSync, readFileSync } from "node:fs";
@@ -11,8 +11,7 @@ function verify_component_version_consistency(
 ): { ok: true } | { ok: false; errors: string[] } {
   const versions = new Set<string>();
   for (const component of app.components) {
-    const component_result = component();
-    for (const part of component_result.parts) {
+    for (const part of component.parts) {
       const version = part.get_current_version();
       versions.add(version);
     }
@@ -87,7 +86,7 @@ export const check = create_command({
     },
   },
   get_context: async ({ args, cwd }) => {
-    const { config, root_dir } = await load_config_with_discovery({
+    const { config, root_dir } = await find_nearest_config({
       config_path: args.config,
       cwd,
     });
