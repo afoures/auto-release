@@ -20,12 +20,24 @@ export type Formatter<
     }>;
   }
 > = {
+  /**
+   * Transform the mdast tree into a custom changelog data structure.
+   * @param tree - The markdown tree to transform
+   */
   transform_markdown(tree: Root): parsed_changelog;
   /**
-   * The changelog content will be sorted by version in ascending order automatically.
+   * Format the changelog data into an renderable markdown strings.
+   * The changelog releases will be sorted by version in ascending order automatically.
+   * @param changelog - The parsed changelog to format
+   * @returns An array of strings that will be written to the changelog file
    */
   format_changelog(changelog: NoInfer<parsed_changelog>): Array<string>;
-  generate_release_notes(args: {
+  /**
+   * Generate release notes for a given app that will be written to the release pull/merge request body
+   * @param options - The options for generating release notes
+   * @returns An array of strings that will be written to the release pull/merge request body
+   */
+  generate_release_notes(options: {
     app: { name: string };
     current_version: string;
     next_version: string;
