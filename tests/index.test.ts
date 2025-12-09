@@ -39,9 +39,13 @@ describe("Public API exports", () => {
       },
     });
 
-    expect(Object.keys(config.apps)).toHaveLength(1);
-    expect(config.apps["test-app"]).toBeDefined();
-    expect(config.apps["test-app"].versioning.allowed_changes).toEqual([
+    const managed_apps = config.managed_applications;
+
+    expect(managed_apps).toHaveLength(1);
+    const managed_app = managed_apps.find((item) => item.name === "test-app");
+
+    expect(managed_app).toBeDefined();
+    expect(managed_app?.versioning.allowed_changes).toEqual([
       "major",
       "minor",
       "patch",
