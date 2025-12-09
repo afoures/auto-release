@@ -28,6 +28,7 @@ type convert_to_values<args extends Record<string, Option>> = {
 type CommandRunContext<args extends Record<string, Option>> = {
   args: convert_to_values<args>;
   get_config: () => Promise<InternalConfig>;
+  root_dir: string;
 };
 
 export interface Command<
@@ -275,6 +276,7 @@ export function create_cli(options: CreateCliOptions) {
     const run_args: CommandRunContext<any> = {
       args: values,
       get_config,
+      root_dir: process.cwd(),
     };
 
     // Execute command

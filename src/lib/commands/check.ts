@@ -1,12 +1,7 @@
-import { validate_packages } from "../packages.js";
-import {
-  discover_all_changes,
-  parse_change_filename,
-  parse_change_markdown,
-} from "../changes.js";
+import { parse_change_filename, parse_change_markdown } from "../changes.js";
 import { create_logger } from "../utils/logger.js";
 import { create_command } from "../cli.js";
-import type { Component, ManagedApplication } from "../types.js";
+import type { ManagedApplication } from "../types.js";
 import { join } from "node:path";
 import { readdirSync, readFileSync } from "node:fs";
 
@@ -26,7 +21,7 @@ function verify_component_version_consistency(
     return {
       ok: false,
       errors: [
-        `Application ${app.name} has multiple versions: ${Array.from(
+        `application ${app.name} has multiple versions: ${Array.from(
           versions
         ).join(", ")}`,
       ],
@@ -44,30 +39,30 @@ function validate_changes_files_content(
   const errors: string[] = [];
   for (const change_file of changes_files) {
     if (!change_file.endsWith(".md")) {
-      errors.push(`Change file ${change_file} is not a markdown file`);
+      errors.push(`change file ${change_file} is not a markdown file`);
       continue;
     }
 
     const change_file_path = join(changes_dir_path, change_file);
     const change_file_parsed = parse_change_filename(change_file);
     if (!change_file_parsed) {
-      errors.push(`Change file ${change_file} has an invalid filename format`);
+      errors.push(`change file ${change_file} has an invalid filename format`);
     } else if (
       !app.versioning.allowed_changes.includes(change_file_parsed.kind)
     ) {
-      errors.push(`Change file ${change_file} has an invalid kind`);
+      errors.push(`change file ${change_file} has an invalid kind`);
     }
 
     const change_file_content = readFileSync(change_file_path, "utf-8");
     const { title, description } = parse_change_markdown(change_file_content);
     if (!title) {
-      errors.push(`Change file ${change_file} has no title`);
+      errors.push(`change file ${change_file} has no title`);
     }
     if (!description) {
-      errors.push(`Change file ${change_file} has no description`);
+      errors.push(`change file ${change_file} has no description`);
     }
     if (description.length === 0) {
-      errors.push(`Change file ${change_file} has no description`);
+      errors.push(`change file ${change_file} has no description`);
     }
   }
 
@@ -91,7 +86,6 @@ export const check = create_command({
     },
   },
   run: async ({ args, get_config }) => {
-    const cwd = process.cwd();
     const json = args.json ?? false;
     const logger = create_logger(json);
 
@@ -100,23 +94,18 @@ export const check = create_command({
 
     const config = await get_config();
 
-    // Validate packages
-    logger.info("Validating packages...");
-    const package_validation = await validate_packages(
-      config.managed_applications,
-      cwd
-    );
-    errors.push(...package_validation.errors);
-
-    // Validate change files
-    logger.info("Validating change files...");
-    try {
-      await discover_all_changes(
-        config.managed_applications,
-        config.changes_dir
+    for (const app of config.managed_applications) {
+      const component_validation = verify_component_version_consistency(app);
+      if (!component_validation.ok) {
+        errors.push(...component_validation.errors);
+      }
+      const changes_validation = validate_changes_files_content(
+        config.changes_dir,
+        app
       );
-    } catch (error: any) {
-      errors.push(error.message);
+      if (!changes_validation.ok) {
+        errors.push(...changes_validation.errors);
+      }
     }
 
     const valid = errors.length === 0;
