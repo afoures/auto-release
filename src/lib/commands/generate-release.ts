@@ -13,7 +13,7 @@ import { create_logger } from "../utils/logger.js";
 import { create_command } from "../cli.js";
 import type { FileChange } from "../providers/types.js";
 import type { ManagedApplication } from "../types.js";
-import { load_config_with_discovery } from "../config.js";
+import { find_nearest_config } from "../config.js";
 
 export const generate_release = create_command({
   name: "generate-release",
@@ -33,7 +33,7 @@ export const generate_release = create_command({
     },
   },
   get_context: async ({ args, cwd }) => {
-    const { config, root_dir } = await load_config_with_discovery({
+    const { config, root_dir } = await find_nearest_config({
       config_path: args.config,
       cwd,
     });
@@ -182,8 +182,7 @@ export const generate_release = create_command({
         // Components define parts that need version updates
         // We read current content from provider, update version, and write back
         for (const component of rel.app.components) {
-          const component_result = component();
-          for (const part of component_result.parts) {
+          for (const part of component.parts) {
             const part_relative_path = relative(cwd, part.path);
             const current_content = await provider.get_file_content(
               part_relative_path,

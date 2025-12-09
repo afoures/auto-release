@@ -1,12 +1,12 @@
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
-import type { AppDefinition, Change, ManagedApplication } from "./types.js";
+import type { Change, ManagedApplication } from "./types.js";
 
 /**
  * Get changelog path for an app
  */
 export function get_changelog_path(
-  app: AppDefinition,
+  app: { changelog: string },
   cwd: string = process.cwd()
 ): string {
   return resolve(cwd, app.changelog);

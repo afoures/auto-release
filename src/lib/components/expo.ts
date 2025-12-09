@@ -1,12 +1,13 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import type { Component, Part } from "./types.js";
 
 export function expo(path: string): Component {
-  return () => {
+  return (root_dir: string) => {
+    const base_path = resolve(root_dir, path);
     const parts: Array<Part> = [];
 
-    const package_json_path = join(path, "package.json");
+    const package_json_path = join(base_path, "package.json");
     if (!existsSync(package_json_path)) {
       console.warn(`package.json not found at ${package_json_path}`);
     } else {
@@ -30,7 +31,7 @@ export function expo(path: string): Component {
       });
     }
 
-    const app_json_path = join(path, "app.json");
+    const app_json_path = join(base_path, "app.json");
     if (existsSync(app_json_path)) {
       parts.push({
         path: app_json_path,
@@ -53,7 +54,7 @@ export function expo(path: string): Component {
     }
 
     return {
-      path,
+      path: base_path,
       parts,
     };
   };

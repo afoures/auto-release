@@ -2,7 +2,7 @@
  * Core types for auto-release
  */
 
-import type { Component } from "./components/types.js";
+import type { Component, ResolvedComponent } from "./components/types.js";
 import type { GitProvider } from "./providers/types.js";
 import type {
   VersionManager,
@@ -17,6 +17,7 @@ export type {
   Change,
   Formatter,
   Component,
+  ResolvedComponent,
   ChangeKindDisplayMap,
 };
 
@@ -54,4 +55,7 @@ export interface AppDefinition {
 
 export type ManagedApplication = {
   name: string;
-} & AppDefinition;
+  components: Array<ResolvedComponent>;
+  versioning: VersionManager;
+  changelog: string;
+};

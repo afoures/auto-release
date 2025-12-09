@@ -4,7 +4,9 @@ export type Part = {
   update_version: (version: string) => void;
 };
 
-export type Component = () => {
+export type ResolvedComponent = {
   path: string;
   parts: Array<Part>;
 };
+
+export type Component = (root_dir: string) => ResolvedComponent;

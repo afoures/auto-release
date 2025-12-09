@@ -1,7 +1,7 @@
 import { constants } from "node:fs";
 import { access } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
-import { dirname, resolve } from "node:path";
+import { dirname, isAbsolute, resolve } from "node:path";
 import type {
   AutoReleaseConfig,
   GitProvider,
@@ -17,12 +17,28 @@ export function define_config<const config extends AutoReleaseConfig>(
 
 export class InternalConfig {
   #config: AutoReleaseConfig;
+  #root_dir: string | undefined;
+
   constructor(config: AutoReleaseConfig) {
     this.#config = config;
+    this.#root_dir = undefined;
+  }
+
+  set_root_dir(root_dir: string): void {
+    this.#root_dir = root_dir;
   }
 
   get changes_dir(): string {
-    return this.#config.changes_dir || ".changes";
+    const configured_changes_dir = this.#config.changes_dir || ".changes";
+    const root_dir = this.#root_dir;
+    if (!root_dir) {
+      throw new Error(
+        "Cannot get changes directory: auto-release root directory not set"
+      );
+    }
+    return isAbsolute(configured_changes_dir)
+      ? configured_changes_dir
+      : resolve(root_dir, configured_changes_dir);
   }
 
   get git(): {
@@ -39,9 +55,16 @@ export class InternalConfig {
   }
 
   get managed_applications(): Array<ManagedApplication> {
+    const root_dir = this.#root_dir;
+    if (!root_dir) {
+      throw new Error(
+        "Cannot get managed applications: auto-release root directory not set"
+      );
+    }
     return Object.entries(this.#config.apps).map(([name, definition]) => ({
       name,
       ...definition,
+      components: definition.components.map((component) => component(root_dir)),
     }));
   }
 }
@@ -49,7 +72,7 @@ export class InternalConfig {
 /**
  * Load and validate auto-release config from a TypeScript file
  */
-export async function load_config(
+async function load_config(
   config_path: string = "auto-release.config.ts",
   cwd: string = process.cwd()
 ): Promise<InternalConfig> {
@@ -77,12 +100,18 @@ export async function load_config(
     throw new Error("Auto-release config is invalid");
   }
 
+  config.set_root_dir(dirname(resolved_path));
+
   return config;
 }
 
 const CONFIG_CANDIDATES = [
   "auto-release.config.ts",
+  "auto-release.config.mts",
+  "auto-release.config.cts",
   "auto-release.config.js",
+  "auto-release.config.mjs",
+  "auto-release.config.cjs",
 ] as const;
 
 async function path_exists(path: string): Promise<boolean> {
@@ -134,12 +163,12 @@ async function find_config_candidate(
   }
 }
 
-export interface ResolvedConfigPath {
+interface ResolvedConfigPath {
   config_path: string;
   root_dir: string;
 }
 
-export async function resolve_config_path(options?: {
+async function resolve_config_path(options?: {
   config_path?: string;
   cwd?: string;
 }): Promise<ResolvedConfigPath> {
@@ -176,7 +205,7 @@ export async function resolve_config_path(options?: {
   };
 }
 
-export async function load_config_with_discovery(options?: {
+export async function find_nearest_config(options?: {
   config_path?: string;
   cwd?: string;
 }): Promise<{ config: InternalConfig; root_dir: string }> {

@@ -1,12 +1,13 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import type { Component, Part } from "./types.js";
 
 export function php(path: string): Component {
-  return () => {
+  return (root_dir: string) => {
+    const base_path = resolve(root_dir, path);
     const parts: Array<Part> = [];
 
-    const composer_json_path = join(path, "composer.json");
+    const composer_json_path = join(base_path, "composer.json");
     if (!existsSync(composer_json_path)) {
       console.warn(`composer.json not found at ${composer_json_path}`);
     } else {
@@ -31,7 +32,7 @@ export function php(path: string): Component {
     }
 
     return {
-      path,
+      path: base_path,
       parts,
     };
   };
