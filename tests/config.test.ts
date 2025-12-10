@@ -66,8 +66,9 @@ describe("define_config", () => {
       transform_markdown: () => ({
         releases: [],
       }),
-      format_changelog: () => [],
-      generate_release_notes: () => [],
+      format_changelog: () => "",
+      generate_release_notes: () => "",
+      generate_pr_body: () => "",
     };
 
     const custom_strategy: VersionManager<"breaking" | "feature" | "fix"> = {

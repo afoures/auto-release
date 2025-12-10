@@ -26,23 +26,34 @@ export type Formatter<
    */
   transform_markdown(tree: Root): parsed_changelog;
   /**
-   * Format the changelog data into an renderable markdown strings.
+   * Format the changelog data into markdown.
    * The changelog releases will be sorted by version in ascending order automatically.
    * @param changelog - The parsed changelog to format
-   * @returns An array of strings that will be written to the changelog file
+   * @returns Markdown string that will be written to the changelog file
    */
-  format_changelog(changelog: NoInfer<parsed_changelog>): Array<string>;
+  format_changelog(changelog: NoInfer<parsed_changelog>): string;
   /**
-   * Generate release notes for a given app that will be written to the release pull/merge request body
+   * Generate release notes for a given app to use in GitHub/GitLab release bodies.
    * @param options - The options for generating release notes
-   * @returns An array of strings that will be written to the release pull/merge request body
+   * @returns Markdown string for release bodies
    */
   generate_release_notes(options: {
     app: { name: string };
     current_version: string;
     next_version: string;
     changes: Change<change_kinds>[];
-  }): Array<string>;
+  }): string;
+  /**
+   * Generate pull/merge request body content.
+   * @param options - The options for generating the PR body
+   * @returns Markdown string for PR bodies
+   */
+  generate_pr_body(options: {
+    app: { name: string };
+    current_version: string;
+    next_version: string;
+    changes: Change<change_kinds>[];
+  }): string;
 };
 
 export type ChangeKindDisplayMap<change_kind extends string> = Record<
