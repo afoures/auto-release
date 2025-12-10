@@ -16,7 +16,12 @@ function verify_component_version_consistency(
       versions.add(version);
     }
   }
-
+  if (versions.size === 0) {
+    return {
+      ok: false,
+      errors: [`application ${app.name} has no versions`],
+    };
+  }
   if (versions.size > 1) {
     return {
       ok: false,
