@@ -1,35 +1,11 @@
 import { relative, resolve } from "node:path";
 import { create_logger } from "../utils/logger.js";
 import { create_command } from "../cli.js";
-import type { ManagedApplication } from "../types.js";
 import { find_nearest_config } from "../config.js";
+import type { ManagedApplication } from "../types.js";
 import { fromMarkdown } from "mdast-util-from-markdown";
 import { gfmFromMarkdown } from "mdast-util-gfm";
 import { gfm } from "micromark-extension-gfm";
-
-async function get_current_version(app: ManagedApplication): Promise<string> {
-  const versions = new Set<string>();
-
-  for (const component of app.components) {
-    for (const part of component.parts) {
-      versions.add(part.get_current_version());
-    }
-  }
-
-  if (versions.size === 0) {
-    throw new Error(`App "${app.name}" has no components`);
-  }
-
-  if (versions.size > 1) {
-    throw new Error(
-      `App "${app.name}" has mismatched versions: ${Array.from(versions).join(
-        ", "
-      )}`
-    );
-  }
-
-  return versions.values().next().value as string;
-}
 
 function build_release_body({
   app,
@@ -169,7 +145,7 @@ export const tag_release = create_command({
 
       try {
         // Get current version from components
-        const current_version = await get_current_version(app);
+        const current_version = app.current_version;
         logger.info(`Version: ${current_version}`);
 
         // Get changelog content for release notes
