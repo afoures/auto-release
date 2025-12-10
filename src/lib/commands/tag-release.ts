@@ -1,10 +1,76 @@
-import { relative } from "node:path";
-import { get_current_version } from "../packages.js";
-import { get_changelog_path } from "../changelog.js";
+import { relative, resolve } from "node:path";
 import { create_logger } from "../utils/logger.js";
 import { create_command } from "../cli.js";
 import type { ManagedApplication } from "../types.js";
 import { find_nearest_config } from "../config.js";
+import { fromMarkdown } from "mdast-util-from-markdown";
+import { gfmFromMarkdown } from "mdast-util-gfm";
+import { gfm } from "micromark-extension-gfm";
+
+async function get_current_version(app: ManagedApplication): Promise<string> {
+  const versions = new Set<string>();
+
+  for (const component of app.components) {
+    for (const part of component.parts) {
+      versions.add(part.get_current_version());
+    }
+  }
+
+  if (versions.size === 0) {
+    throw new Error(`App "${app.name}" has no components`);
+  }
+
+  if (versions.size > 1) {
+    throw new Error(
+      `App "${app.name}" has mismatched versions: ${Array.from(versions).join(
+        ", "
+      )}`
+    );
+  }
+
+  return versions.values().next().value as string;
+}
+
+function build_release_body({
+  app,
+  version,
+  changelog_content,
+}: {
+  app: ManagedApplication;
+  version: string;
+  changelog_content: string | null;
+}): string {
+  const formatter = app.versioning.formatter;
+
+  if (!changelog_content) {
+    return `Release ${app.name} ${version}`;
+  }
+
+  const parsed_changelog: ReturnType<typeof formatter.transform_markdown> =
+    formatter.transform_markdown(
+      fromMarkdown(changelog_content, {
+        extensions: [gfm()],
+        mdastExtensions: [gfmFromMarkdown()],
+      })
+    );
+
+  const release = parsed_changelog.releases.find(
+    (item) => item.version === version
+  );
+
+  if (!release) {
+    return `Release ${app.name} ${version}`;
+  }
+
+  return `${formatter
+    .generate_release_notes({
+      app: { name: app.name },
+      current_version: version,
+      next_version: version,
+      changes: release.changes,
+    })
+    .trimEnd()}\n`;
+}
 
 export const tag_release = create_command({
   name: "tag-release",
@@ -103,54 +169,22 @@ export const tag_release = create_command({
 
       try {
         // Get current version from components
-        const current_version = await get_current_version(app, cwd);
+        const current_version = await get_current_version(app);
         logger.info(`Version: ${current_version}`);
 
         // Get changelog content for release notes
-        const changelog_path = get_changelog_path(app, cwd);
+        const changelog_path = resolve(cwd, app.changelog);
         const changelog_relative_path = relative(cwd, changelog_path);
         const changelog_content = await provider.get_file_content(
           changelog_relative_path,
           default_branch
         );
 
-        // Extract release notes from changelog
-        let release_body = `Release ${app_name} ${current_version}`;
-        if (changelog_content) {
-          // Extract the first release section (most recent)
-          const lines = changelog_content.split("\n");
-          let in_release_section = false;
-          let release_lines: string[] = [];
-
-          // Find the version header
-          for (let i = 0; i < lines.length; i++) {
-            if (
-              lines[i].match(
-                new RegExp(
-                  `^## ${current_version.replace(
-                    /[.*+?^${}()|[\]\\]/g,
-                    "\\$&"
-                  )}`
-                )
-              )
-            ) {
-              in_release_section = true;
-              release_lines.push(lines[i]);
-              continue;
-            }
-            if (in_release_section) {
-              // Stop at next release section
-              if (lines[i].match(/^## /)) {
-                break;
-              }
-              release_lines.push(lines[i]);
-            }
-          }
-
-          if (release_lines.length > 0) {
-            release_body = release_lines.join("\n").trim();
-          }
-        }
+        const release_body = build_release_body({
+          app,
+          version: current_version,
+          changelog_content,
+        });
 
         // Create git tag
         const tag_name = `${app_name}@${current_version}`;

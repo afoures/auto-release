@@ -1,19 +1,40 @@
-import { relative } from "node:path";
-import { get_current_version } from "../packages.js";
+import { relative, resolve } from "node:path";
 import {
   discover_all_changes,
   discover_all_changes_with_metadata,
 } from "../changes.js";
-import {
-  generate_updated_changelog,
-  get_changelog_path,
-} from "../changelog.js";
-import { generate_release_notes } from "../release-notes.js";
 import { create_logger } from "../utils/logger.js";
 import { create_command } from "../cli.js";
 import type { FileChange } from "../providers/types.js";
 import type { ManagedApplication } from "../types.js";
 import { find_nearest_config } from "../config.js";
+import { fromMarkdown } from "mdast-util-from-markdown";
+import { gfmFromMarkdown } from "mdast-util-gfm";
+import { gfm } from "micromark-extension-gfm";
+
+async function get_current_version(app: ManagedApplication): Promise<string> {
+  const versions = new Set<string>();
+
+  for (const component of app.components) {
+    for (const part of component.parts) {
+      versions.add(part.get_current_version());
+    }
+  }
+
+  if (versions.size === 0) {
+    throw new Error(`App "${app.name}" has no components`);
+  }
+
+  if (versions.size > 1) {
+    throw new Error(
+      `App "${app.name}" has mismatched versions: ${Array.from(versions).join(
+        ", "
+      )}`
+    );
+  }
+
+  return versions.values().next().value as string;
+}
 
 export const generate_release = create_command({
   name: "generate-release",
@@ -94,7 +115,7 @@ export const generate_release = create_command({
       }
 
       try {
-        const current_version = await get_current_version(app, cwd);
+        const current_version = await get_current_version(app);
         const strategy = app.versioning;
 
         const next_version = strategy.bump({
@@ -161,27 +182,20 @@ export const generate_release = create_command({
 
     // Process each release
     const errors: string[] = [];
-    for (const rel of releases) {
-      logger.info(`\nPreparing release for ${rel.app.name}...`);
+    for (const release of releases) {
+      logger.info(`\nPreparing release for ${release.app.name}...`);
 
       try {
-        // Fetch current files from default branch
-        const changelog_path = get_changelog_path(rel.app, cwd);
-
-        // Read current changelog
+        const changelog_path = resolve(cwd, release.app.changelog);
         const changelog_relative_path = relative(cwd, changelog_path);
         const existing_changelog = await provider.get_file_content(
           changelog_relative_path,
           default_branch
         );
 
-        // Generate updated files
         const file_changes: FileChange[] = [];
 
-        // Update component files
-        // Components define parts that need version updates
-        // We read current content from provider, update version, and write back
-        for (const component of rel.app.components) {
+        for (const component of release.app.components) {
           for (const part of component.parts) {
             const part_relative_path = relative(cwd, part.path);
             const current_content = await provider.get_file_content(
@@ -196,20 +210,15 @@ export const generate_release = create_command({
               continue;
             }
 
-            // Update version in content
-            // For JSON files (package.json, etc.), parse and update version field
             let updated_content = current_content;
             try {
               const parsed = JSON.parse(current_content);
               if (parsed.version !== undefined) {
-                parsed.version = rel.next_version;
+                parsed.version = release.next_version;
                 updated_content = JSON.stringify(parsed, null, 2) + "\n";
               }
             } catch {
-              // Not JSON - for other file types, components would handle this
-              // but since we're working with provider content, we can't use update_version
-              // For now, skip non-JSON files or implement component-specific logic
-              // This is a limitation that may need component-specific handlers
+              // Non-JSON files are skipped; component-specific handling would be needed
             }
 
             file_changes.push({
@@ -223,15 +232,34 @@ export const generate_release = create_command({
           continue;
         }
 
-        // Update changelog
-        const updated_changelog = generate_updated_changelog({
-          existing_content: existing_changelog,
-          app: rel.app,
-          current_version: rel.current_version,
-          next_version: rel.next_version,
-          date: new Date(),
-          changes: rel.changes,
-        });
+        const formatter = release.app.versioning.formatter;
+        const parsed_changelog = formatter.transform_markdown(
+          existing_changelog
+            ? fromMarkdown(existing_changelog, {
+                extensions: [gfm()],
+                mdastExtensions: [gfmFromMarkdown()],
+              })
+            : { type: "root", children: [] }
+        );
+
+        const releases = [
+          { version: release.next_version, changes: release.changes },
+          ...parsed_changelog.releases.filter(
+            (existing_release) =>
+              existing_release.version !== release.next_version
+          ),
+        ];
+
+        releases.sort((a, b) =>
+          release.app.versioning.compare(a.version, b.version)
+        );
+
+        const changelog_content = formatter.format_changelog({
+          ...parsed_changelog,
+          releases,
+        } as typeof parsed_changelog);
+        const updated_changelog = `${changelog_content.trimEnd()}\n`;
+
         file_changes.push({
           path: changelog_relative_path,
           content: updated_changelog,
@@ -239,10 +267,10 @@ export const generate_release = create_command({
 
         // Delete change files - need to discover changes with metadata
         const changes_with_metadata = await discover_all_changes_with_metadata(
-          [rel.app],
+          [release.app],
           config.changes_dir
         );
-        const app_changes = changes_with_metadata.get(rel.app.name) || [];
+        const app_changes = changes_with_metadata.get(release.app.name) || [];
         for (const change of app_changes) {
           const change_relative_path = relative(cwd, change.file_path);
           file_changes.push({
@@ -252,27 +280,26 @@ export const generate_release = create_command({
         }
 
         // Create or update branch
-        const commit_message = `chore: release ${rel.app.name} ${rel.next_version}`;
+        const commit_message = `chore: release ${release.app.name} ${release.next_version}`;
         await provider.create_or_update_branch(
-          rel.release_branch,
+          release.release_branch,
           default_branch_sha,
           file_changes,
           commit_message
         );
-        logger.success(`Updated branch: ${rel.release_branch}`);
+        logger.success(`Updated branch: ${release.release_branch}`);
 
-        // Generate PR title and body
-        const pr_title = `chore: release ${rel.app.name} ${rel.next_version}`;
-        const pr_body = generate_release_notes({
-          app: rel.app,
-          current_version: rel.current_version,
-          next_version: rel.next_version,
-          changes: rel.changes,
+        const pr_title = `chore: release ${release.app.name} ${release.next_version}`;
+        const pr_body = formatter.generate_pr_body({
+          app: release.app,
+          current_version: release.current_version,
+          next_version: release.next_version,
+          changes: release.changes,
         });
 
         // Find existing PR or create new one
         const existing_pr = await provider.find_pull_request(
-          rel.release_branch
+          release.release_branch
         );
         if (existing_pr) {
           await provider.update_pull_request(
@@ -285,7 +312,7 @@ export const generate_release = create_command({
           );
         } else {
           const pr = await provider.create_pull_request(
-            rel.release_branch,
+            release.release_branch,
             default_branch,
             pr_title,
             pr_body
@@ -294,7 +321,7 @@ export const generate_release = create_command({
         }
       } catch (error: any) {
         errors.push(
-          `Failed to prepare release for ${rel.app.name}: ${error.message}`
+          `Failed to prepare release for ${release.app.name}: ${error.message}`
         );
       }
     }

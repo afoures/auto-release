@@ -41,10 +41,7 @@ auto-release/
 │   │   ├── types.ts                # Core type definitions
 │   │   ├── config.ts               # Config loading & validation
 │   │   ├── changes.ts              # Change file discovery & parsing
-│   │   ├── packages.ts             # Component version management
-│   │   ├── changelog.ts            # Changelog generation
-│   │   ├── release-notes.ts        # Release notes generation
-│   │   ├── formatter.ts            # Default formatter implementation
+│   │   ├── formatter.ts            # Changelog & release note formatting
 │   │   ├── cli.ts                  # CLI framework
 │   │   ├── commands/
 │   │   │   ├── check.ts            # Check command

@@ -1,72 +1,64 @@
 import { describe, it, expect } from "vitest";
-import { generate_changelog_section } from "../src/lib/changelog.js";
 import { semver } from "../src/lib/versioning/semantic.js";
-import type { AppDefinition, Change } from "../src/lib/types.js";
+import { fromMarkdown } from "mdast-util-from-markdown";
+import { gfmFromMarkdown } from "mdast-util-gfm";
+import { gfm } from "micromark-extension-gfm";
 
-describe("generate_changelog_section", () => {
-  const strategy = semver();
-  const app: AppDefinition = {
-    components: [],
-    versioning: strategy,
-    changelog: "CHANGELOG.md",
-  };
+describe("default formatter", () => {
+  const formatter = semver().formatter;
 
-  it("should generate changelog section with grouped changes", () => {
-    const changes: Change<"major" | "minor" | "patch">[] = [
-      {
-        kind: "major",
-        title: "Breaking API change",
-        description: [],
-      },
-      {
-        kind: "minor",
-        title: "Add new feature",
-        description: [],
-      },
-      {
-        kind: "patch",
-        title: "Fix bug",
-        description: [],
-      },
-    ];
+  it("formats grouped changelog sections without dates", () => {
+    const changelog = {
+      root: { title: "test-app", description: [] as string[] },
+      releases: [
+        {
+          version: "2.0.0",
+          changes: [
+            { kind: "major", title: "Breaking API change", description: [] },
+            { kind: "minor", title: "Add new feature", description: [] },
+            { kind: "patch", title: "Fix bug", description: [] },
+          ],
+        },
+      ],
+    };
 
-    const section = generate_changelog_section({
-      app,
-      app_name: "test-app",
-      current_version: "1.0.0",
-      next_version: "2.0.0",
-      date: new Date("2025-11-26"),
-      changes,
-    });
+    const output = formatter.format_changelog(changelog);
 
-    expect(section).toContain("## 2.0.0 (2025-11-26)");
-    expect(section).toContain("- Breaking API change");
-    expect(section).toContain("- Add new feature");
-    expect(section).toContain("- Fix bug");
+    expect(output).toContain("## 2.0.0");
+    expect(output).toContain("### Breaking Changes");
+    expect(output).toContain("### Features");
+    expect(output).toContain("### Bug Fixes");
+    expect(output).not.toMatch(/\(/); // no date fragments
   });
 
-  it("should include description content if present", () => {
-    const changes: Change<"minor">[] = [
-      {
-        kind: "minor",
-        title: "Add authentication",
-        description: [
-          "This adds JWT-based authentication with refresh tokens.",
-        ],
-      },
-    ];
+  it("parses existing markdown and keeps root title", () => {
+    const markdown = `# test-app\n\n## 1.0.0\n\n- Initial release`;
+    const parsed = formatter.transform_markdown(
+      fromMarkdown(markdown, {
+        extensions: [gfm()],
+        mdastExtensions: [gfmFromMarkdown()],
+      })
+    );
 
-    const section = generate_changelog_section({
-      app,
-      app_name: "test-app",
+    expect(parsed.root.title).toBe("test-app");
+    expect(parsed.releases[0]?.version).toBe("1.0.0");
+    expect(parsed.releases[0]?.changes[0]?.title).toContain("Initial release");
+  });
+
+  it("creates release notes with headings and no dates", () => {
+    const notes = formatter.generate_release_notes({
+      app: { name: "test-app" },
       current_version: "1.0.0",
       next_version: "1.1.0",
-      date: new Date("2025-11-26"),
-      changes,
+      changes: [
+        { kind: "minor", title: "Add authentication", description: [] },
+        { kind: "patch", title: "Fix login", description: [] },
+      ],
     });
 
-    expect(section).toContain("- Add authentication");
-    // Description is included via formatter.generate_release_notes
-    expect(section).toContain("- Add authentication");
+    const body = notes;
+    expect(body).toContain("# Release test-app 1.1.0");
+    expect(body).not.toContain("1.0.0 → 1.1.0");
+    expect(body).not.toMatch(/\(/); // no date fragments
   });
 });

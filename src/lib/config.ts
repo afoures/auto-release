@@ -30,12 +30,7 @@ export class InternalConfig {
 
   get changes_dir(): string {
     const configured_changes_dir = this.#config.changes_dir || ".changes";
-    const root_dir = this.#root_dir;
-    if (!root_dir) {
-      throw new Error(
-        "Cannot get changes directory: auto-release root directory not set"
-      );
-    }
+    const root_dir = this.#root_dir ?? process.cwd();
     return isAbsolute(configured_changes_dir)
       ? configured_changes_dir
       : resolve(root_dir, configured_changes_dir);
@@ -55,16 +50,30 @@ export class InternalConfig {
   }
 
   get managed_applications(): Array<ManagedApplication> {
-    const root_dir = this.#root_dir;
-    if (!root_dir) {
-      throw new Error(
-        "Cannot get managed applications: auto-release root directory not set"
-      );
-    }
+    const root_dir = this.#root_dir ?? process.cwd();
     return Object.entries(this.#config.apps).map(([name, definition]) => ({
       name,
       ...definition,
       components: definition.components.map((component) => component(root_dir)),
+      get current_version(): string {
+        const versions = new Set<string>();
+        for (const component of this.components) {
+          for (const part of component.parts) {
+            versions.add(part.get_current_version());
+          }
+        }
+        if (versions.size === 0) {
+          throw new Error(`App "${name}" has no components`);
+        }
+        if (versions.size > 1) {
+          throw new Error(
+            `App "${name}" has mismatched versions: ${Array.from(versions).join(
+              ", "
+            )}`
+          );
+        }
+        return versions.values().next().value as string;
+      },
     }));
   }
 }
