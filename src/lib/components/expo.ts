@@ -3,8 +3,8 @@ import { join, resolve } from "node:path";
 import type { Component, Part } from "./types.js";
 
 export function expo(path: string): Component {
-  return (root_dir: string) => {
-    const base_path = resolve(root_dir, path);
+  return (config_folder: string) => {
+    const base_path = resolve(config_folder, path);
     const parts: Array<Part> = [];
 
     const package_json_path = join(base_path, "package.json");

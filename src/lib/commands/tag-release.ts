@@ -1,4 +1,4 @@
-import { relative, resolve } from "node:path";
+import { relative } from "node:path";
 import { create_logger } from "../utils/logger.js";
 import { create_command } from "../cli.js";
 import { find_nearest_config } from "../config.js";
@@ -66,20 +66,26 @@ export const tag_release = create_command({
     },
   },
   get_context: async ({ args, cwd }) => {
-    const { config, root_dir } = await find_nearest_config({
+    const { config, git_root } = await find_nearest_config({
       config_path: args.config,
       cwd,
     });
-    return { config, root_dir };
+    return { config, git_root };
   },
   run: async ({ args, context }) => {
-    const cwd = context.root_dir;
     const app_filter = args.app;
     const branch_name = args.branch;
     const config = context.config;
     const logger = create_logger();
     const provider = config.git.provider;
     const release_branch_prefix = config.git.default_release_branch_prefix;
+
+    if (!context.git_root) {
+      return {
+        status: "error" as const,
+        error: "Could not determine git root",
+      };
+    }
 
     // Get default branch
     const default_branch = config.git.default_target_branch;
@@ -149,8 +155,10 @@ export const tag_release = create_command({
         logger.info(`Version: ${current_version}`);
 
         // Get changelog content for release notes
-        const changelog_path = resolve(cwd, app.changelog);
-        const changelog_relative_path = relative(cwd, changelog_path);
+        const changelog_relative_path = relative(
+          context.git_root,
+          app.changelog
+        );
         const changelog_content = await provider.get_file_content(
           changelog_relative_path,
           default_branch

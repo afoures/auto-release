@@ -2,7 +2,7 @@
 
 import { create_cli } from "./lib/cli.js";
 import { check } from "./lib/commands/check.js";
-import { record } from "./lib/commands/record.js";
+import { record_change } from "./lib/commands/record.js";
 import { generate_release } from "./lib/commands/generate-release.js";
 import { tag_release } from "./lib/commands/tag-release.js";
 import { init } from "./lib/commands/init.js";
@@ -13,7 +13,7 @@ const run = create_cli({
   commands: {
     init,
     check,
-    record,
+    "record-change": record_change,
     "generate-release": generate_release,
     "tag-release": tag_release,
   },

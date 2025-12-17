@@ -1,7 +1,6 @@
 import { parseArgs } from "node:util";
 import type { ParseArgsOptionDescriptor } from "node:util";
 import { log, cancel } from "@clack/prompts";
-import type { InternalConfig } from "./config.js";
 
 /**
  * Extended option schema with description for help generation
@@ -30,11 +29,6 @@ type ParsedCommandArgs<args extends Record<string, Option>> =
     config?: string;
   };
 
-type CommandExecutionContext = {
-  config: InternalConfig;
-  root_dir: string;
-};
-
 type CommandGetContextArgs<args extends Record<string, Option>> = {
   args: ParsedCommandArgs<args>;
   cwd: string;
@@ -42,7 +36,7 @@ type CommandGetContextArgs<args extends Record<string, Option>> = {
 
 type CommandRunContext<
   args extends Record<string, Option>,
-  context = CommandExecutionContext
+  context extends Record<string, unknown> = Record<string, unknown>
 > = {
   args: ParsedCommandArgs<args>;
   context: context;
@@ -50,7 +44,7 @@ type CommandRunContext<
 
 export interface Command<
   args extends Record<string, Option> = Record<string, Option>,
-  context = CommandExecutionContext
+  context extends Record<string, unknown> = Record<string, unknown>
 > {
   /**
    * Command name (e.g., "check", "record")
@@ -84,16 +78,9 @@ export interface Command<
 /**
  * Command helper function
  */
-export function create_command<args extends Record<string, Option>>(
-  command: Command<args>
-): Command<args>;
 export function create_command<
   args extends Record<string, Option>,
-  context = CommandExecutionContext
->(command: Command<args, context>): Command<args, context>;
-export function create_command<
-  args extends Record<string, Option>,
-  context = CommandExecutionContext
+  context extends Record<string, unknown> = never
 >(command: Command<args, context>): Command<args, context> {
   return command;
 }
