@@ -1,3 +1,3 @@
-export { node } from "./lib/components/node.js";
-export { expo } from "./lib/components/expo.js";
-export { php } from "./lib/components/php.js";
+export { node } from "./lib/components/node.ts";
+export { expo } from "./lib/components/expo.ts";
+export { php } from "./lib/components/php.ts";

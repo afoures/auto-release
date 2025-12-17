@@ -1,7 +1,7 @@
-import { define_config } from "../src/index.js";
-import { semver } from "../src/versioning.js";
-import { github } from "../src/git-providers.js";
-import { node } from "../src/components.js";
+import { define_config } from "../dist/index.mjs";
+import { semver } from "../dist/versioning.mjs";
+import { github } from "../dist/git-providers.mjs";
+import { node } from "../dist/components.mjs";
 
 /**
  * Example configuration for a single-app repository

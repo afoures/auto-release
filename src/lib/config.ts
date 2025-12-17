@@ -2,7 +2,7 @@ import { constants } from "node:fs";
 import { access } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 import { dirname, isAbsolute, resolve } from "node:path";
-import type { AutoReleaseConfig, GitProvider, ManagedApplication } from "./types.js";
+import type { AutoReleaseConfig, GitProvider, ManagedApplication } from "./types.ts";
 
 export function define_config<const config extends AutoReleaseConfig>(
   config: config,
@@ -20,12 +20,16 @@ export class InternalConfig {
     this.#internal_config_path = undefined;
   }
 
-  get #path(): string {
+  get path(): string {
     const root_dir = this.#internal_config_path;
     if (!root_dir) {
       throw new Error("Root directory not set");
     }
     return root_dir;
+  }
+
+  get folder(): string {
+    return dirname(this.path);
   }
 
   set path(path: string) {
@@ -36,7 +40,7 @@ export class InternalConfig {
     const configured_changes_dir = this.#config.changes_dir || ".changes";
     return isAbsolute(configured_changes_dir)
       ? configured_changes_dir
-      : resolve(dirname(this.#path), configured_changes_dir);
+      : resolve(this.folder, configured_changes_dir);
   }
 
   get git(): {
@@ -55,7 +59,7 @@ export class InternalConfig {
     return Object.entries(this.#config.apps).map(([name, definition]) => ({
       name,
       ...definition,
-      components: definition.components.map((component) => component(dirname(this.#path))),
+      components: definition.components.map((component) => component(this.folder)),
       get current_version(): string {
         const versions = new Set<string>();
         for (const component of this.components) {
@@ -113,7 +117,7 @@ const CONFIG_CANDIDATES = [
   "auto-release.config.ts",
   "auto-release.config.mts",
   "auto-release.config.cts",
-  "auto-release.config.js",
+  "auto-release.config.ts",
   "auto-release.config.mjs",
   "auto-release.config.cjs",
 ] as const;

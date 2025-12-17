@@ -1,6 +1,6 @@
 import { regex } from "arkregex";
-import type { Change, ChangeKindDisplayMap, Formatter, VersionManager } from "./types.js";
-import { default_formatter } from "../formatter.js";
+import type { Change, ChangeKindDisplayMap, Formatter, VersionManager } from "./types.ts";
+import { default_formatter } from "../formatter.ts";
 
 interface MarketingVersion {
   marketing: bigint;

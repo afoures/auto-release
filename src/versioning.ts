@@ -1,3 +1,3 @@
-export { semver } from "./lib/versioning/semantic.js";
-export { calver } from "./lib/versioning/calendar.js";
-export { markver } from "./lib/versioning/marketing.js";
+export { semver } from "./lib/versioning/semantic.ts";
+export { calver } from "./lib/versioning/calendar.ts";
+export { markver } from "./lib/versioning/marketing.ts";

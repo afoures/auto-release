@@ -1,4 +1,4 @@
-import type { GitProvider, FileChange, PullRequest } from "./types.js";
+import type { GitProvider, FileChange, PullRequest } from "./types.ts";
 
 interface GitLabOptions {
   token: string;

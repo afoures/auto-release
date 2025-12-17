@@ -2,14 +2,14 @@
  * Core types for auto-release
  */
 
-import type { Component, ResolvedComponent } from "./components/types.js";
-import type { GitProvider } from "./providers/types.js";
+import type { Component, ResolvedComponent } from "./components/types.ts";
+import type { GitProvider } from "./providers/types.ts";
 import type {
   VersionManager,
   Change,
   Formatter,
   ChangeKindDisplayMap,
-} from "./versioning/types.js";
+} from "./versioning/types.ts";
 
 export type {
   GitProvider,
@@ -25,6 +25,7 @@ export type {
  * Logger interface for structured output
  */
 export interface Logger {
+  note(title: string, message: string): void;
   info(message: string): void;
   warn(message: string): void;
   error(message: string): void;

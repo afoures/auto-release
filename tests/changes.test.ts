@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parse_change_filename, parse_change_markdown } from "../src/lib/changes.js";
+import { parse_change_filename, parse_change_markdown } from "../src/lib/changes.ts";
 
 describe("parse_change_filename", () => {
   it("should parse valid change filenames", () => {

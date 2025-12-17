@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 
-import { create_cli } from "./lib/cli.js";
-import { check } from "./lib/commands/check.js";
-import { record_change } from "./lib/commands/record.js";
-import { generate_release } from "./lib/commands/generate-release.js";
-import { tag_release } from "./lib/commands/tag-release.js";
-import { init } from "./lib/commands/init.js";
-import { list } from "./lib/commands/list.js";
+import { create_cli } from "./lib/cli.ts";
+import { check } from "./lib/commands/check.ts";
+import { record_change } from "./lib/commands/record-change.ts";
+import { generate_release } from "./lib/commands/generate-release.ts";
+import { tag_release } from "./lib/commands/tag-release.ts";
+import { init } from "./lib/commands/init.ts";
+import { list } from "./lib/commands/list.ts";
 
 const run = create_cli({
   name: "auto-release",

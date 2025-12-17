@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { define_config } from "../src/index.js";
-import { semver } from "../src/lib/versioning/semantic.js";
-import { calver } from "../src/lib/versioning/calendar.js";
-import { github } from "../src/lib/providers/github.js";
-import { node } from "../src/lib/components/node.js";
+import { define_config } from "../src/index.ts";
+import { semver } from "../src/lib/versioning/semantic.ts";
+import { calver } from "../src/lib/versioning/calendar.ts";
+import { github } from "../src/lib/providers/github.ts";
+import { node } from "../src/lib/components/node.ts";
 
 describe("Public API exports", () => {
   it("should export define_config helper", () => {

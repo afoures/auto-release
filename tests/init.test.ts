@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { generate_config_source, type AppTemplate } from "../src/lib/commands/init.js";
+import { generate_config_source, type AppTemplate } from "../src/lib/commands/init.ts";
 
 const base_app: AppTemplate = {
   name: "web-app",

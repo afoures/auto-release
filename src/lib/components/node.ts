@@ -1,35 +1,39 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import type { Component, Part } from "./types.js";
+import type { Component, Part } from "./types.ts";
 
 export function node(path: string): Component {
   return (config_folder: string) => {
     const base_path = resolve(config_folder, path);
     const parts: Array<Part> = [];
+    const warnings: Array<string> = [];
 
     const package_json_path = join(base_path, "package.json");
-    if (!existsSync(package_json_path)) {
-      console.warn(`package.json not found at ${package_json_path}`);
-    } else {
-      parts.push({
-        path: package_json_path,
-        get_current_version: () => {
-          const content = readFileSync(package_json_path, "utf-8");
-          const package_json = JSON.parse(content);
-          return package_json.version;
-        },
-        update_version: (version: string) => {
-          const content = readFileSync(package_json_path, "utf-8");
-          const package_json = JSON.parse(content);
-          package_json.version = version;
-          writeFileSync(package_json_path, JSON.stringify(package_json, null, 2) + "\n", "utf-8");
-        },
-      });
+    const package_json_exists = existsSync(package_json_path);
+    if (!package_json_exists) {
+      warnings.push(`package.json not found at ${package_json_path}`);
     }
+
+    parts.push({
+      path: package_json_path,
+      exists: package_json_exists,
+      get_current_version: () => {
+        const content = readFileSync(package_json_path, "utf-8");
+        const package_json = JSON.parse(content);
+        return package_json.version;
+      },
+      update_version: (version: string) => {
+        const content = readFileSync(package_json_path, "utf-8");
+        const package_json = JSON.parse(content);
+        package_json.version = version;
+        writeFileSync(package_json_path, JSON.stringify(package_json, null, 2) + "\n", "utf-8");
+      },
+    });
 
     return {
       path: base_path,
       parts,
+      warnings,
     };
   };
 }
