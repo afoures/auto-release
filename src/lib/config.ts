@@ -17,23 +17,30 @@ export function define_config<const config extends AutoReleaseConfig>(
 
 export class InternalConfig {
   #config: AutoReleaseConfig;
-  #root_dir: string | undefined;
+  #internal_config_path: string | undefined;
 
   constructor(config: AutoReleaseConfig) {
     this.#config = config;
-    this.#root_dir = undefined;
+    this.#internal_config_path = undefined;
   }
 
-  set_root_dir(root_dir: string): void {
-    this.#root_dir = root_dir;
+  get #path(): string {
+    const root_dir = this.#internal_config_path;
+    if (!root_dir) {
+      throw new Error("Root directory not set");
+    }
+    return root_dir;
+  }
+
+  set path(path: string) {
+    this.#internal_config_path = path;
   }
 
   get changes_dir(): string {
     const configured_changes_dir = this.#config.changes_dir || ".changes";
-    const root_dir = this.#root_dir ?? process.cwd();
     return isAbsolute(configured_changes_dir)
       ? configured_changes_dir
-      : resolve(root_dir, configured_changes_dir);
+      : resolve(dirname(this.#path), configured_changes_dir);
   }
 
   get git(): {
@@ -50,11 +57,12 @@ export class InternalConfig {
   }
 
   get managed_applications(): Array<ManagedApplication> {
-    const root_dir = this.#root_dir ?? process.cwd();
     return Object.entries(this.#config.apps).map(([name, definition]) => ({
       name,
       ...definition,
-      components: definition.components.map((component) => component(root_dir)),
+      components: definition.components.map((component) =>
+        component(dirname(this.#path))
+      ),
       get current_version(): string {
         const versions = new Set<string>();
         for (const component of this.components) {
@@ -109,7 +117,7 @@ async function load_config(
     throw new Error("Auto-release config is invalid");
   }
 
-  config.set_root_dir(dirname(resolved_path));
+  config.path = resolved_path;
 
   return config;
 }
@@ -172,17 +180,13 @@ async function find_config_candidate(
   }
 }
 
-interface ResolvedConfigPath {
-  config_path: string;
-  root_dir: string;
-}
-
 async function resolve_config_path(options?: {
   config_path?: string;
   cwd?: string;
-}): Promise<ResolvedConfigPath> {
+}): Promise<{ config_path: string; git_root: string | undefined }> {
   const cwd = options?.cwd ? resolve(options.cwd) : process.cwd();
   const explicit_path = options?.config_path;
+  const git_root = await find_git_root(cwd);
 
   if (explicit_path) {
     const resolved_explicit = resolve(cwd, explicit_path);
@@ -190,13 +194,9 @@ async function resolve_config_path(options?: {
     if (!exists) {
       throw new Error(`Config file not found at ${resolved_explicit}`);
     }
-    return {
-      config_path: resolved_explicit,
-      root_dir: dirname(resolved_explicit),
-    };
+    return { config_path: resolved_explicit, git_root };
   }
 
-  const git_root = await find_git_root(cwd);
   const config_candidate = await find_config_candidate(cwd, git_root);
 
   if (!config_candidate) {
@@ -208,19 +208,16 @@ async function resolve_config_path(options?: {
     );
   }
 
-  return {
-    config_path: config_candidate,
-    root_dir: dirname(config_candidate),
-  };
+  return { config_path: config_candidate, git_root };
 }
 
 export async function find_nearest_config(options?: {
   config_path?: string;
   cwd?: string;
-}): Promise<{ config: InternalConfig; root_dir: string }> {
-  const { config_path, root_dir } = await resolve_config_path(options);
-  const config = await load_config(config_path, root_dir);
-  return { config, root_dir };
+}): Promise<{ config: InternalConfig; git_root: string | undefined }> {
+  const { config_path, git_root } = await resolve_config_path(options);
+  const config = await load_config(config_path);
+  return { config, git_root };
 }
 
 /**

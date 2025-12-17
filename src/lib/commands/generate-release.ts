@@ -1,4 +1,4 @@
-import { relative, resolve } from "node:path";
+import { relative } from "node:path";
 import {
   discover_all_changes,
   discover_all_changes_with_metadata,
@@ -30,14 +30,13 @@ export const generate_release = create_command({
     },
   },
   get_context: async ({ args, cwd }) => {
-    const { config, root_dir } = await find_nearest_config({
+    const { config, git_root } = await find_nearest_config({
       config_path: args.config,
       cwd,
     });
-    return { config, root_dir };
+    return { config, git_root };
   },
   run: async ({ args, context }) => {
-    const cwd = context.root_dir;
     const app_filter = args.app;
     const dry_run = args["dry-run"] ?? false;
 
@@ -82,6 +81,8 @@ export const generate_release = create_command({
       release_branch: string;
     }> = [];
 
+    const now = new Date();
+
     for (const app of target_apps) {
       const app_name = app.name;
       const changes = changes_map.get(app_name) || [];
@@ -97,7 +98,7 @@ export const generate_release = create_command({
         const next_version = strategy.bump({
           version: current_version,
           changes,
-          date: new Date(),
+          date: now,
         });
 
         // Determine release branch name
@@ -128,11 +129,13 @@ export const generate_release = create_command({
 
     // Display plan
     logger.info("Release PR plan:\n");
-    for (const rel of releases) {
-      logger.info(`📦 ${rel.app.name}`);
-      logger.info(`  Version: ${rel.current_version} → ${rel.next_version}`);
-      logger.info(`  Branch: ${rel.release_branch}`);
-      logger.info(`  Changes: ${rel.changes.length} file(s)`);
+    for (const release of releases) {
+      logger.info(`📦 ${release.app.name}`);
+      logger.info(
+        `  Version: ${release.current_version} → ${release.next_version}`
+      );
+      logger.info(`  Branch: ${release.release_branch}`);
+      logger.info(`  Changes: ${release.changes.length} file(s)`);
       logger.info("");
     }
 
@@ -141,6 +144,13 @@ export const generate_release = create_command({
       return {
         status: "success" as const,
         message: "Dry run completed - no changes were made",
+      };
+    }
+
+    if (!context.git_root) {
+      return {
+        status: "error" as const,
+        error: "Could not determine git root",
       };
     }
 
@@ -162,8 +172,10 @@ export const generate_release = create_command({
       logger.info(`\nPreparing release for ${release.app.name}...`);
 
       try {
-        const changelog_path = resolve(cwd, release.app.changelog);
-        const changelog_relative_path = relative(cwd, changelog_path);
+        const changelog_relative_path = relative(
+          context.git_root,
+          release.app.changelog
+        );
         const existing_changelog = await provider.get_file_content(
           changelog_relative_path,
           default_branch
@@ -173,7 +185,7 @@ export const generate_release = create_command({
 
         for (const component of release.app.components) {
           for (const part of component.parts) {
-            const part_relative_path = relative(cwd, part.path);
+            const part_relative_path = relative(context.git_root, part.path);
             const current_content = await provider.get_file_content(
               part_relative_path,
               default_branch
@@ -248,7 +260,10 @@ export const generate_release = create_command({
         );
         const app_changes = changes_with_metadata.get(release.app.name) || [];
         for (const change of app_changes) {
-          const change_relative_path = relative(cwd, change.file_path);
+          const change_relative_path = relative(
+            context.git_root,
+            change.file_path
+          );
           file_changes.push({
             path: change_relative_path,
             content: null, // null = delete

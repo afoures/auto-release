@@ -17,10 +17,6 @@ import { exec } from "../utils/exec.js";
 
 type PackageManager = "npm" | "pnpm" | "yarn" | "bun";
 
-interface InitCommandContext {
-  root_dir: string;
-}
-
 interface PackageJson {
   name?: string;
   version?: string;
@@ -242,22 +238,23 @@ function sanitize_env_var(value: string, fallback: string): string {
 
 const INIT_SCHEMA: Record<string, Option> = {};
 
-export const init = create_command<typeof INIT_SCHEMA, InitCommandContext>({
+export const init = create_command({
   name: "init",
   description: "Set up auto-release in the current repository",
   schema: INIT_SCHEMA,
   get_context: async ({ cwd }) => {
-    return { root_dir: cwd };
+    return { cwd };
   },
   run: async ({ context }) => {
     intro("auto-release init");
-    const cwd = context.root_dir;
-
     try {
-      const package_json_path = join(cwd, "package.json");
+      const package_json_path = join(context.cwd, "package.json");
       const package_json = await ensure_package_json(package_json_path);
 
-      let package_manager = await detect_package_manager(cwd, package_json);
+      let package_manager = await detect_package_manager(
+        context.cwd,
+        package_json
+      );
       if (!package_manager) {
         const selection = await select({
           message: "Select your package manager",
@@ -287,7 +284,9 @@ export const init = create_command<typeof INIT_SCHEMA, InitCommandContext>({
         const install_spinner = spinner();
         install_spinner.start("Installing auto-release...");
         try {
-          await exec(get_install_command(package_manager), { cwd });
+          await exec(get_install_command(package_manager), {
+            cwd: context.cwd,
+          });
           install_spinner.stop("Installed auto-release");
         } catch (error: any) {
           install_spinner.stop("Failed to install auto-release");
@@ -509,7 +508,7 @@ export const init = create_command<typeof INIT_SCHEMA, InitCommandContext>({
         };
       }
 
-      const config_path = join(cwd, "auto-release.config.ts");
+      const config_path = join(context.cwd, "auto-release.config.ts");
       if (await path_exists(config_path)) {
         const overwrite_result = await confirm({
           message: "auto-release.config.ts already exists. Overwrite?",
@@ -535,9 +534,9 @@ export const init = create_command<typeof INIT_SCHEMA, InitCommandContext>({
       });
       await writeFile(config_path, config_source, "utf-8");
 
-      await create_changes_directories(cwd, changes_dir, apps);
+      await create_changes_directories(context.cwd, changes_dir, apps);
       for (const app of apps) {
-        await ensure_changelog(app, cwd);
+        await ensure_changelog(app, context.cwd);
       }
 
       log.success("Generated auto-release.config.ts");

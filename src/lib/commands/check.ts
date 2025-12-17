@@ -91,11 +91,11 @@ export const check = create_command({
     },
   },
   get_context: async ({ args, cwd }) => {
-    const { config, root_dir } = await find_nearest_config({
+    const { config } = await find_nearest_config({
       config_path: args.config,
       cwd,
     });
-    return { config, root_dir };
+    return { config };
   },
   run: async ({ args, context }) => {
     const json = args.json ?? false;

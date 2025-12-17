@@ -12,8 +12,8 @@ import {
 import { create_command } from "../cli.js";
 import { find_nearest_config } from "../config.js";
 
-export const record = create_command({
-  name: "record",
+export const record_change = create_command({
+  name: "record-change",
   description: "Record a new change",
   schema: {
     app: {
@@ -38,14 +38,13 @@ export const record = create_command({
     },
   },
   get_context: async ({ args, cwd }) => {
-    const { config, root_dir } = await find_nearest_config({
+    const { config } = await find_nearest_config({
       config_path: args.config,
       cwd,
     });
-    return { config, root_dir };
+    return { config };
   },
   run: async ({ args, context }) => {
-    const cwd = context.root_dir;
     intro(`record a new change`);
 
     const config = context.config;
@@ -172,7 +171,7 @@ export const record = create_command({
 
     // Write file
     try {
-      const changes_dir = join(cwd, config.changes_dir!, app_name);
+      const changes_dir = join(config.changes_dir, app_name);
       await mkdir(changes_dir, { recursive: true });
 
       const file_path = join(changes_dir, filename);

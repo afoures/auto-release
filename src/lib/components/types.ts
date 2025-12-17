@@ -9,4 +9,4 @@ export type ResolvedComponent = {
   parts: Array<Part>;
 };
 
-export type Component = (root_dir: string) => ResolvedComponent;
+export type Component = (config_folder: string) => ResolvedComponent;
