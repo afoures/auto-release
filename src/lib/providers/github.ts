@@ -21,10 +21,7 @@ export function github(options: GitHubOptions): GitProvider {
   const { token, owner, repo } = options;
   const api_base = `https://api.github.com/repos/${owner}/${repo}`;
 
-  async function api_request(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<any> {
+  async function api_request(endpoint: string, options: RequestInit = {}): Promise<any> {
     const url = `${api_base}${endpoint}`;
     const response = await fetch(url, {
       ...options,
@@ -38,9 +35,7 @@ export function github(options: GitHubOptions): GitProvider {
 
     if (!response.ok) {
       const error_text = await response.text();
-      throw new Error(
-        `GitHub API error: ${response.status} ${response.statusText}\n${error_text}`
-      );
+      throw new Error(`GitHub API error: ${response.status} ${response.statusText}\n${error_text}`);
     }
 
     if (response.status === 204) {
@@ -56,10 +51,7 @@ export function github(options: GitHubOptions): GitProvider {
       return ref.object.sha;
     },
 
-    async get_file_content(
-      path: string,
-      branch: string
-    ): Promise<string | null> {
+    async get_file_content(path: string, branch: string): Promise<string | null> {
       try {
         const file = await api_request(`/contents/${path}?ref=${branch}`);
         if (file.type !== "file") {
@@ -78,21 +70,17 @@ export function github(options: GitHubOptions): GitProvider {
       name: string,
       base_sha: string,
       files: FileChange[],
-      message: string
+      message: string,
     ): Promise<string> {
       // Get base tree
       const base_commit = await api_request(`/git/commits/${base_sha}`);
       const base_tree_sha = base_commit.tree.sha;
 
       // Get all files from base tree (needed for deletions)
-      const base_tree = await api_request(
-        `/git/trees/${base_tree_sha}?recursive=1`
-      );
+      const base_tree = await api_request(`/git/trees/${base_tree_sha}?recursive=1`);
 
       // Track files to delete
-      const files_to_delete = new Set(
-        files.filter((f) => f.content === null).map((f) => f.path)
-      );
+      const files_to_delete = new Set(files.filter((f) => f.content === null).map((f) => f.path));
 
       // Track files to modify/add
       const files_to_modify = new Map<string, string>();
@@ -186,9 +174,7 @@ export function github(options: GitHubOptions): GitProvider {
     },
 
     async find_pull_request(head_branch: string): Promise<PullRequest | null> {
-      const prs = await api_request(
-        `/pulls?head=${owner}:${head_branch}&state=open`
-      );
+      const prs = await api_request(`/pulls?head=${owner}:${head_branch}&state=open`);
       if (prs.length === 0) {
         return null;
       }
@@ -205,7 +191,7 @@ export function github(options: GitHubOptions): GitProvider {
       head: string,
       base: string,
       title: string,
-      body: string
+      body: string,
     ): Promise<PullRequest> {
       const pr = await api_request("/pulls", {
         method: "POST",
@@ -224,11 +210,7 @@ export function github(options: GitHubOptions): GitProvider {
       };
     },
 
-    async update_pull_request(
-      number: number,
-      title: string,
-      body: string
-    ): Promise<void> {
+    async update_pull_request(number: number, title: string, body: string): Promise<void> {
       await api_request(`/pulls/${number}`, {
         method: "PATCH",
         body: JSON.stringify({
@@ -238,11 +220,7 @@ export function github(options: GitHubOptions): GitProvider {
       });
     },
 
-    async create_tag(
-      name: string,
-      sha: string,
-      message: string
-    ): Promise<void> {
+    async create_tag(name: string, sha: string, message: string): Promise<void> {
       // Create annotated tag
       const tag = await api_request("/git/tags", {
         method: "POST",
@@ -264,11 +242,7 @@ export function github(options: GitHubOptions): GitProvider {
       });
     },
 
-    async create_release(
-      tag: string,
-      name: string,
-      body: string
-    ): Promise<void> {
+    async create_release(tag: string, name: string, body: string): Promise<void> {
       await api_request("/releases", {
         method: "POST",
         body: JSON.stringify({

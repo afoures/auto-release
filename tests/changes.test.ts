@@ -1,8 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  parse_change_filename,
-  parse_change_markdown,
-} from "../src/lib/changes.js";
+import { parse_change_filename, parse_change_markdown } from "../src/lib/changes.js";
 
 describe("parse_change_filename", () => {
   it("should parse valid change filenames", () => {
@@ -72,8 +69,6 @@ Users can now customize their profiles.`;
 
   it("should throw on empty content", () => {
     expect(() => parse_change_markdown("")).toThrow("Change file is empty");
-    expect(() => parse_change_markdown("   \n\n  ")).toThrow(
-      "Change file is empty"
-    );
+    expect(() => parse_change_markdown("   \n\n  ")).toThrow("Change file is empty");
   });
 });

@@ -9,11 +9,7 @@ export interface Option extends ParseArgsOptionDescriptor {
   description?: string;
 }
 
-type OptionValue<T> = T extends "string"
-  ? string
-  : T extends "boolean"
-  ? boolean
-  : never;
+type OptionValue<T> = T extends "string" ? string : T extends "boolean" ? boolean : never;
 
 type convert_to_values<args extends Record<string, Option>> = {
   [K in keyof args]?: args[K]["multiple"] extends true
@@ -24,10 +20,9 @@ type convert_to_values<args extends Record<string, Option>> = {
 /**
  * Command definition interface
  */
-type ParsedCommandArgs<args extends Record<string, Option>> =
-  convert_to_values<args> & {
-    config?: string;
-  };
+type ParsedCommandArgs<args extends Record<string, Option>> = convert_to_values<args> & {
+  config?: string;
+};
 
 type CommandGetContextArgs<args extends Record<string, Option>> = {
   args: ParsedCommandArgs<args>;
@@ -36,7 +31,7 @@ type CommandGetContextArgs<args extends Record<string, Option>> = {
 
 type CommandRunContext<
   args extends Record<string, Option>,
-  context extends Record<string, unknown> = Record<string, unknown>
+  context extends Record<string, unknown> = Record<string, unknown>,
 > = {
   args: ParsedCommandArgs<args>;
   context: context;
@@ -44,7 +39,7 @@ type CommandRunContext<
 
 export interface Command<
   args extends Record<string, Option> = Record<string, Option>,
-  context extends Record<string, unknown> = Record<string, unknown>
+  context extends Record<string, unknown> = Record<string, unknown>,
 > {
   /**
    * Command name (e.g., "check", "record")
@@ -65,10 +60,8 @@ export interface Command<
    * Run the command with parsed arguments and config
    */
   run: (
-    args: CommandRunContext<args, context>
-  ) => Promise<
-    { status: "success"; message?: string } | { status: "error"; error: string }
-  >;
+    args: CommandRunContext<args, context>,
+  ) => Promise<{ status: "success"; message?: string } | { status: "error"; error: string }>;
   /**
    * Build the execution context (loads config, resolves root, etc.)
    */
@@ -80,7 +73,7 @@ export interface Command<
  */
 export function create_command<
   args extends Record<string, Option>,
-  context extends Record<string, unknown> = never
+  context extends Record<string, unknown> = never,
 >(command: Command<args, context>): Command<args, context> {
   return command;
 }
@@ -91,7 +84,7 @@ export function create_command<
 export function generate_help(
   name: string,
   description: string,
-  schema: Record<string, Option>
+  schema: Record<string, Option>,
 ): string {
   const options: Array<{ name: string; description: string }> = [];
 
@@ -114,9 +107,7 @@ export function generate_help(
   }
 
   // Calculate max option name length for proper alignment
-  const max_option_length = Math.max(
-    ...option_names.map((name) => name.length)
-  );
+  const max_option_length = Math.max(...option_names.map((name) => name.length));
 
   // Add help option (always present)
   options.push({
@@ -138,9 +129,7 @@ export function generate_help(
   }
 
   const optionsText = options
-    .map(
-      (opt) => `  ${opt.name.padEnd(max_option_length + 2)}${opt.description}`
-    )
+    .map((opt) => `  ${opt.name.padEnd(max_option_length + 2)}${opt.description}`)
     .join("\n");
 
   return `
@@ -181,19 +170,14 @@ function show_help(
   name: string,
   description: string,
   commands: Record<string, Command<any>>,
-  command?: Command<any>
+  command?: Command<any>,
 ) {
   if (!command) {
     // Calculate max command name length for proper alignment
-    const max_command_length = Math.max(
-      ...Object.values(commands).map((cmd) => cmd.name.length)
-    );
+    const max_command_length = Math.max(...Object.values(commands).map((cmd) => cmd.name.length));
 
     const command_list = Object.values(commands)
-      .map(
-        (cmd) =>
-          `  ${cmd.name.padEnd(max_command_length + 2)}${cmd.description}`
-      )
+      .map((cmd) => `  ${cmd.name.padEnd(max_command_length + 2)}${cmd.description}`)
       .join("\n");
 
     console.log(`

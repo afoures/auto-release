@@ -3,17 +3,13 @@ import { join } from "node:path";
 import type { Change, ManagedApplication } from "./types.js";
 import { regex } from "arkregex";
 
-const CHANGE_FILE_REGEX = regex(
-  "^(?<kind>[a-z0-9-]+)\\.(?<slug>[a-z0-9-]+)\\.md$"
-);
+const CHANGE_FILE_REGEX = regex("^(?<kind>[a-z0-9-]+)\\.(?<slug>[a-z0-9-]+)\\.md$");
 
 /**
  * Parse change filename and validate format
  * Expected format: type.slug-words.md
  */
-export function parse_change_filename(
-  filename: string
-): { kind: string; slug: string } | null {
+export function parse_change_filename(filename: string): { kind: string; slug: string } | null {
   const match = CHANGE_FILE_REGEX.exec(filename);
   if (!match) {
     return null;
@@ -39,9 +35,7 @@ export function parse_change_markdown(content: string) {
   // Check if first line is a heading
   if (first_line.startsWith("#")) {
     const title = first_line.replace(/^#+\s*/, "").trim();
-    const body_start_index = lines.findIndex(
-      (line) => line.trim() === first_line
-    );
+    const body_start_index = lines.findIndex((line) => line.trim() === first_line);
     const body_lines = lines.slice(body_start_index + 1);
     return {
       title,
@@ -62,7 +56,7 @@ export function parse_change_markdown(content: string) {
 export async function discover_changes<change_kind extends string>(
   app_name: string,
   changes_dir: string,
-  valid_change_kinds: readonly change_kind[]
+  valid_change_kinds: readonly change_kind[],
 ): Promise<Change<change_kind>[]> {
   const app_changes_dir = join(changes_dir, app_name);
 
@@ -86,16 +80,14 @@ export async function discover_changes<change_kind extends string>(
 
     const parsed = parse_change_filename(file);
     if (!parsed) {
-      throw new Error(
-        `Invalid change filename format: ${file} (expected: type.slug-words.md)`
-      );
+      throw new Error(`Invalid change filename format: ${file} (expected: type.slug-words.md)`);
     }
 
     if (!valid_change_kinds.includes(parsed.kind as change_kind)) {
       throw new Error(
         `Invalid change kind "${
           parsed.kind
-        }" in file ${file}. Valid kinds: ${valid_change_kinds.join(", ")}`
+        }" in file ${file}. Valid kinds: ${valid_change_kinds.join(", ")}`,
       );
     }
 
@@ -116,8 +108,7 @@ export async function discover_changes<change_kind extends string>(
 /**
  * Change with metadata (file path and app name)
  */
-export interface ChangeWithMetadata<change_kind extends string>
-  extends Change<change_kind> {
+export interface ChangeWithMetadata<change_kind extends string> extends Change<change_kind> {
   file_path: string;
   app_name: string;
 }
@@ -127,7 +118,7 @@ export interface ChangeWithMetadata<change_kind extends string>
  */
 export async function discover_all_changes(
   apps: Array<ManagedApplication>,
-  changes_dir: string
+  changes_dir: string,
 ): Promise<Map<string, Change<any>[]>> {
   const changes_map = new Map<string, Change<any>[]>();
 
@@ -135,11 +126,7 @@ export async function discover_all_changes(
     const app_name = app.name;
     const valid_change_types = app.versioning.allowed_changes;
 
-    const changes = await discover_changes(
-      app_name,
-      changes_dir,
-      valid_change_types
-    );
+    const changes = await discover_changes(app_name, changes_dir, valid_change_types);
     changes_map.set(app_name, changes);
   }
 
@@ -151,7 +138,7 @@ export async function discover_all_changes(
  */
 export async function discover_all_changes_with_metadata(
   apps: Array<ManagedApplication>,
-  changes_dir: string
+  changes_dir: string,
 ): Promise<Map<string, ChangeWithMetadata<any>[]>> {
   const changes_map = new Map<string, ChangeWithMetadata<any>[]>();
 
@@ -181,16 +168,14 @@ export async function discover_all_changes_with_metadata(
 
       const parsed = parse_change_filename(file);
       if (!parsed) {
-        throw new Error(
-          `Invalid change filename format: ${file} (expected: type.slug-words.md)`
-        );
+        throw new Error(`Invalid change filename format: ${file} (expected: type.slug-words.md)`);
       }
 
       if (!valid_change_types.includes(parsed.kind)) {
         throw new Error(
           `Invalid change kind "${
             parsed.kind
-          }" in file ${file}. Valid kinds: ${valid_change_types.join(", ")}`
+          }" in file ${file}. Valid kinds: ${valid_change_types.join(", ")}`,
         );
       }
 

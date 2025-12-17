@@ -1,9 +1,4 @@
-import {
-  define_config,
-  VersionManager,
-  Formatter,
-  ChangeKindDisplayMap,
-} from "../src/index.js";
+import { define_config, VersionManager, Formatter, ChangeKindDisplayMap } from "../src/index.js";
 import { github } from "../src/git-providers.js";
 import { node } from "../src/components.js";
 
@@ -24,10 +19,10 @@ function custom_version(): VersionManager<AllowedChangeKind> {
       if (a[1] !== b[1]) return a[1] > b[1] ? 1 : -1;
       return 0;
     },
-    validate({ version }) {
+    validate() {
       return true;
     },
-    bump({ version, changes, date }) {
+    bump({ version, changes }) {
       // Return current version if no changes
       if (changes.length === 0) {
         return version;

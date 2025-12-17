@@ -22,11 +22,7 @@ export function node(path: string): Component {
           const content = readFileSync(package_json_path, "utf-8");
           const package_json = JSON.parse(content);
           package_json.version = version;
-          writeFileSync(
-            package_json_path,
-            JSON.stringify(package_json, null, 2) + "\n",
-            "utf-8"
-          );
+          writeFileSync(package_json_path, JSON.stringify(package_json, null, 2) + "\n", "utf-8");
         },
       });
     }

@@ -27,12 +27,10 @@ function build_release_body({
       fromMarkdown(changelog_content, {
         extensions: [gfm()],
         mdastExtensions: [gfmFromMarkdown()],
-      })
+      }),
     );
 
-  const release = parsed_changelog.releases.find(
-    (item) => item.version === version
-  );
+  const release = parsed_changelog.releases.find((item) => item.version === version);
 
   if (!release) {
     return `Release ${app.name} ${version}`;
@@ -103,9 +101,7 @@ export const tag_release = create_command({
 
     // If app is specified, use it
     if (app_filter) {
-      const app = config.managed_applications.find(
-        (item) => item.name === app_filter
-      );
+      const app = config.managed_applications.find((item) => item.name === app_filter);
       if (!app) {
         return {
           status: "error" as const,
@@ -122,7 +118,7 @@ export const tag_release = create_command({
         const app =
           config.managed_applications.find((item) => item.name === app_name) ||
           config.managed_applications.find(
-            (item) => `${release_branch_prefix}/${item.name}` === branch_name
+            (item) => `${release_branch_prefix}/${item.name}` === branch_name,
           );
         if (app) {
           target_apps = [app];
@@ -137,9 +133,7 @@ export const tag_release = create_command({
     } else {
       // No app or branch specified - publish all apps that have been released
       // This is a fallback - ideally CI should pass branch name
-      logger.warn(
-        "No app or branch specified. Publishing all apps (this may not be intended)"
-      );
+      logger.warn("No app or branch specified. Publishing all apps (this may not be intended)");
       target_apps = config.managed_applications;
     }
 
@@ -155,13 +149,10 @@ export const tag_release = create_command({
         logger.info(`Version: ${current_version}`);
 
         // Get changelog content for release notes
-        const changelog_relative_path = relative(
-          context.git_root,
-          app.changelog
-        );
+        const changelog_relative_path = relative(context.git_root, app.changelog);
         const changelog_content = await provider.get_file_content(
           changelog_relative_path,
-          default_branch
+          default_branch,
         );
 
         const release_body = build_release_body({
@@ -180,9 +171,7 @@ export const tag_release = create_command({
         await provider.create_release(tag_name, release_name, release_body);
         logger.success(`Created release: ${release_name}`);
       } catch (error: any) {
-        errors.push(
-          `Failed to publish release for ${app_name}: ${error.message}`
-        );
+        errors.push(`Failed to publish release for ${app_name}: ${error.message}`);
       }
     }
 

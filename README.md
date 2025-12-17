@@ -112,7 +112,7 @@ export default define_config({
     // Optional: Release branch prefix (default: 'release')
     default_release_branch_prefix: 'release',
   },
-  
+
   // Required: Apps record (object keyed by app name)
   apps: {
     'web-app': {
@@ -121,7 +121,7 @@ export default define_config({
         node('packages/web'),
         node('packages/shared'),
       ],
-      
+
       // Versioning strategy with optional formatter
       versioning: semver({
         // Optional: Custom formatter for changelog/release notes
@@ -133,12 +133,12 @@ export default define_config({
           },
         }),
       }),
-      
+
       // Required: Changelog file path (relative to repo root)
       changelog: 'apps/web/CHANGELOG.md',
     },
   },
-  
+
   // Optional: Directory for change files (default: '.changes')
   changes_dir: '.changes',
 })
@@ -245,6 +245,7 @@ auto-release record
 ```
 
 Prompts you for:
+
 - App selection
 - Change type
 - Summary
@@ -295,6 +296,7 @@ auto-release init
 ```
 
 What it does:
+
 - Detects or prompts for your package manager and installs `auto-release`
 - Asks for apps, packages, changelog paths, and versioning strategies
 - Configures GitHub or GitLab provider details
@@ -309,10 +311,12 @@ auto-release check
 ```
 
 Options:
+
 - `--config <path>`: Custom config file path
 - `--json`: Output results as JSON
 
 Validates:
+
 - Config structure and schema
 - All packages exist and versions match per app
 - Change file naming and types
@@ -336,6 +340,7 @@ auto-release record \
 ```
 
 Options:
+
 - `--app <name>`: App name
 - `--type <type>`: Change type
 - `--summary <text>`: Change summary
@@ -358,12 +363,14 @@ auto-release generate-release --app web-app
 ```
 
 When using `--dry-run`, shows:
+
 - Apps with pending changes
 - Current → next version
 - Release branch name
 - Detailed list of changes with types, titles, and file paths
 
 Options:
+
 - `--app <name>`: Filter by app name
 - `--dry-run`: Show what would be done without making changes
 - `--config <path>`: Custom config file path
@@ -387,6 +394,7 @@ auto-release release --app web-app
 ```
 
 Actions performed:
+
 1. Computes next versions using version strategies (`bump()` function)
 2. Updates version in all app's component files (via component `update_version()`)
 3. Generates changelog section using versioning formatter
@@ -394,6 +402,7 @@ Actions performed:
 5. Deletes consumed change files
 
 Options:
+
 - `--app <name>`: Filter by app name
 - `--dry-run`: Show plan without making changes
 - `--yes`: Skip confirmation prompt
@@ -420,12 +429,14 @@ auto-release deploy --app web-app
 ```
 
 Actions performed:
+
 1. Reads current version from components
 2. Runs deployment command/handler for each app
 3. If ALL deployments succeed, creates git tags
 4. If ANY deployment fails, no tags are created
 
 Options:
+
 - `--app <name>`: Filter by app name
 - `--dry-run`: Show plan without executing
 - `--yes`: Skip confirmation prompt
@@ -434,6 +445,7 @@ Options:
 **Tag format**: Always uses `app_name@version` format (not customizable)
 
 After successful deployment:
+
 ```bash
 git push --tags
 ```
@@ -447,6 +459,7 @@ Components define where versions are read from and written to. Built-in componen
 - **`php(path)`**: Reads/writes version from `composer.json` (PHP projects)
 
 Components are functions that return an object with:
+
 - `path`: Base path of the component
 - `parts`: Array of parts, each with:
   - `path`: File path
@@ -462,11 +475,13 @@ You can create custom components by implementing the `Component` interface.
 1. **Make changes** to your code
 
 2. **Create change file**:
+
    ```bash
    auto-release record
    ```
 
 3. **Commit everything** (including change file):
+
    ```bash
    git add .
    git commit -m "feat: add new feature"
@@ -474,6 +489,7 @@ You can create custom components by implementing the `Component` interface.
    ```
 
 4. **On main branch**, when ready to release:
+
    ```bash
    auto-release generate-release --dry-run  # Review what will be released
    auto-release generate-release  # Create/update release PRs
@@ -501,19 +517,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      
+
       - uses: actions/setup-node@v3
         with:
           node-version: 22
-      
+
       - run: pnpm install
-      
+
       # Validate on every push
       - run: pnpm auto-release check
-      
+
       # Preview what would be released
       - run: pnpm auto-release generate-release --dry-run
-      
+
       # Check if there are changes to release
       - id: check-changes
         run: |
@@ -522,11 +538,11 @@ jobs:
           else
             echo "has_changes=true" >> $GITHUB_OUTPUT
           fi
-      
+
       # Release (update versions, changelogs)
       - if: steps.check-changes.outputs.has_changes == 'true'
         run: pnpm auto-release release --yes
-      
+
       # Commit release changes
       - if: steps.check-changes.outputs.has_changes == 'true'
         run: |
@@ -535,14 +551,14 @@ jobs:
           git add .
           git commit -m "chore: release [skip ci]"
           git push
-      
+
       # Deploy and tag
       - if: steps.check-changes.outputs.has_changes == 'true'
         run: pnpm auto-release deploy --yes
         env:
           # Add any deployment secrets here
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-      
+
       # Push tags
       - if: steps.check-changes.outputs.has_changes == 'true'
         run: git push --tags
@@ -567,6 +583,7 @@ See the [`examples/`](./examples) directory for complete configuration examples:
 - Deployment is tightly integrated with versioning
 
 Unlike traditional Changesets:
+
 - **App-focused** rather than package-focused
 - **Built-in deployment** support with git tagging
 - **Flexible strategies** beyond semver

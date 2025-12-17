@@ -5,27 +5,32 @@ Thank you for considering contributing to auto-release!
 ## Development Setup
 
 1. Clone the repository:
+
 ```bash
 git clone https://github.com/afoures/auto-release.git
 cd auto-release
 ```
 
 2. Install dependencies:
+
 ```bash
 pnpm install
 ```
 
 3. Build the project:
+
 ```bash
 pnpm build
 ```
 
 4. Run tests:
+
 ```bash
 pnpm test
 ```
 
 5. Type check:
+
 ```bash
 pnpm typecheck
 ```
@@ -88,6 +93,7 @@ This allows direct lookup by name and clearer organization.
 ### Component Model
 
 Apps use **components** to define version sources. Components are functions that return:
+
 - `path`: Base path
 - `parts`: Array of versioned files/parts
 
@@ -96,6 +102,7 @@ Each part has `get_current_version()` and `update_version()` methods.
 ### Formatter-Driven Versioning
 
 Versioning strategies (`semver()`, `calver()`) require a **formatter** that controls:
+
 - How changelogs are parsed from markdown
 - How changelog sections are formatted
 - How release notes are generated
@@ -105,6 +112,7 @@ The `default_changelog_formatter()` provides a simple default, but custom format
 ### Git Provider Abstraction
 
 Git operations are abstracted through the `GitProvider` interface, supporting:
+
 - GitHub (via REST API)
 - GitLab (via REST API)
 - Extensible for other providers
@@ -114,6 +122,7 @@ All provider calls use `config.git.default_target_branch` consistently.
 ## Development Workflow
 
 1. Create a feature branch:
+
 ```bash
 git checkout -b feature/your-feature
 ```
@@ -121,21 +130,25 @@ git checkout -b feature/your-feature
 2. Make your changes and add tests
 
 3. Ensure tests pass:
+
 ```bash
 pnpm test
 ```
 
 4. Ensure type checking passes:
+
 ```bash
 pnpm typecheck
 ```
 
 5. Build to verify:
+
 ```bash
 pnpm build
 ```
 
 6. Commit your changes:
+
 ```bash
 git commit -m "feat: add your feature"
 ```
@@ -171,4 +184,3 @@ git commit -m "feat: add your feature"
 ## Questions?
 
 Feel free to open an issue for discussion before starting work on a major feature.
-

@@ -1,10 +1,5 @@
 import { regex } from "arkregex";
-import type {
-  Change,
-  ChangeKindDisplayMap,
-  Formatter,
-  VersionManager,
-} from "./types.js";
+import type { Change, ChangeKindDisplayMap, Formatter, VersionManager } from "./types.js";
 import { default_formatter } from "../formatter.js";
 
 interface CalendarVersion {
@@ -44,7 +39,7 @@ export function calver<
       version: string;
       changes: Array<Change<CalendarChangeKind>>;
     }>;
-  }
+  },
 >({
   formatter: custom_formatter,
   display_map: custom_display_map,
@@ -64,8 +59,7 @@ export function calver<
       feature: { singular: "Feature", plural: "Features" },
       fix: { singular: "Bug Fix", plural: "Bug Fixes" },
     } satisfies ChangeKindDisplayMap<CalendarChangeKind>);
-  const formatter =
-    custom_formatter || default_formatter({ allowed_changes, display_map });
+  const formatter = custom_formatter || default_formatter({ allowed_changes, display_map });
 
   return {
     allowed_changes,
@@ -93,10 +87,7 @@ export function calver<
       const current_year = BigInt(date.getFullYear());
 
       let highest_type: CalendarChangeKind = "fix";
-      const precedence = { feature: 2, fix: 1 } satisfies Record<
-        CalendarChangeKind,
-        number
-      >;
+      const precedence = { feature: 2, fix: 1 } satisfies Record<CalendarChangeKind, number>;
 
       for (const change of changes) {
         if (precedence[change.kind] > precedence[highest_type]) {

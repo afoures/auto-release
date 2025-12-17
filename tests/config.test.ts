@@ -45,9 +45,7 @@ describe("define_config", () => {
       },
     });
 
-    const managed_app = config.managed_applications.find(
-      (item) => item.name === "my-app"
-    );
+    const managed_app = config.managed_applications.find((item) => item.name === "my-app");
 
     expect(managed_app).toBeDefined();
     const resolved_app = managed_app!;
@@ -56,9 +54,7 @@ describe("define_config", () => {
 
     const component_result = resolved_app.components[0];
     expect(isAbsolute(component_result.path)).toBe(true);
-    expect(component_result.parts.every((part) => isAbsolute(part.path))).toBe(
-      true
-    );
+    expect(component_result.parts.every((part) => isAbsolute(part.path))).toBe(true);
   });
 
   it("should support custom strategies", () => {
@@ -98,14 +94,8 @@ describe("define_config", () => {
       },
     });
 
-    const managed_app = config.managed_applications.find(
-      (item) => item.name === "my-app"
-    );
+    const managed_app = config.managed_applications.find((item) => item.name === "my-app");
 
-    expect(managed_app?.versioning.allowed_changes).toEqual([
-      "breaking",
-      "feature",
-      "fix",
-    ]);
+    expect(managed_app?.versioning.allowed_changes).toEqual(["breaking", "feature", "fix"]);
   });
 });

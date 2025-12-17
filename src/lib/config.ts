@@ -2,14 +2,10 @@ import { constants } from "node:fs";
 import { access } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 import { dirname, isAbsolute, resolve } from "node:path";
-import type {
-  AutoReleaseConfig,
-  GitProvider,
-  ManagedApplication,
-} from "./types.js";
+import type { AutoReleaseConfig, GitProvider, ManagedApplication } from "./types.js";
 
 export function define_config<const config extends AutoReleaseConfig>(
-  config: config
+  config: config,
 ): InternalConfig {
   validate_config(config);
   return new InternalConfig(config);
@@ -51,8 +47,7 @@ export class InternalConfig {
     return {
       provider: this.#config.git.provider,
       default_target_branch: this.#config.git.default_target_branch || "main",
-      default_release_branch_prefix:
-        this.#config.git.default_release_branch_prefix || "release",
+      default_release_branch_prefix: this.#config.git.default_release_branch_prefix || "release",
     };
   }
 
@@ -60,9 +55,7 @@ export class InternalConfig {
     return Object.entries(this.#config.apps).map(([name, definition]) => ({
       name,
       ...definition,
-      components: definition.components.map((component) =>
-        component(dirname(this.#path))
-      ),
+      components: definition.components.map((component) => component(dirname(this.#path))),
       get current_version(): string {
         const versions = new Set<string>();
         for (const component of this.components) {
@@ -75,9 +68,7 @@ export class InternalConfig {
         }
         if (versions.size > 1) {
           throw new Error(
-            `App "${name}" has mismatched versions: ${Array.from(versions).join(
-              ", "
-            )}`
+            `App "${name}" has mismatched versions: ${Array.from(versions).join(", ")}`,
           );
         }
         return versions.values().next().value as string;
@@ -91,7 +82,7 @@ export class InternalConfig {
  */
 async function load_config(
   config_path: string = "auto-release.config.ts",
-  cwd: string = process.cwd()
+  cwd: string = process.cwd(),
 ): Promise<InternalConfig> {
   const resolved_path = resolve(cwd, config_path);
   const file_url = pathToFileURL(resolved_path).href;
@@ -100,15 +91,11 @@ async function load_config(
   try {
     module = await import(file_url);
   } catch (error: any) {
-    throw new Error(
-      `Failed to load config from ${config_path}: ${error.message}`
-    );
+    throw new Error(`Failed to load config from ${config_path}: ${error.message}`);
   }
 
   if (!module.default) {
-    throw new Error(
-      `Auto-release config file ${config_path} must have a default export`
-    );
+    throw new Error(`Auto-release config file ${config_path} must have a default export`);
   }
 
   const config = module.default;
@@ -157,7 +144,7 @@ async function find_git_root(start_dir: string): Promise<string | undefined> {
 
 async function find_config_candidate(
   start_dir: string,
-  stop_dir?: string
+  stop_dir?: string,
 ): Promise<string | undefined> {
   let current_dir = start_dir;
   while (true) {
@@ -203,8 +190,8 @@ async function resolve_config_path(options?: {
     const stop_point = git_root || "filesystem root";
     throw new Error(
       `Could not find config (searched for ${CONFIG_CANDIDATES.join(
-        ", "
-      )}) from ${cwd} up to ${stop_point}`
+        ", ",
+      )}) from ${cwd} up to ${stop_point}`,
     );
   }
 
@@ -226,18 +213,12 @@ export async function find_nearest_config(options?: {
 function validate_config(config: AutoReleaseConfig): void {
   if (!config.git) {
     throw new Error(
-      'Auto-release config must have a "git" provider. Use github() or gitlab() from "auto-release/providers"'
+      'Auto-release config must have a "git" provider. Use github() or gitlab() from "auto-release/providers"',
     );
   }
 
-  if (
-    !config.apps ||
-    typeof config.apps !== "object" ||
-    Array.isArray(config.apps)
-  ) {
-    throw new Error(
-      'Auto-release config must have an "apps" record (object keyed by app name)'
-    );
+  if (!config.apps || typeof config.apps !== "object" || Array.isArray(config.apps)) {
+    throw new Error('Auto-release config must have an "apps" record (object keyed by app name)');
   }
 
   const app_entries = Object.entries(config.apps);
@@ -260,17 +241,12 @@ function validate_config(config: AutoReleaseConfig): void {
 
     if (typeof app.versioning.bump !== "function") {
       throw new Error(
-        `App "${name}" versioning must have a "bump" function. Did you forget to call the strategy function?`
+        `App "${name}" versioning must have a "bump" function. Did you forget to call the strategy function?`,
       );
     }
 
-    if (
-      !app.versioning.allowed_changes ||
-      !Array.isArray(app.versioning.allowed_changes)
-    ) {
-      throw new Error(
-        `App "${name}" versioning must have an "allowed_changes" array`
-      );
+    if (!app.versioning.allowed_changes || !Array.isArray(app.versioning.allowed_changes)) {
+      throw new Error(`App "${name}" versioning must have an "allowed_changes" array`);
     }
 
     if (!app.changelog || typeof app.changelog !== "string") {

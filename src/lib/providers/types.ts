@@ -38,7 +38,7 @@ export interface GitProvider {
     name: string,
     base_sha: string,
     files: FileChange[],
-    message: string
+    message: string,
   ): Promise<string>;
 
   /**
@@ -53,17 +53,13 @@ export interface GitProvider {
     head: string,
     base: string,
     title: string,
-    body: string
+    body: string,
   ): Promise<PullRequest>;
 
   /**
    * Update an existing pull request
    */
-  update_pull_request(
-    number: number,
-    title: string,
-    body: string
-  ): Promise<void>;
+  update_pull_request(number: number, title: string, body: string): Promise<void>;
 
   /**
    * Create a git tag

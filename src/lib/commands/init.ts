@@ -76,9 +76,7 @@ export function generate_config_source(options: GenerateConfigOptions): string {
 
   const lines: string[] = [...imports, "", "export default define_config({"];
   lines.push(`  changes_dir: ${JSON.stringify(changes_dir)},`);
-  lines.push(
-    `  release_branch_prefix: ${JSON.stringify(release_branch_prefix)},`
-  );
+  lines.push(`  release_branch_prefix: ${JSON.stringify(release_branch_prefix)},`);
 
   lines.push("  apps: [");
   apps.forEach((app, index) => {
@@ -89,11 +87,7 @@ export function generate_config_source(options: GenerateConfigOptions): string {
       lines.push(`        ${JSON.stringify(pkg)},`);
     });
     lines.push("      ],");
-    lines.push(
-      `      versioning: ${
-        app.versioning === "semver" ? "semver()" : "calver()"
-      },`
-    );
+    lines.push(`      versioning: ${app.versioning === "semver" ? "semver()" : "calver()"},`);
     lines.push("      changelog: {");
     lines.push(`        path: ${JSON.stringify(app.changelog_path)},`);
     lines.push("      },");
@@ -150,16 +144,11 @@ async function path_exists(target: string): Promise<boolean> {
 
 async function detect_package_manager(
   cwd: string,
-  package_json?: PackageJson
+  package_json?: PackageJson,
 ): Promise<PackageManager | undefined> {
   if (package_json?.packageManager) {
     const [manager] = package_json.packageManager.split("@");
-    if (
-      manager === "pnpm" ||
-      manager === "npm" ||
-      manager === "yarn" ||
-      manager === "bun"
-    ) {
+    if (manager === "pnpm" || manager === "npm" || manager === "yarn" || manager === "bun") {
       return manager;
     }
   }
@@ -209,7 +198,7 @@ async function ensure_package_json(path: string): Promise<PackageJson> {
 async function create_changes_directories(
   cwd: string,
   changes_dir: string,
-  apps: AppTemplate[]
+  apps: AppTemplate[],
 ): Promise<void> {
   const root_dir = join(cwd, changes_dir);
   await mkdir(root_dir, { recursive: true });
@@ -251,10 +240,7 @@ export const init = create_command({
       const package_json_path = join(context.cwd, "package.json");
       const package_json = await ensure_package_json(package_json_path);
 
-      let package_manager = await detect_package_manager(
-        context.cwd,
-        package_json
-      );
+      let package_manager = await detect_package_manager(context.cwd, package_json);
       if (!package_manager) {
         const selection = await select({
           message: "Select your package manager",
@@ -290,9 +276,7 @@ export const init = create_command({
           install_spinner.stop("Installed auto-release");
         } catch (error: any) {
           install_spinner.stop("Failed to install auto-release");
-          throw new Error(
-            `Dependency installation failed: ${error.message || error}`
-          );
+          throw new Error(`Dependency installation failed: ${error.message || error}`);
         }
       } else {
         log.info("auto-release already present in package.json");
@@ -314,9 +298,7 @@ export const init = create_command({
         message: "Release branch prefix",
         initialValue: "release",
         validate: (value = "") =>
-          value.trim().length === 0
-            ? "Release branch prefix cannot be empty"
-            : undefined,
+          value.trim().length === 0 ? "Release branch prefix cannot be empty" : undefined,
       });
       if (isCancel(release_prefix_input)) {
         cancel("Initialization cancelled");
@@ -329,9 +311,7 @@ export const init = create_command({
         initialValue: "1",
         validate: (value = "") => {
           const parsed = Number.parseInt(value, 10);
-          return Number.isNaN(parsed) || parsed <= 0
-            ? "Enter a positive number"
-            : undefined;
+          return Number.isNaN(parsed) || parsed <= 0 ? "Enter a positive number" : undefined;
         },
       });
       if (isCancel(app_count_input)) {
@@ -362,9 +342,7 @@ export const init = create_command({
           message: `Package paths for ${app_name} (comma separated)`,
           initialValue: app_count === 1 ? "." : `apps/${app_name}`,
           validate: (value = "") =>
-            value.trim().length === 0
-              ? "At least one package path is required"
-              : undefined,
+            value.trim().length === 0 ? "At least one package path is required" : undefined,
         });
         if (isCancel(package_paths_input)) {
           cancel("Initialization cancelled");
@@ -377,12 +355,9 @@ export const init = create_command({
 
         const changelog_input = await text({
           message: `Changelog path for ${app_name}`,
-          initialValue:
-            app_count === 1 ? "CHANGELOG.md" : `apps/${app_name}/CHANGELOG.md`,
+          initialValue: app_count === 1 ? "CHANGELOG.md" : `apps/${app_name}/CHANGELOG.md`,
           validate: (value = "") =>
-            value.trim().length === 0
-              ? "Changelog path is required"
-              : undefined,
+            value.trim().length === 0 ? "Changelog path is required" : undefined,
         });
         if (isCancel(changelog_input)) {
           cancel("Initialization cancelled");
@@ -429,8 +404,7 @@ export const init = create_command({
         const owner_input = await text({
           message: "GitHub owner (user or org)",
           initialValue: package_json.name?.replace(/@.*\//, "") || "",
-          validate: (value = "") =>
-            value.trim().length === 0 ? "Owner is required" : undefined,
+          validate: (value = "") => (value.trim().length === 0 ? "Owner is required" : undefined),
         });
         if (isCancel(owner_input)) {
           cancel("Initialization cancelled");
@@ -463,10 +437,7 @@ export const init = create_command({
           provider: "github",
           owner: (owner_input as string).trim(),
           repo: (repo_input as string).trim(),
-          token_env: sanitize_env_var(
-            token_env_input as string,
-            "GITHUB_TOKEN"
-          ),
+          token_env: sanitize_env_var(token_env_input as string, "GITHUB_TOKEN"),
         };
       } else {
         const project_input = await text({
@@ -501,10 +472,7 @@ export const init = create_command({
           provider: "gitlab",
           project_id: (project_input as string).trim(),
           host: (host_input as string).trim() || undefined,
-          token_env: sanitize_env_var(
-            token_env_input as string,
-            "GITLAB_TOKEN"
-          ),
+          token_env: sanitize_env_var(token_env_input as string, "GITLAB_TOKEN"),
         };
       }
 
@@ -542,9 +510,7 @@ export const init = create_command({
       log.success("Generated auto-release.config.ts");
       log.success(`Change files directory: ${changes_dir}`);
       apps.forEach((app) => {
-        log.success(
-          `App ${app.name} ready with ${app.packages.length} package(s)`
-        );
+        log.success(`App ${app.name} ready with ${app.packages.length} package(s)`);
       });
 
       outro("auto-release init complete!");

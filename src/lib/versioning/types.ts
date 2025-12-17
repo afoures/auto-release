@@ -18,7 +18,7 @@ export type Formatter<
       version: string;
       changes: Array<Change<change_kinds>>;
     }>;
-  }
+  },
 > = {
   /**
    * Transform the mdast tree into a custom changelog data structure.
@@ -73,16 +73,12 @@ export type VersionManager<
       version: string;
       changes: Array<Change<change_kind>>;
     }>;
-  }
+  },
 > = {
   allowed_changes: readonly change_kind[];
   compare(a: string, b: string): -1 | 0 | 1;
   validate({ version }: { version: string }): boolean;
-  bump(args: {
-    version: string;
-    changes: Array<Change<change_kind>>;
-    date: Date;
-  }): string;
+  bump(args: { version: string; changes: Array<Change<change_kind>>; date: Date }): string;
   formatter: Formatter<change_kind, parsed_changelog>;
   display_map: ChangeKindDisplayMap<change_kind>;
 };

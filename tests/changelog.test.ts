@@ -37,7 +37,7 @@ describe("default formatter", () => {
       fromMarkdown(markdown, {
         extensions: [gfm()],
         mdastExtensions: [gfmFromMarkdown()],
-      })
+      }),
     );
 
     expect(parsed.root.title).toBe("test-app");
