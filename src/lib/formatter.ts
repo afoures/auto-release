@@ -1,6 +1,6 @@
 import type { Content, Heading, List, ListItem, Root } from "mdast";
-import type { Change, Formatter } from "./types.js";
-import type { ChangeKindDisplayMap } from "./versioning/types.js";
+import type { Change, Formatter } from "./types.ts";
+import type { ChangeKindDisplayMap } from "./versioning/types.ts";
 
 type DefaultParsedChangelog<change_kinds extends string> = {
   root: { title: string; description: string[] };

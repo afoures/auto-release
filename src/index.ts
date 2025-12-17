@@ -10,7 +10,7 @@ export type {
   GitProvider,
   Formatter,
   ChangeKindDisplayMap,
-} from "./lib/types.js";
+} from "./lib/types.ts";
 
 // Export config helper
-export { define_config } from "./lib/config.js";
+export { define_config } from "./lib/config.ts";

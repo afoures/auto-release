@@ -12,4 +12,5 @@ export default defineConfig({
   dts: true,
   clean: true,
   minify: false,
+  unbundle: true,
 });

@@ -1,6 +1,7 @@
-import { create_logger } from "../utils/logger.js";
-import { create_command } from "../cli.js";
-import { find_nearest_config } from "../config.js";
+import { create_logger } from "../utils/logger.ts";
+import { create_command } from "../cli.ts";
+import { find_nearest_config } from "../config.ts";
+import { relative } from "node:path";
 
 export const list = create_command({
   name: "list",
@@ -9,66 +10,55 @@ export const list = create_command({
     config: {
       type: "string",
       description: "Path to config file",
-    },
-    json: {
-      type: "boolean",
-      description: "Output as JSON",
+      short: "c",
     },
   },
   get_context: async ({ args, cwd }) => {
-    const { config } = await find_nearest_config({
+    const { config, git_root } = await find_nearest_config({
       config_path: args.config,
       cwd,
     });
-    return { config };
+    return { config, root: git_root || config.folder };
   },
-  run: async ({ args, context }) => {
-    const json = args.json ?? false;
-    const logger = create_logger(json);
+  run: async ({ context: { config, root } }) => {
+    const logger = create_logger();
 
-    const config = context.config;
-    const apps_data = config.managed_applications.map((app) => {
-      const part_paths = app.components.flatMap((component) =>
-        component.parts.map((part) => part.path),
-      );
+    if (config.managed_applications.length === 0) {
+      logger.info("no applications registered.");
+      return { status: "success" as const };
+    }
+
+    const count = config.managed_applications.length;
+    const warnings: string[] = [];
+
+    logger.info(`found ${count} application${count > 1 ? "s" : ""}:`);
+    logger.info("");
+
+    for (const app of config.managed_applications) {
       let version: string;
       try {
         version = app.current_version;
       } catch (error: any) {
-        version = `Error: ${error.message}`;
-      }
-      return {
-        name: app.name,
-        version,
-        parts: part_paths,
-      };
-    });
-
-    if (json) {
-      console.log(JSON.stringify(apps_data, null, 2));
-    } else {
-      if (apps_data.length === 0) {
-        logger.info("No apps registered.");
-        return { status: "success" as const };
+        warnings.push(`${app.name} has no version: ${error.message}`);
+        version = `unknown`;
       }
 
-      logger.info(`Found ${apps_data.length} registered app${apps_data.length > 1 ? "s" : ""}:\n`);
+      const parts = app.components.flatMap((component) =>
+        component.parts.map((part) => ({
+          relative_path: relative(root, part.path),
+          missing: part.exists === false,
+        })),
+      );
 
-      for (const app of apps_data) {
-        logger.info(`App: ${app.name}`);
-        logger.info(`  Current version: ${app.version}`);
-        logger.info(`  Managed files:`);
-        if (app.parts.length === 0) {
-          logger.info(`    (none)`);
-        } else {
-          for (const part_path of app.parts) {
-            logger.info(`    - ${part_path}`);
-          }
-        }
-        logger.info("");
-      }
+      logger.note(
+        `${app.name} (${version})`,
+        parts
+          .map((part) => `./${part.relative_path} ${part.missing ? "⚠️ missing" : ""}`)
+          .join("\n"),
+      );
+      logger.info("");
     }
 
-    return { status: "success" as const };
+    return { status: "success" as const, warnings };
   },
 });

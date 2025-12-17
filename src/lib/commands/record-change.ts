@@ -1,8 +1,8 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { text, select, confirm, isCancel, intro, log, cancel } from "@clack/prompts";
-import { create_command } from "../cli.js";
-import { find_nearest_config } from "../config.js";
+import { create_command } from "../cli.ts";
+import { find_nearest_config } from "../config.ts";
 
 export const record_change = create_command({
   name: "record-change",

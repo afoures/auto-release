@@ -1,6 +1,6 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { Change, ManagedApplication } from "./types.js";
+import type { Change, ManagedApplication } from "./types.ts";
 import { regex } from "arkregex";
 
 const CHANGE_FILE_REGEX = regex("^(?<kind>[a-z0-9-]+)\\.(?<slug>[a-z0-9-]+)\\.md$");

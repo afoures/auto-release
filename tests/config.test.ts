@@ -1,10 +1,10 @@
 import { isAbsolute, resolve } from "node:path";
 import { describe, it, expect } from "vitest";
-import { define_config } from "../src/lib/config.js";
-import { semver } from "../src/lib/versioning/semantic.js";
-import { github } from "../src/lib/providers/github.js";
-import { node } from "../src/lib/components/node.js";
-import type { Formatter, VersionManager } from "../src/lib/types.js";
+import { define_config } from "../src/lib/config.ts";
+import { semver } from "../src/lib/versioning/semantic.ts";
+import { github } from "../src/lib/providers/github.ts";
+import { node } from "../src/lib/components/node.ts";
+import type { Formatter, VersionManager } from "../src/lib/types.ts";
 
 describe("define_config", () => {
   it("should return config as-is", () => {

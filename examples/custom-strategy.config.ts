@@ -1,6 +1,6 @@
-import { define_config, VersionManager, Formatter, ChangeKindDisplayMap } from "../src/index.js";
-import { github } from "../src/git-providers.js";
-import { node } from "../src/components.js";
+import { define_config, VersionManager, Formatter, ChangeKindDisplayMap } from "../dist/index.mjs";
+import { github } from "../dist/git-providers.mjs";
+import { node } from "../dist/components.mjs";
 
 type AllowedChangeKind = "breaking" | "feature" | "fix";
 /**

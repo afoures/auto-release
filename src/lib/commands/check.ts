@@ -1,8 +1,8 @@
-import { parse_change_filename, parse_change_markdown } from "../changes.js";
-import { create_logger } from "../utils/logger.js";
-import { create_command } from "../cli.js";
-import { find_nearest_config } from "../config.js";
-import type { ManagedApplication } from "../types.js";
+import { parse_change_filename, parse_change_markdown } from "../changes.ts";
+import { create_logger } from "../utils/logger.ts";
+import { create_command } from "../cli.ts";
+import { find_nearest_config } from "../config.ts";
+import type { ManagedApplication } from "../types.ts";
 import { join } from "node:path";
 import { readdirSync, readFileSync } from "node:fs";
 

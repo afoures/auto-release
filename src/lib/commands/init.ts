@@ -12,8 +12,8 @@ import {
   log,
   isCancel,
 } from "@clack/prompts";
-import { create_command, type Option } from "../cli.js";
-import { exec } from "../utils/exec.js";
+import { create_command, type Option } from "../cli.ts";
+import { exec } from "../utils/exec.ts";
 
 type PackageManager = "npm" | "pnpm" | "yarn" | "bun";
 

@@ -1,35 +1,39 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import type { Component, Part } from "./types.js";
+import type { Component, Part } from "./types.ts";
 
 export function php(path: string): Component {
   return (config_folder: string) => {
     const base_path = resolve(config_folder, path);
     const parts: Array<Part> = [];
+    const warnings: Array<string> = [];
 
     const composer_json_path = join(base_path, "composer.json");
-    if (!existsSync(composer_json_path)) {
-      console.warn(`composer.json not found at ${composer_json_path}`);
-    } else {
-      parts.push({
-        path: composer_json_path,
-        get_current_version: () => {
-          const content = readFileSync(composer_json_path, "utf-8");
-          const composer_json = JSON.parse(content);
-          return composer_json.version;
-        },
-        update_version: (version: string) => {
-          const content = readFileSync(composer_json_path, "utf-8");
-          const composer_json = JSON.parse(content);
-          composer_json.version = version;
-          writeFileSync(composer_json_path, JSON.stringify(composer_json, null, 2) + "\n", "utf-8");
-        },
-      });
+    const composer_json_exists = existsSync(composer_json_path);
+    if (!composer_json_exists) {
+      warnings.push(`composer.json not found at ${composer_json_path}`);
     }
+
+    parts.push({
+      path: composer_json_path,
+      exists: composer_json_exists,
+      get_current_version: () => {
+        const content = readFileSync(composer_json_path, "utf-8");
+        const composer_json = JSON.parse(content);
+        return composer_json.version;
+      },
+      update_version: (version: string) => {
+        const content = readFileSync(composer_json_path, "utf-8");
+        const composer_json = JSON.parse(content);
+        composer_json.version = version;
+        writeFileSync(composer_json_path, JSON.stringify(composer_json, null, 2) + "\n", "utf-8");
+      },
+    });
 
     return {
       path: base_path,
       parts,
+      warnings,
     };
   };
 }

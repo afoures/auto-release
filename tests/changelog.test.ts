@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { semver } from "../src/lib/versioning/semantic.js";
+import { semver } from "../src/lib/versioning/semantic.ts";
 import { fromMarkdown } from "mdast-util-from-markdown";
 import { gfmFromMarkdown } from "mdast-util-gfm";
 import { gfm } from "micromark-extension-gfm";

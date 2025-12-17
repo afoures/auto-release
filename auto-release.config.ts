@@ -22,6 +22,17 @@ export default define_config({
         },
       }),
     },
+    "another-app": {
+      components: [node(".")],
+      changelog: "CHANGELOG.md",
+      versioning: semver({
+        display_map: {
+          major: { singular: "Major", plural: "Major" },
+          minor: { singular: "Minor", plural: "Minor" },
+          patch: { singular: "Patch", plural: "Patch" },
+        },
+      }),
+    },
   },
   git: {
     provider: github({
