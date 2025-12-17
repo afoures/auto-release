@@ -11,14 +11,9 @@ interface GitLabOptions {
  */
 export function gitlab(options: GitLabOptions): GitProvider {
   const { token, project_id, host = "gitlab.com" } = options;
-  const api_base = `https://${host}/api/v4/projects/${encodeURIComponent(
-    project_id
-  )}`;
+  const api_base = `https://${host}/api/v4/projects/${encodeURIComponent(project_id)}`;
 
-  async function api_request(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<any> {
+  async function api_request(endpoint: string, options: RequestInit = {}): Promise<any> {
     const url = `${api_base}${endpoint}`;
     const response = await fetch(url, {
       ...options,
@@ -31,9 +26,7 @@ export function gitlab(options: GitLabOptions): GitProvider {
 
     if (!response.ok) {
       const error_text = await response.text();
-      throw new Error(
-        `GitLab API error: ${response.status} ${response.statusText}\n${error_text}`
-      );
+      throw new Error(`GitLab API error: ${response.status} ${response.statusText}\n${error_text}`);
     }
 
     if (response.status === 204) {
@@ -45,19 +38,14 @@ export function gitlab(options: GitLabOptions): GitProvider {
 
   return {
     async get_branch_sha(branch: string): Promise<string> {
-      const ref = await api_request(
-        `/repository/branches/${encodeURIComponent(branch)}`
-      );
+      const ref = await api_request(`/repository/branches/${encodeURIComponent(branch)}`);
       return ref.commit.id;
     },
 
-    async get_file_content(
-      path: string,
-      branch: string
-    ): Promise<string | null> {
+    async get_file_content(path: string, branch: string): Promise<string | null> {
       try {
         const url = `${api_base}/repository/files/${encodeURIComponent(
-          path
+          path,
         )}/raw?ref=${encodeURIComponent(branch)}`;
         const response = await fetch(url, {
           headers: {
@@ -71,7 +59,7 @@ export function gitlab(options: GitLabOptions): GitProvider {
           }
           const error_text = await response.text();
           throw new Error(
-            `GitLab API error: ${response.status} ${response.statusText}\n${error_text}`
+            `GitLab API error: ${response.status} ${response.statusText}\n${error_text}`,
           );
         }
 
@@ -88,7 +76,7 @@ export function gitlab(options: GitLabOptions): GitProvider {
       name: string,
       base_sha: string,
       files: FileChange[],
-      message: string
+      message: string,
     ): Promise<string> {
       // GitLab uses commits API with actions
       const actions = files.map((file) => {
@@ -134,9 +122,7 @@ export function gitlab(options: GitLabOptions): GitProvider {
     async find_pull_request(head_branch: string): Promise<PullRequest | null> {
       // GitLab calls them "merge requests"
       const mrs = await api_request(
-        `/merge_requests?state=opened&source_branch=${encodeURIComponent(
-          head_branch
-        )}`
+        `/merge_requests?state=opened&source_branch=${encodeURIComponent(head_branch)}`,
       );
       if (mrs.length === 0) {
         return null;
@@ -154,7 +140,7 @@ export function gitlab(options: GitLabOptions): GitProvider {
       head: string,
       base: string,
       title: string,
-      body: string
+      body: string,
     ): Promise<PullRequest> {
       const mr = await api_request("/merge_requests", {
         method: "POST",
@@ -173,11 +159,7 @@ export function gitlab(options: GitLabOptions): GitProvider {
       };
     },
 
-    async update_pull_request(
-      number: number,
-      title: string,
-      body: string
-    ): Promise<void> {
+    async update_pull_request(number: number, title: string, body: string): Promise<void> {
       await api_request(`/merge_requests/${number}`, {
         method: "PUT",
         body: JSON.stringify({
@@ -187,11 +169,7 @@ export function gitlab(options: GitLabOptions): GitProvider {
       });
     },
 
-    async create_tag(
-      name: string,
-      sha: string,
-      message: string
-    ): Promise<void> {
+    async create_tag(name: string, sha: string, message: string): Promise<void> {
       await api_request("/repository/tags", {
         method: "POST",
         body: JSON.stringify({
@@ -202,11 +180,7 @@ export function gitlab(options: GitLabOptions): GitProvider {
       });
     },
 
-    async create_release(
-      tag: string,
-      name: string,
-      body: string
-    ): Promise<void> {
+    async create_release(tag: string, name: string, body: string): Promise<void> {
       await api_request("/releases", {
         method: "POST",
         body: JSON.stringify({

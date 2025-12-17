@@ -62,4 +62,3 @@ some local description
 - Example configurations for common scenarios
 - TypeScript API documentation
 - Contributing guidelines
-

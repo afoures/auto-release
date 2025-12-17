@@ -3,13 +3,17 @@
 1. merge sur main
 2. la CI sur main qui run `auto-release generate-release`
 3. creation/update de la branche de release avec
-  - nouvelle version apply sur les packages
-  - changelog généré
+
+- nouvelle version apply sur les packages
+- changelog généré
+
 4. CI sur cette branche qui run
-  - check de qualité
-  - tests
-  - build + deploy sur env de test (⚠️ ici on doit pouvoir override la version via le commit/time/whatever car risque de multiple déploiement ici)
-  - possibilité de force de deploy sur pré-prod ??
+
+- check de qualité
+- tests
+- build + deploy sur env de test (⚠️ ici on doit pouvoir override la version via le commit/time/whatever car risque de multiple déploiement ici)
+- possibilité de force de deploy sur pré-prod ??
+
 5. lorsqu'on est ready, on merge cette MR
 6. la CI sur main va procéder au tagging via `auto-release tag-release`
 7. la CI du tag s'occupe du build + deploy en pré-prod/prod (maybe de manière manuelle)
@@ -25,4 +29,4 @@
 - comment on propose une intégration poussés pour expo, react native, php, package.json classique ?
 - calver ne fonctionne pas bien avec les hotfixs...
 - la command `check` peut verifier qu'une MR ne modifie pas manuellement une version managée par auto release et prevent le merge
-- 
+-

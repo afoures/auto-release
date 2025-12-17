@@ -2,7 +2,6 @@
   "name": "auto-release",
   "version": "0.1.0",
   "description": "A changesets-inspired release management tool for monorepos",
-  "type": "module",
   "homepage": "https://github.com/afoures/auto-release#readme",
   "bugs": {
     "url": "https://github.com/afoures/auto-release/issues"
@@ -12,54 +11,45 @@
     "url": "git+https://github.com/afoures/auto-release.git"
   },
   "author": "Antoine Fourès <contact@afoures.com>",
+  "type": "module",
+  "main": "./dist/index.mjs",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    },
+    "./components": {
+      "types": "./dist/components.d.mts",
+      "import": "./dist/components.mjs"
+    },
+    "./package.json": "./package.json",
+    "./providers": {
+      "types": "./dist/git-providers.d.mts",
+      "import": "./dist/git-providers.mjs"
+    },
+    "./versioning": {
+      "types": "./dist/versioning.d.mts",
+      "import": "./dist/versioning.mjs"
+    }
+  },
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "bin": {
+    "auto-release": "./dist/bin.mjs"
+  },
   "files": [
     "dist",
     "package.json"
   ],
-  "bin": {
-    "auto-release": "./dist/bin.mjs"
-  },
-  "main": "./dist/index.mjs",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.mts",
-  "exports": {
-    ".": {
-      "import": "./dist/index.mjs",
-      "types": "./dist/index.d.mts"
-    },
-    "./versioning": {
-      "import": "./dist/versioning.mjs",
-      "types": "./dist/versioning.d.mts"
-    },
-    "./providers": {
-      "import": "./dist/git-providers.mjs",
-      "types": "./dist/git-providers.d.mts"
-    },
-    "./components": {
-      "import": "./dist/components.mjs",
-      "types": "./dist/components.d.mts"
-    },
-    "./package.json": "./package.json"
-  },
   "scripts": {
     "build": "tsdown",
     "dev": "tsdown --watch",
     "test": "vitest",
     "typecheck": "tsc --noEmit",
+    "lint": "oxlint",
+    "format": "oxfmt",
     "prepublishOnly": "pnpm run build"
   },
-  "devDependencies": {
-    "@types/mdast": "^4.0.4",
-    "@types/node": "^24.10.1",
-    "bumpp": "^10.3.1",
-    "tsdown": "^0.16.4",
-    "typescript": "^5.9.3",
-    "vitest": "^4.0.9"
-  },
-  "engines": {
-    "node": ">=22.0.0"
-  },
-  "packageManager": "pnpm@8.15.9+sha512.499434c9d8fdd1a2794ebf4552b3b25c0a633abcee5bb15e7b5de90f32f47b513aca98cd5cfd001c31f0db454bc3804edccd578501e4ca293a6816166bbd9f81",
   "dependencies": {
     "@clack/prompts": "1.0.0-alpha.7",
     "arkregex": "^0.0.3",
@@ -67,5 +57,19 @@
     "mdast-util-gfm": "^3.1.0",
     "mdast-util-to-markdown": "^2.1.2",
     "micromark-extension-gfm": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/mdast": "^4.0.4",
+    "@types/node": "^24.10.1",
+    "bumpp": "^10.3.1",
+    "oxfmt": "^0.18.0",
+    "oxlint": "^1.33.0",
+    "tsdown": "^0.16.4",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.9"
+  },
+  "packageManager": "pnpm@8.15.9+sha512.499434c9d8fdd1a2794ebf4552b3b25c0a633abcee5bb15e7b5de90f32f47b513aca98cd5cfd001c31f0db454bc3804edccd578501e4ca293a6816166bbd9f81",
+  "engines": {
+    "node": ">=22.0.0"
   }
 }

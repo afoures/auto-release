@@ -22,11 +22,7 @@ export function php(path: string): Component {
           const content = readFileSync(composer_json_path, "utf-8");
           const composer_json = JSON.parse(content);
           composer_json.version = version;
-          writeFileSync(
-            composer_json_path,
-            JSON.stringify(composer_json, null, 2) + "\n",
-            "utf-8"
-          );
+          writeFileSync(composer_json_path, JSON.stringify(composer_json, null, 2) + "\n", "utf-8");
         },
       });
     }

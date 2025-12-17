@@ -1,14 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import {
-  text,
-  select,
-  confirm,
-  isCancel,
-  intro,
-  log,
-  cancel,
-} from "@clack/prompts";
+import { text, select, confirm, isCancel, intro, log, cancel } from "@clack/prompts";
 import { create_command } from "../cli.js";
 import { find_nearest_config } from "../config.js";
 
@@ -71,9 +63,7 @@ export const record_change = create_command({
       }
     }
 
-    const app = config.managed_applications.find(
-      (item) => item.name === app_name
-    );
+    const app = config.managed_applications.find((item) => item.name === app_name);
     if (!app) {
       return {
         status: "error" as const,
@@ -104,7 +94,7 @@ export const record_change = create_command({
       return {
         status: "error" as const,
         error: `Invalid change type "${change_type}". Valid types for ${app_name}: ${valid_types.join(
-          ", "
+          ", ",
         )}`,
       };
     }

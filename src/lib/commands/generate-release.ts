@@ -1,8 +1,5 @@
 import { relative } from "node:path";
-import {
-  discover_all_changes,
-  discover_all_changes_with_metadata,
-} from "../changes.js";
+import { discover_all_changes, discover_all_changes_with_metadata } from "../changes.js";
 import { create_logger } from "../utils/logger.js";
 import { create_command } from "../cli.js";
 import type { FileChange } from "../providers/types.js";
@@ -49,10 +46,7 @@ export const generate_release = create_command({
     // Discover all changes
     let changes_map: Map<string, any>;
     try {
-      changes_map = await discover_all_changes(
-        config.managed_applications,
-        config.changes_dir
-      );
+      changes_map = await discover_all_changes(config.managed_applications, config.changes_dir);
     } catch (error: any) {
       return {
         status: "error" as const,
@@ -131,9 +125,7 @@ export const generate_release = create_command({
     logger.info("Release PR plan:\n");
     for (const release of releases) {
       logger.info(`📦 ${release.app.name}`);
-      logger.info(
-        `  Version: ${release.current_version} → ${release.next_version}`
-      );
+      logger.info(`  Version: ${release.current_version} → ${release.next_version}`);
       logger.info(`  Branch: ${release.release_branch}`);
       logger.info(`  Changes: ${release.changes.length} file(s)`);
       logger.info("");
@@ -172,13 +164,10 @@ export const generate_release = create_command({
       logger.info(`\nPreparing release for ${release.app.name}...`);
 
       try {
-        const changelog_relative_path = relative(
-          context.git_root,
-          release.app.changelog
-        );
+        const changelog_relative_path = relative(context.git_root, release.app.changelog);
         const existing_changelog = await provider.get_file_content(
           changelog_relative_path,
-          default_branch
+          default_branch,
         );
 
         const file_changes: FileChange[] = [];
@@ -188,13 +177,11 @@ export const generate_release = create_command({
             const part_relative_path = relative(context.git_root, part.path);
             const current_content = await provider.get_file_content(
               part_relative_path,
-              default_branch
+              default_branch,
             );
 
             if (!current_content) {
-              errors.push(
-                `Could not read ${part_relative_path} from ${default_branch}`
-              );
+              errors.push(`Could not read ${part_relative_path} from ${default_branch}`);
               continue;
             }
 
@@ -227,20 +214,17 @@ export const generate_release = create_command({
                 extensions: [gfm()],
                 mdastExtensions: [gfmFromMarkdown()],
               })
-            : { type: "root", children: [] }
+            : { type: "root", children: [] },
         );
 
         const releases = [
           { version: release.next_version, changes: release.changes },
           ...parsed_changelog.releases.filter(
-            (existing_release) =>
-              existing_release.version !== release.next_version
+            (existing_release) => existing_release.version !== release.next_version,
           ),
         ];
 
-        releases.sort((a, b) =>
-          release.app.versioning.compare(a.version, b.version)
-        );
+        releases.sort((a, b) => release.app.versioning.compare(a.version, b.version));
 
         const changelog_content = formatter.format_changelog({
           ...parsed_changelog,
@@ -256,14 +240,11 @@ export const generate_release = create_command({
         // Delete change files - need to discover changes with metadata
         const changes_with_metadata = await discover_all_changes_with_metadata(
           [release.app],
-          config.changes_dir
+          config.changes_dir,
         );
         const app_changes = changes_with_metadata.get(release.app.name) || [];
         for (const change of app_changes) {
-          const change_relative_path = relative(
-            context.git_root,
-            change.file_path
-          );
+          const change_relative_path = relative(context.git_root, change.file_path);
           file_changes.push({
             path: change_relative_path,
             content: null, // null = delete
@@ -276,7 +257,7 @@ export const generate_release = create_command({
           release.release_branch,
           default_branch_sha,
           file_changes,
-          commit_message
+          commit_message,
         );
         logger.success(`Updated branch: ${release.release_branch}`);
 
@@ -289,31 +270,21 @@ export const generate_release = create_command({
         });
 
         // Find existing PR or create new one
-        const existing_pr = await provider.find_pull_request(
-          release.release_branch
-        );
+        const existing_pr = await provider.find_pull_request(release.release_branch);
         if (existing_pr) {
-          await provider.update_pull_request(
-            existing_pr.number,
-            pr_title,
-            pr_body
-          );
-          logger.success(
-            `Updated PR #${existing_pr.number}: ${existing_pr.url}`
-          );
+          await provider.update_pull_request(existing_pr.number, pr_title, pr_body);
+          logger.success(`Updated PR #${existing_pr.number}: ${existing_pr.url}`);
         } else {
           const pr = await provider.create_pull_request(
             release.release_branch,
             default_branch,
             pr_title,
-            pr_body
+            pr_body,
           );
           logger.success(`Created PR #${pr.number}: ${pr.url}`);
         }
       } catch (error: any) {
-        errors.push(
-          `Failed to prepare release for ${release.app.name}: ${error.message}`
-        );
+        errors.push(`Failed to prepare release for ${release.app.name}: ${error.message}`);
       }
     }
 

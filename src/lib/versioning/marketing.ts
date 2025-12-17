@@ -1,10 +1,5 @@
 import { regex } from "arkregex";
-import type {
-  Change,
-  ChangeKindDisplayMap,
-  Formatter,
-  VersionManager,
-} from "./types.js";
+import type { Change, ChangeKindDisplayMap, Formatter, VersionManager } from "./types.js";
 import { default_formatter } from "../formatter.js";
 
 interface MarketingVersion {
@@ -13,9 +8,7 @@ interface MarketingVersion {
   patch: bigint;
 }
 
-const MARKVER_REGEX = regex(
-  "^(?<marketing>\\d+).(?<minor>\\d+).(?<patch>\\d+)$"
-);
+const MARKVER_REGEX = regex("^(?<marketing>\\d+).(?<minor>\\d+).(?<patch>\\d+)$");
 
 function parse(version: string): MarketingVersion {
   const match = MARKVER_REGEX.exec(version);
@@ -46,7 +39,7 @@ export function markver<
       version: string;
       changes: Array<Change<MarketingChangeKind>>;
     }>;
-  }
+  },
 >({
   formatter: custom_formatter,
   display_map: custom_display_map,
@@ -67,8 +60,7 @@ export function markver<
       feature: { singular: "Feature", plural: "Features" },
       fix: { singular: "Bug Fix", plural: "Bug Fixes" },
     } satisfies ChangeKindDisplayMap<MarketingChangeKind>);
-  const formatter =
-    custom_formatter || default_formatter({ allowed_changes, display_map });
+  const formatter = custom_formatter || default_formatter({ allowed_changes, display_map });
 
   return {
     allowed_changes,
@@ -77,8 +69,7 @@ export function markver<
     compare(version_a, version_b) {
       const a = parse(version_a);
       const b = parse(version_b);
-      if (a.marketing !== b.marketing)
-        return a.marketing > b.marketing ? 1 : -1;
+      if (a.marketing !== b.marketing) return a.marketing > b.marketing ? 1 : -1;
       if (a.minor !== b.minor) return a.minor > b.minor ? 1 : -1;
       if (a.patch !== b.patch) return a.patch > b.patch ? 1 : -1;
       return 0;
@@ -86,7 +77,7 @@ export function markver<
     validate({ version }) {
       return MARKVER_REGEX.test(version);
     },
-    bump({ version, changes, date }): string {
+    bump({ version, changes }): string {
       const parsed = parse(version);
       // will always increase patch version if no other change type is present
       let highest_type: MarketingChangeKind = "fix";

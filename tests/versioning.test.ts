@@ -111,7 +111,7 @@ describe("semver", () => {
           },
         ],
         date: new Date(),
-      })
+      }),
     ).toThrow("Invalid semantic version");
   });
 });
@@ -181,7 +181,7 @@ describe("calver", () => {
           },
         ],
         date: new Date(),
-      })
+      }),
     ).toThrow("Invalid calendar version");
   });
 });

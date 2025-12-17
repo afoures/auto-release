@@ -22,11 +22,7 @@ export function expo(path: string): Component {
           const content = readFileSync(package_json_path, "utf-8");
           const package_json = JSON.parse(content);
           package_json.version = version;
-          writeFileSync(
-            package_json_path,
-            JSON.stringify(package_json, null, 2) + "\n",
-            "utf-8"
-          );
+          writeFileSync(package_json_path, JSON.stringify(package_json, null, 2) + "\n", "utf-8");
         },
       });
     }
@@ -44,11 +40,7 @@ export function expo(path: string): Component {
           const content = readFileSync(app_json_path, "utf-8");
           const app_json = JSON.parse(content);
           app_json.version = version;
-          writeFileSync(
-            app_json_path,
-            JSON.stringify(app_json, null, 2) + "\n",
-            "utf-8"
-          );
+          writeFileSync(app_json_path, JSON.stringify(app_json, null, 2) + "\n", "utf-8");
         },
       });
     }

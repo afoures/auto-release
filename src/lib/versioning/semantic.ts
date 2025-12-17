@@ -1,10 +1,5 @@
 import { regex } from "arkregex";
-import type {
-  Change,
-  ChangeKindDisplayMap,
-  Formatter,
-  VersionManager,
-} from "./types.js";
+import type { Change, ChangeKindDisplayMap, Formatter, VersionManager } from "./types.js";
 import { default_formatter } from "../formatter.js";
 
 interface SemanticVersion {
@@ -44,7 +39,7 @@ export function semver<
       version: string;
       changes: Array<Change<SemanticChangeKind>>;
     }>;
-  }
+  },
 >({
   formatter: custom_formatter,
   display_map: custom_display_map,
@@ -65,8 +60,7 @@ export function semver<
       minor: { singular: "Feature", plural: "Features" },
       patch: { singular: "Bug Fix", plural: "Bug Fixes" },
     } satisfies ChangeKindDisplayMap<SemanticChangeKind>);
-  const formatter =
-    custom_formatter || default_formatter({ allowed_changes, display_map });
+  const formatter = custom_formatter || default_formatter({ allowed_changes, display_map });
 
   return {
     allowed_changes,

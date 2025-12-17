@@ -45,10 +45,6 @@ describe("Public API exports", () => {
     const managed_app = managed_apps.find((item) => item.name === "test-app");
 
     expect(managed_app).toBeDefined();
-    expect(managed_app?.versioning.allowed_changes).toEqual([
-      "major",
-      "minor",
-      "patch",
-    ]);
+    expect(managed_app?.versioning.allowed_changes).toEqual(["major", "minor", "patch"]);
   });
 });

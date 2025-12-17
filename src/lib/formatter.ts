@@ -12,14 +12,9 @@ type DefaultParsedChangelog<change_kinds extends string> = {
 
 function to_plain_text(node: Content | Root): string {
   if ("children" in node && Array.isArray(node.children)) {
-    return node.children
-      .map((child) => to_plain_text(child as Content))
-      .join("");
+    return node.children.map((child) => to_plain_text(child as Content)).join("");
   }
-  if (
-    "value" in node &&
-    typeof (node as { value?: unknown }).value === "string"
-  ) {
+  if ("value" in node && typeof (node as { value?: unknown }).value === "string") {
     return (node as { value: string }).value;
   }
   return "";
@@ -48,10 +43,7 @@ function resolve_change_kind<change_kinds extends string>({
     const labels = display_map[kind];
     const singular = labels?.singular ?? kind;
     const plural = labels?.plural ?? singular;
-    if (
-      normalize_label(singular) === normalized ||
-      normalize_label(plural) === normalized
-    ) {
+    if (normalize_label(singular) === normalized || normalize_label(plural) === normalized) {
       return kind;
     }
   }
@@ -73,7 +65,7 @@ function extract_list_item_text(item: ListItem): {
 }
 
 function create_empty_changelog<
-  change_kinds extends string
+  change_kinds extends string,
 >(): DefaultParsedChangelog<change_kinds> {
   return {
     root: { title: "", description: [] },
@@ -90,19 +82,20 @@ export function default_formatter<change_kinds extends string>({
 }): Formatter<change_kinds, DefaultParsedChangelog<change_kinds>> {
   const resolved_display_map =
     display_map ??
-    allowed_changes.reduce((map, kind) => {
-      const label = kind.charAt(0).toUpperCase() + kind.slice(1);
-      map[kind] = { singular: label, plural: `${label}s` };
-      return map;
-    }, {} as ChangeKindDisplayMap<change_kinds>);
+    allowed_changes.reduce(
+      (map, kind) => {
+        const label = kind.charAt(0).toUpperCase() + kind.slice(1);
+        map[kind] = { singular: label, plural: `${label}s` };
+        return map;
+      },
+      {} as ChangeKindDisplayMap<change_kinds>,
+    );
 
   return {
     transform_markdown(tree: Root) {
       const changelog = create_empty_changelog<change_kinds>();
 
-      let current_release:
-        | DefaultParsedChangelog<change_kinds>["releases"][number]
-        | null = null;
+      let current_release: DefaultParsedChangelog<change_kinds>["releases"][number] | null = null;
       let current_kind: change_kinds | null = null;
 
       const push_current_release = () => {
@@ -138,8 +131,7 @@ export function default_formatter<change_kinds extends string>({
         }
 
         if (node.type === "list" && current_release) {
-          const kind_for_items =
-            current_kind ?? allowed_changes[0] ?? ("default" as change_kinds);
+          const kind_for_items = current_kind ?? allowed_changes[0] ?? ("default" as change_kinds);
           for (const item of (node as List).children) {
             const { title, description } = extract_list_item_text(item);
             if (!title) {
@@ -180,9 +172,7 @@ export function default_formatter<change_kinds extends string>({
         const release_lines: string[] = [`## ${release.version}`];
 
         for (const change_kind of allowed_changes) {
-          const kind_changes = release.changes.filter(
-            (change) => change.kind === change_kind
-          );
+          const kind_changes = release.changes.filter((change) => change.kind === change_kind);
           if (kind_changes.length === 0) {
             continue;
           }

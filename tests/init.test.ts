@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  generate_config_source,
-  type AppTemplate,
-} from "../src/lib/commands/init.js";
+import { generate_config_source, type AppTemplate } from "../src/lib/commands/init.js";
 
 const base_app: AppTemplate = {
   name: "web-app",
@@ -29,7 +26,7 @@ describe("generate_config_source", () => {
     expect(source).toContain('import { github } from "auto-release/git/github";');
     expect(source).toContain('name: "web-app"');
     expect(source).toContain("github({");
-    expect(source).toContain('token: process.env.GITHUB_TOKEN!');
+    expect(source).toContain("token: process.env.GITHUB_TOKEN!");
   });
 
   it("creates a GitLab config with calver strategy", () => {
@@ -64,4 +61,3 @@ describe("generate_config_source", () => {
     expect(source).toContain('release_branch_prefix: "releases"');
   });
 });
-

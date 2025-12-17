@@ -7,7 +7,7 @@ import { join } from "node:path";
 import { readdirSync, readFileSync } from "node:fs";
 
 function verify_component_version_consistency(
-  app: ManagedApplication
+  app: ManagedApplication,
 ): { ok: true } | { ok: false; errors: string[] } {
   const versions = new Set<string>();
   for (const component of app.components) {
@@ -25,11 +25,7 @@ function verify_component_version_consistency(
   if (versions.size > 1) {
     return {
       ok: false,
-      errors: [
-        `application ${app.name} has multiple versions: ${Array.from(
-          versions
-        ).join(", ")}`,
-      ],
+      errors: [`application ${app.name} has multiple versions: ${Array.from(versions).join(", ")}`],
     };
   }
   return { ok: true };
@@ -37,7 +33,7 @@ function verify_component_version_consistency(
 
 function validate_changes_files_content(
   changes_dir: string,
-  app: ManagedApplication
+  app: ManagedApplication,
 ): { ok: true } | { ok: false; errors: string[] } {
   const changes_dir_path = join(changes_dir, app.name);
   const changes_files = readdirSync(changes_dir_path);
@@ -52,9 +48,7 @@ function validate_changes_files_content(
     const change_file_parsed = parse_change_filename(change_file);
     if (!change_file_parsed) {
       errors.push(`change file ${change_file} has an invalid filename format`);
-    } else if (
-      !app.versioning.allowed_changes.includes(change_file_parsed.kind)
-    ) {
+    } else if (!app.versioning.allowed_changes.includes(change_file_parsed.kind)) {
       errors.push(`change file ${change_file} has an invalid kind`);
     }
 
@@ -111,10 +105,7 @@ export const check = create_command({
       if (!component_validation.ok) {
         errors.push(...component_validation.errors);
       }
-      const changes_validation = validate_changes_files_content(
-        config.changes_dir,
-        app
-      );
+      const changes_validation = validate_changes_files_content(config.changes_dir, app);
       if (!changes_validation.ok) {
         errors.push(...changes_validation.errors);
       }
