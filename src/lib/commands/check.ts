@@ -53,9 +53,6 @@ async function validate_changes_files_content(
     if (change_file.summary.length === 0) {
       errors.push(`change file ${file} has no summary`);
     }
-    if (change_file.details.length === 0) {
-      errors.push(`change file ${file} has no details`);
-    }
   }
 
   if (errors.length > 0) {

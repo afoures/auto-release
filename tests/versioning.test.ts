@@ -16,7 +16,6 @@ describe("semver", () => {
         kind: "major",
         slug: "breaking-change",
         summary: "Breaking change",
-        details: [],
       }),
     ];
     const result = strategy.bump({
@@ -34,7 +33,6 @@ describe("semver", () => {
         kind: "minor",
         slug: "new-feature",
         summary: "New feature",
-        details: [],
       }),
     ];
     const result = strategy.bump({
@@ -52,7 +50,6 @@ describe("semver", () => {
         kind: "patch",
         slug: "bug-fix",
         summary: "Bug fix",
-        details: [],
       }),
     ];
     const result = strategy.bump({
@@ -81,13 +78,11 @@ describe("semver", () => {
         kind: "major",
         slug: "breaking-change",
         summary: "Breaking change",
-        details: [],
       }),
       new ChangeFile<"major" | "minor" | "patch">({
         kind: "minor",
         slug: "new-feature",
         summary: "New feature",
-        details: [],
       }),
     ];
     const result = strategy.bump({
@@ -108,7 +103,6 @@ describe("semver", () => {
             kind: "patch",
             slug: "bug-fix",
             summary: "Bug fix",
-            details: [],
           }),
         ],
         date: new Date(),
@@ -130,7 +124,6 @@ describe("calver", () => {
         kind: "feature",
         slug: "new-feature",
         summary: "New feature",
-        details: [],
       }),
     ];
     const result = strategy.bump({
@@ -148,7 +141,6 @@ describe("calver", () => {
         kind: "feature",
         slug: "new-feature",
         summary: "New feature",
-        details: [],
       }),
     ];
     const result = strategy.bump({
@@ -181,7 +173,6 @@ describe("calver", () => {
             kind: "feature",
             slug: "new-feature",
             summary: "New feature",
-            details: [],
           }),
         ],
         date: new Date(),
