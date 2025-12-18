@@ -1,5 +1,4 @@
-import { relative } from "node:path";
-import { discover_changes_with_metadata_bis, type ChangeWithMetadata } from "../changes.ts";
+import { join, relative } from "node:path";
 import { create_logger } from "../utils/logger.ts";
 import { create_command } from "../cli.ts";
 import { find_nearest_config } from "../config.ts";
@@ -9,6 +8,8 @@ import { gfm } from "micromark-extension-gfm";
 import { readFile, writeFile } from "node:fs/promises";
 import type { ManagedApplication } from "../types.ts";
 import * as git from "../utils/git.ts";
+import * as fs from "../utils/fs.ts";
+import { ChangeFile } from "../change-file.ts";
 
 export const generate_release = create_command({
   name: "generate-release",
@@ -18,7 +19,7 @@ export const generate_release = create_command({
       type: "string",
       description: "Path to config file",
     },
-    app: {
+    filter: {
       type: "string",
       description: "Only generate release PRs for the specified apps",
       multiple: true,
@@ -33,20 +34,14 @@ export const generate_release = create_command({
       config_path: args.config,
       cwd,
     });
-    if (!git_root) {
-      throw new Error("Could not determine git root");
-    }
-    return { config, git_root };
+    return { config, root: git_root || config.folder };
   },
-  run: async ({
-    args: { app: filter, "dry-run": dry_run = false },
-    context: { config, git_root },
-  }) => {
+  run: async ({ args: { filter, "dry-run": dry_run = false }, context: { config, root } }) => {
     const logger = create_logger();
 
     const releases: Array<{
       app: ManagedApplication;
-      changes: Array<ChangeWithMetadata<any>>;
+      changes: Array<ChangeFile<any>>;
       next_version: string;
     }> = [];
 
@@ -55,16 +50,35 @@ export const generate_release = create_command({
         continue;
       }
 
-      const changes = await discover_changes_with_metadata_bis(app, config.changes_dir);
+      const valid_change_types = app.versioning.allowed_changes;
+      const app_changes_dir = join(config.changes_dir, app.name);
+
+      const files = await fs.list_files(app_changes_dir);
+
+      const change_files: ChangeFile<(typeof valid_change_types)[number]>[] = [];
+      for (const file of files) {
+        const change_file_or_error = ChangeFile.from_file(file);
+        if (change_file_or_error instanceof Error) {
+          continue;
+        }
+        const change_file = change_file_or_error;
+        if (!valid_change_types.includes(change_file.kind)) {
+          throw new Error(
+            `Invalid change kind "${change_file.kind}" in file ${file}. Valid kinds: ${valid_change_types.join(", ")}`,
+          );
+        }
+        change_files.push(change_file);
+      }
+
       const next_version = app.versioning.bump({
         version: app.current_version,
-        changes,
+        changes: change_files,
         date: new Date(),
       });
 
       releases.push({
         app,
-        changes,
+        changes: change_files,
         next_version,
       });
     }
@@ -80,7 +94,9 @@ export const generate_release = create_command({
       const { app, changes, next_version } = release;
       logger.note(
         `Release ${app.name} ${next_version}`,
-        changes.map((change) => `${change.kind} ${change.title} in ${change.file_path}`).join("\n"),
+        changes
+          .map((change) => `${change.kind} ${change.summary} in ${change.filename}`)
+          .join("\n"),
       );
     }
 
@@ -97,7 +113,7 @@ export const generate_release = create_command({
       // run all component updates
       for (const component of app.components) {
         for (const part of component.parts) {
-          const relative_path = relative(git_root, part.file);
+          const relative_path = relative(root, part.file);
           const initial_content = await readFile(relative_path, "utf-8");
           const updated_content = part.update_version(initial_content, next_version);
           await writeFile(relative_path, updated_content);
@@ -108,7 +124,7 @@ export const generate_release = create_command({
       const formatter = app.versioning.formatter;
 
       // update changelog
-      const changelog_relative_path = relative(git_root, app.changelog);
+      const changelog_relative_path = relative(root, app.changelog);
       const initial_changelog_content = await readFile(changelog_relative_path, "utf-8");
       const changelog_as_mdast = fromMarkdown(initial_changelog_content, {
         extensions: [gfm()],
@@ -125,9 +141,9 @@ export const generate_release = create_command({
       await writeFile(changelog_relative_path, updated_changelog_content);
 
       // git diff
-      const file_operations = await git.diff(git_root);
+      const file_operations = await git.diff(root);
       // git reset
-      await git.reset(git_root);
+      await git.reset(root);
 
       const platform = config.git.platform;
       const release_branch_name = `${config.git.default_release_branch_prefix}/${app.name}`;

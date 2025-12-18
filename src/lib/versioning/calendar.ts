@@ -1,5 +1,6 @@
 import { regex } from "arkregex";
-import type { Change, ChangeKindDisplayMap, Formatter, VersionManager } from "./types.ts";
+import type { ChangeFile } from "../change-file.ts";
+import type { ChangeKindDisplayMap, Formatter, VersionManager } from "./types.ts";
 import { default_formatter } from "../formatter.ts";
 
 interface CalendarVersion {
@@ -37,7 +38,7 @@ export function calver<
   parsed_changelog extends {
     releases: Array<{
       version: string;
-      changes: Array<Change<CalendarChangeKind>>;
+      changes: Array<ChangeFile<CalendarChangeKind>>;
     }>;
   },
 >({

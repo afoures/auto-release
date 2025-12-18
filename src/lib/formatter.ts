@@ -1,12 +1,13 @@
 import type { Content, Heading, List, ListItem, Root } from "mdast";
-import type { Change, Formatter } from "./types.ts";
+import type { Formatter } from "./versioning/types.ts";
 import type { ChangeKindDisplayMap } from "./versioning/types.ts";
+import { ChangeFile } from "./change-file.ts";
 
 type DefaultParsedChangelog<change_kinds extends string> = {
   root: { title: string; description: string[] };
   releases: Array<{
     version: string;
-    changes: Array<Change<change_kinds>>;
+    changes: Array<ChangeFile<change_kinds>>;
   }>;
 };
 
@@ -137,11 +138,13 @@ export function default_formatter<change_kinds extends string>({
             if (!title) {
               continue;
             }
-            current_release.changes.push({
-              kind: kind_for_items,
-              title,
-              description,
-            });
+            current_release.changes.push(
+              new ChangeFile({
+                kind: kind_for_items,
+                summary: title,
+                details: description,
+              }),
+            );
           }
           continue;
         }
@@ -182,8 +185,8 @@ export function default_formatter<change_kinds extends string>({
           release_lines.push(`### ${heading}`);
 
           for (const change of kind_changes) {
-            release_lines.push(`- ${change.title}`);
-            for (const line of change.description) {
+            release_lines.push(`- ${change.summary}`);
+            for (const line of change.details) {
               release_lines.push(`  ${line}`);
             }
           }
@@ -204,7 +207,7 @@ export function default_formatter<change_kinds extends string>({
       lines.push(`# Release ${app.name} ${next_version}`);
       lines.push(`Version: ${current_version} → ${next_version}`);
 
-      const grouped = new Map<change_kinds, Array<Change<change_kinds>>>();
+      const grouped = new Map<change_kinds, Array<ChangeFile<change_kinds>>>();
       for (const change of changes) {
         const group = grouped.get(change.kind) ?? [];
         group.push(change);
@@ -222,8 +225,8 @@ export function default_formatter<change_kinds extends string>({
         lines.push("");
         lines.push(`## ${heading}`);
         for (const change of items) {
-          lines.push(`- ${change.title}`);
-          for (const line of change.description) {
+          lines.push(`- ${change.summary}`);
+          for (const line of change.details) {
             lines.push(`  ${line}`);
           }
         }

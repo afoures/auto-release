@@ -6,7 +6,6 @@
 export type {
   AutoReleaseConfig,
   VersionManager,
-  Change,
   GitPlatformClient,
   Formatter,
   ChangeKindDisplayMap,
