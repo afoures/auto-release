@@ -3,48 +3,6 @@ import { create_logger } from "../utils/logger.ts";
 import { create_command } from "../cli.ts";
 import { find_nearest_config } from "../config.ts";
 import type { ManagedApplication } from "../types.ts";
-import { fromMarkdown } from "mdast-util-from-markdown";
-import { gfmFromMarkdown } from "mdast-util-gfm";
-import { gfm } from "micromark-extension-gfm";
-
-function build_release_body({
-  app,
-  version,
-  changelog_content,
-}: {
-  app: ManagedApplication;
-  version: string;
-  changelog_content: string | null;
-}): string {
-  const formatter = app.versioning.formatter;
-
-  if (!changelog_content) {
-    return `Release ${app.name} ${version}`;
-  }
-
-  const parsed_changelog: ReturnType<typeof formatter.transform_markdown> =
-    formatter.transform_markdown(
-      fromMarkdown(changelog_content, {
-        extensions: [gfm()],
-        mdastExtensions: [gfmFromMarkdown()],
-      }),
-    );
-
-  const release = parsed_changelog.releases.find((item) => item.version === version);
-
-  if (!release) {
-    return `Release ${app.name} ${version}`;
-  }
-
-  return `${formatter
-    .generate_release_notes({
-      app: { name: app.name },
-      current_version: version,
-      next_version: version,
-      changes: release.changes,
-    })
-    .trimEnd()}\n`;
-}
 
 export const tag_release = create_command({
   name: "tag-release",
@@ -75,7 +33,7 @@ export const tag_release = create_command({
     const branch_name = args.branch;
     const config = context.config;
     const logger = create_logger();
-    const provider = config.git.provider;
+    const platform = config.git.platform;
     const release_branch_prefix = config.git.default_release_branch_prefix;
 
     if (!context.git_root) {
@@ -89,7 +47,7 @@ export const tag_release = create_command({
     const default_branch = config.git.default_target_branch;
     let default_branch_sha: string;
     try {
-      default_branch_sha = await provider.get_branch_sha(default_branch);
+      default_branch_sha = await platform.get_branch_sha(default_branch);
     } catch (error: any) {
       return {
         status: "error" as const,
@@ -150,25 +108,20 @@ export const tag_release = create_command({
 
         // Get changelog content for release notes
         const changelog_relative_path = relative(context.git_root, app.changelog);
-        const changelog_content = await provider.get_file_content(
-          changelog_relative_path,
-          default_branch,
-        );
 
-        const release_body = build_release_body({
-          app,
+        const release_body = app.versioning.formatter.generate_release_notes({
+          app: { name: app.name, changelog: changelog_relative_path },
           version: current_version,
-          changelog_content,
         });
 
         // Create git tag
         const tag_name = `${app_name}@${current_version}`;
-        await provider.create_tag(tag_name, default_branch_sha, release_body);
+        await platform.create_tag(tag_name, default_branch_sha, release_body);
         logger.success(`Created tag: ${tag_name}`);
 
         // Create release
         const release_name = `${app_name} ${current_version}`;
-        await provider.create_release(tag_name, release_name, release_body);
+        await platform.create_release(tag_name, release_name, release_body);
         logger.success(`Created release: ${release_name}`);
       } catch (error: any) {
         errors.push(`Failed to publish release for ${app_name}: ${error.message}`);

@@ -1,4 +1,5 @@
-import type { GitProvider, FileChange, PullRequest } from "./types.ts";
+import type { GitPlatformClient } from "./types.ts";
+import type { GitFileOperation } from "../utils/git.ts";
 
 interface GitHubOptions {
   token: string;
@@ -17,7 +18,7 @@ interface GitHubFile {
 /**
  * GitHub provider implementation using REST API
  */
-export function github(options: GitHubOptions): GitProvider {
+export function github(options: GitHubOptions): GitPlatformClient {
   const { token, owner, repo } = options;
   const api_base = `https://api.github.com/repos/${owner}/${repo}`;
 
@@ -46,32 +47,17 @@ export function github(options: GitHubOptions): GitProvider {
   }
 
   return {
-    async get_branch_sha(branch: string): Promise<string> {
-      const ref = await api_request(`/git/ref/heads/${branch}`);
-      return ref.object.sha;
-    },
+    async create_or_update_branch(args: {
+      branch_name: string;
+      base_branch_name: string;
+      file_operations: GitFileOperation[];
+      commit_message: string;
+    }): Promise<any> {
+      const { branch_name, base_branch_name, file_operations, commit_message } = args;
+      // Get base branch SHA
+      const base_ref = await api_request(`/git/ref/heads/${base_branch_name}`);
+      const base_sha = base_ref.object.sha;
 
-    async get_file_content(path: string, branch: string): Promise<string | null> {
-      try {
-        const file = await api_request(`/contents/${path}?ref=${branch}`);
-        if (file.type !== "file") {
-          return null;
-        }
-        return Buffer.from(file.content, "base64").toString("utf-8");
-      } catch (error: any) {
-        if (error.message.includes("404")) {
-          return null;
-        }
-        throw error;
-      }
-    },
-
-    async create_or_update_branch(
-      name: string,
-      base_sha: string,
-      files: FileChange[],
-      message: string,
-    ): Promise<string> {
       // Get base tree
       const base_commit = await api_request(`/git/commits/${base_sha}`);
       const base_tree_sha = base_commit.tree.sha;
@@ -80,13 +66,20 @@ export function github(options: GitHubOptions): GitProvider {
       const base_tree = await api_request(`/git/trees/${base_tree_sha}?recursive=1`);
 
       // Track files to delete
-      const files_to_delete = new Set(files.filter((f) => f.content === null).map((f) => f.path));
+      const files_to_delete = new Set(
+        file_operations.filter((f) => f.type === "delete").map((f) => f.file_path),
+      );
 
-      // Track files to modify/add
+      // Track files to modify/add (including moves)
       const files_to_modify = new Map<string, string>();
-      for (const file of files) {
-        if (file.content !== null) {
-          files_to_modify.set(file.path, file.content);
+
+      for (const op of file_operations) {
+        if (op.type === "create" || op.type === "update") {
+          files_to_modify.set(op.file_path, op.content);
+        } else if (op.type === "move") {
+          files_to_modify.set(op.file_path, op.content || "");
+          // Also delete the old path
+          files_to_delete.add(op.previous_path);
         }
       }
 
@@ -140,7 +133,7 @@ export function github(options: GitHubOptions): GitProvider {
       const commit = await api_request("/git/commits", {
         method: "POST",
         body: JSON.stringify({
-          message,
+          message: commit_message,
           tree: tree.sha,
           parents: [base_sha],
         }),
@@ -148,7 +141,7 @@ export function github(options: GitHubOptions): GitProvider {
 
       // Create or update branch reference
       try {
-        await api_request(`/git/refs/heads/${name}`, {
+        await api_request(`/git/refs/heads/${branch_name}`, {
           method: "PATCH",
           body: JSON.stringify({
             sha: commit.sha,
@@ -161,7 +154,7 @@ export function github(options: GitHubOptions): GitProvider {
           await api_request("/git/refs", {
             method: "POST",
             body: JSON.stringify({
-              ref: `refs/heads/${name}`,
+              ref: `refs/heads/${branch_name}`,
               sha: commit.sha,
             }),
           });
@@ -173,61 +166,71 @@ export function github(options: GitHubOptions): GitProvider {
       return commit.sha;
     },
 
-    async find_pull_request(head_branch: string): Promise<PullRequest | null> {
-      const prs = await api_request(`/pulls?head=${owner}:${head_branch}&state=open`);
-      if (prs.length === 0) {
-        return null;
+    async create_or_update_pull_request(args: {
+      head_branch_name: string;
+      base_branch_name: string;
+      title: string;
+      body: string;
+      draft?: boolean;
+    }): Promise<any> {
+      const { head_branch_name, base_branch_name, title, body, draft = false } = args;
+
+      // Check if PR already exists
+      const prs = await api_request(`/pulls?head=${owner}:${head_branch_name}&state=open`);
+
+      if (prs.length > 0) {
+        // Update existing PR
+        const pr = prs[0];
+        await api_request(`/pulls/${pr.number}`, {
+          method: "PATCH",
+          body: JSON.stringify({
+            title,
+            body,
+            draft,
+          }),
+        });
+        return {
+          number: pr.number,
+          url: pr.html_url,
+          head_branch: pr.head.ref,
+          base_branch: pr.base.ref,
+        };
+      } else {
+        // Create new PR
+        const pr = await api_request("/pulls", {
+          method: "POST",
+          body: JSON.stringify({
+            title,
+            head: head_branch_name,
+            base: base_branch_name,
+            body,
+            draft,
+          }),
+        });
+        return {
+          number: pr.number,
+          url: pr.html_url,
+          head_branch: pr.head.ref,
+          base_branch: pr.base.ref,
+        };
       }
-      const pr = prs[0];
-      return {
-        number: pr.number,
-        url: pr.html_url,
-        head_branch: pr.head.ref,
-        base_branch: pr.base.ref,
+    },
+
+    async create_tag(args: {
+      tag: string;
+      commit: {
+        sha: string;
+        message: string;
       };
-    },
-
-    async create_pull_request(
-      head: string,
-      base: string,
-      title: string,
-      body: string,
-    ): Promise<PullRequest> {
-      const pr = await api_request("/pulls", {
-        method: "POST",
-        body: JSON.stringify({
-          title,
-          head,
-          base,
-          body,
-        }),
-      });
-      return {
-        number: pr.number,
-        url: pr.html_url,
-        head_branch: pr.head.ref,
-        base_branch: pr.base.ref,
-      };
-    },
-
-    async update_pull_request(number: number, title: string, body: string): Promise<void> {
-      await api_request(`/pulls/${number}`, {
-        method: "PATCH",
-        body: JSON.stringify({
-          title,
-          body,
-        }),
-      });
-    },
-
-    async create_tag(name: string, sha: string, message: string): Promise<void> {
+    }): Promise<any> {
+      const { tag, commit } = args;
       // Create annotated tag
-      const tag = await api_request("/git/tags", {
+      const tag_obj = await api_request("/git/tags", {
         method: "POST",
         body: JSON.stringify({
-          tag: name,
-          message,
-          object: sha,
+          tag: tag,
+          message: commit.message,
+          object: commit.sha,
           type: "commit",
         }),
       });
@@ -236,19 +239,28 @@ export function github(options: GitHubOptions): GitProvider {
       await api_request("/git/refs", {
         method: "POST",
         body: JSON.stringify({
-          ref: `refs/tags/${name}`,
-          sha: tag.sha,
+          ref: `refs/tags/${tag}`,
+          sha: tag_obj.sha,
         }),
       });
+
+      return tag_obj;
     },
 
-    async create_release(tag: string, name: string, body: string): Promise<void> {
-      await api_request("/releases", {
+    async create_release(args: {
+      tag: string;
+      release: {
+        name: string;
+        body: string;
+      };
+    }): Promise<any> {
+      const { tag, release } = args;
+      return await api_request("/releases", {
         method: "POST",
         body: JSON.stringify({
           tag_name: tag,
-          name,
-          body,
+          name: release.name,
+          body: release.body,
         }),
       });
     },

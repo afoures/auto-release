@@ -45,20 +45,12 @@ describe("default formatter", () => {
     expect(parsed.releases[0]?.changes[0]?.title).toContain("Initial release");
   });
 
-  it("creates release notes with headings and no dates", () => {
+  it("creates release notes with link to changelog", () => {
     const notes = formatter.generate_release_notes({
-      app: { name: "test-app" },
-      current_version: "1.0.0",
-      next_version: "1.1.0",
-      changes: [
-        { kind: "minor", title: "Add authentication", description: [] },
-        { kind: "patch", title: "Fix login", description: [] },
-      ],
+      app: { name: "test-app", changelog: "CHANGELOG.md" },
+      version: "1.1.0",
     });
 
-    const body = notes;
-    expect(body).toContain("# Release test-app 1.1.0");
-    expect(body).not.toContain("1.0.0 → 1.1.0");
-    expect(body).not.toMatch(/\(/); // no date fragments
+    expect(notes).toBe("[View Changelog](CHANGELOG.md)");
   });
 });

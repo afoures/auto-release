@@ -12,7 +12,7 @@ import {
   log,
   isCancel,
 } from "@clack/prompts";
-import { create_command, type Option } from "../cli.ts";
+import { create_command } from "../cli.ts";
 import { exec } from "../utils/exec.ts";
 
 type PackageManager = "npm" | "pnpm" | "yarn" | "bun";
@@ -34,15 +34,15 @@ export interface AppTemplate {
   versioning: "semver" | "calver";
 }
 
-type GitProviderAnswers =
+type GitPlatformClientAnswers =
   | {
-      provider: "github";
+      platform: "github";
       owner: string;
       repo: string;
       token_env: string;
     }
   | {
-      provider: "gitlab";
+      platform: "gitlab";
       project_id: string;
       token_env: string;
       host?: string;
@@ -52,7 +52,7 @@ export interface GenerateConfigOptions {
   apps: AppTemplate[];
   changes_dir: string;
   release_branch_prefix: string;
-  git: GitProviderAnswers;
+  git: GitPlatformClientAnswers;
 }
 
 export function generate_config_source(options: GenerateConfigOptions): string {
@@ -68,7 +68,7 @@ export function generate_config_source(options: GenerateConfigOptions): string {
     imports.push('import { calver } from "auto-release/versioning/calver";');
   }
 
-  if (git.provider === "github") {
+  if (git.platform === "github") {
     imports.push('import { github } from "auto-release/git/github";');
   } else {
     imports.push('import { gitlab } from "auto-release/git/gitlab";');
@@ -95,7 +95,7 @@ export function generate_config_source(options: GenerateConfigOptions): string {
   });
   lines.push("  ],");
 
-  if (git.provider === "github") {
+  if (git.platform === "github") {
     lines.push("  git: github({");
     lines.push(`    token: process.env.${git.token_env}!,`);
     lines.push(`    owner: ${JSON.stringify(git.owner)},`);
@@ -225,12 +225,10 @@ function sanitize_env_var(value: string, fallback: string): string {
   return trimmed.replace(/[^a-zA-Z0-9_]/g, "_").toUpperCase();
 }
 
-const INIT_SCHEMA: Record<string, Option> = {};
-
 export const init = create_command({
   name: "init",
   description: "Set up auto-release in the current repository",
-  schema: INIT_SCHEMA,
+  schema: {},
   get_context: async ({ cwd }) => {
     return { cwd };
   },
@@ -387,7 +385,7 @@ export const init = create_command({
       }
 
       const git_choice = await select({
-        message: "Which git provider do you use?",
+        message: "Which git platform do you use?",
         options: [
           { value: "github", label: "GitHub" },
           { value: "gitlab", label: "GitLab" },
@@ -398,9 +396,9 @@ export const init = create_command({
         return { status: "success" as const };
       }
 
-      let git_answers: GitProviderAnswers;
-      const git_provider = git_choice as "github" | "gitlab";
-      if (git_provider === "github") {
+      let git_answers: GitPlatformClientAnswers;
+      const git_platform = git_choice as "github" | "gitlab";
+      if (git_platform === "github") {
         const owner_input = await text({
           message: "GitHub owner (user or org)",
           initialValue: package_json.name?.replace(/@.*\//, "") || "",
@@ -434,7 +432,7 @@ export const init = create_command({
         }
 
         git_answers = {
-          provider: "github",
+          platform: "github",
           owner: (owner_input as string).trim(),
           repo: (repo_input as string).trim(),
           token_env: sanitize_env_var(token_env_input as string, "GITHUB_TOKEN"),
@@ -469,7 +467,7 @@ export const init = create_command({
         }
 
         git_answers = {
-          provider: "gitlab",
+          platform: "gitlab",
           project_id: (project_input as string).trim(),
           host: (host_input as string).trim() || undefined,
           token_env: sanitize_env_var(token_env_input as string, "GITLAB_TOKEN"),

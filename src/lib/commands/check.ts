@@ -12,7 +12,8 @@ function verify_component_version_consistency(
   const versions = new Set<string>();
   for (const component of app.components) {
     for (const part of component.parts) {
-      const version = part.get_current_version();
+      const file_content = readFileSync(part.file, "utf-8");
+      const version = part.get_current_version(file_content);
       versions.add(version);
     }
   }
@@ -79,10 +80,6 @@ export const check = create_command({
       type: "string",
       description: "Path to config file",
     },
-    json: {
-      type: "boolean",
-      description: "Output as JSON",
-    },
   },
   get_context: async ({ args, cwd }) => {
     const { config } = await find_nearest_config({
@@ -91,9 +88,8 @@ export const check = create_command({
     });
     return { config };
   },
-  run: async ({ args, context }) => {
-    const json = args.json ?? false;
-    const logger = create_logger(json);
+  run: async ({ context }) => {
+    const logger = create_logger();
 
     const errors: string[] = [];
     const warnings: string[] = [];
@@ -113,19 +109,15 @@ export const check = create_command({
 
     const valid = errors.length === 0;
 
-    if (json) {
-      console.log(JSON.stringify({ valid, errors, warnings }, null, 2));
+    if (valid) {
+      logger.success("All validations passed!");
     } else {
-      if (valid) {
-        logger.success("All validations passed!");
-      } else {
-        logger.error("Validation failed:");
-        errors.forEach((err) => logger.error(`  ${err}`));
-      }
+      logger.error("Validation failed:");
+      errors.forEach((err) => logger.error(`  ${err}`));
+    }
 
-      if (warnings.length > 0) {
-        warnings.forEach((warn) => logger.warn(`  ${warn}`));
-      }
+    if (warnings.length > 0) {
+      warnings.forEach((warn) => logger.warn(`  ${warn}`));
     }
 
     if (valid) {

@@ -1,8 +1,8 @@
-import { constants } from "node:fs";
+import { constants, readFileSync } from "node:fs";
 import { access } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 import { dirname, isAbsolute, resolve } from "node:path";
-import type { AutoReleaseConfig, GitProvider, ManagedApplication } from "./types.ts";
+import type { AutoReleaseConfig, GitPlatformClient, ManagedApplication } from "./types.ts";
 
 export function define_config<const config extends AutoReleaseConfig>(
   config: config,
@@ -44,27 +44,31 @@ export class InternalConfig {
   }
 
   get git(): {
-    provider: GitProvider;
+    platform: GitPlatformClient;
     default_target_branch: string;
     default_release_branch_prefix: string;
   } {
     return {
-      provider: this.#config.git.provider,
+      platform: this.#config.git.platform,
       default_target_branch: this.#config.git.default_target_branch || "main",
       default_release_branch_prefix: this.#config.git.default_release_branch_prefix || "release",
     };
   }
 
   get managed_applications(): Array<ManagedApplication> {
-    return Object.entries(this.#config.apps).map(([name, definition]) => ({
-      name,
-      ...definition,
-      components: definition.components.map((component) => component(this.folder)),
-      get current_version(): string {
+    return Object.entries(this.#config.apps).map(([name, definition]) => {
+      const components = definition.components.map((component) => component(this.folder));
+
+      let current_version: string | undefined;
+      function get_current_version(): string {
+        if (current_version) {
+          return current_version;
+        }
         const versions = new Set<string>();
-        for (const component of this.components) {
+        for (const component of components) {
           for (const part of component.parts) {
-            versions.add(part.get_current_version());
+            const file_content = readFileSync(part.file, "utf-8");
+            versions.add(part.get_current_version(file_content));
           }
         }
         if (versions.size === 0) {
@@ -75,9 +79,19 @@ export class InternalConfig {
             `App "${name}" has mismatched versions: ${Array.from(versions).join(", ")}`,
           );
         }
-        return versions.values().next().value as string;
-      },
-    }));
+        current_version = versions.values().next().value as string;
+        return current_version;
+      }
+
+      return {
+        name,
+        ...definition,
+        components,
+        get current_version(): string {
+          return get_current_version();
+        },
+      };
+    });
   }
 }
 
@@ -217,7 +231,7 @@ export async function find_nearest_config(options?: {
 function validate_config(config: AutoReleaseConfig): void {
   if (!config.git) {
     throw new Error(
-      'Auto-release config must have a "git" provider. Use github() or gitlab() from "auto-release/providers"',
+      'Auto-release config must have a "git" platform. Use github() or gitlab() from "auto-release/providers"',
     );
   }
 

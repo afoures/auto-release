@@ -1,29 +1,31 @@
 import { relative } from "node:path";
-import { discover_all_changes, discover_all_changes_with_metadata } from "../changes.ts";
+import { discover_changes_with_metadata_bis, type ChangeWithMetadata } from "../changes.ts";
 import { create_logger } from "../utils/logger.ts";
 import { create_command } from "../cli.ts";
-import type { FileChange } from "../providers/types.ts";
 import { find_nearest_config } from "../config.ts";
-import type { ManagedApplication } from "../types.ts";
 import { fromMarkdown } from "mdast-util-from-markdown";
 import { gfmFromMarkdown } from "mdast-util-gfm";
 import { gfm } from "micromark-extension-gfm";
+import { readFile, writeFile } from "node:fs/promises";
+import type { ManagedApplication } from "../types.ts";
+import * as git from "../utils/git.ts";
 
 export const generate_release = create_command({
   name: "generate-release",
   description: "Create or update release PRs from change files",
   schema: {
+    config: {
+      type: "string",
+      description: "Path to config file",
+    },
     app: {
       type: "string",
-      description: "Filter by app name",
+      description: "Only generate release PRs for the specified apps",
+      multiple: true,
     },
     "dry-run": {
       type: "boolean",
       description: "Show what would be done without making changes",
-    },
-    config: {
-      type: "string",
-      description: "Path to config file",
     },
   },
   get_context: async ({ args, cwd }) => {
@@ -31,274 +33,138 @@ export const generate_release = create_command({
       config_path: args.config,
       cwd,
     });
+    if (!git_root) {
+      throw new Error("Could not determine git root");
+    }
     return { config, git_root };
   },
-  run: async ({ args, context }) => {
-    const app_filter = args.app;
-    const dry_run = args["dry-run"] ?? false;
-
-    const config = context.config;
-
+  run: async ({
+    args: { app: filter, "dry-run": dry_run = false },
+    context: { config, git_root },
+  }) => {
     const logger = create_logger();
-    const provider = config.git.provider;
-    const release_branch_prefix = config.git.default_release_branch_prefix;
 
-    // Discover all changes
-    let changes_map: Map<string, any>;
-    try {
-      changes_map = await discover_all_changes(config.managed_applications, config.changes_dir);
-    } catch (error: any) {
-      return {
-        status: "error" as const,
-        error: `Failed to discover changes: ${error.message}`,
-      };
-    }
-
-    // Filter apps if specified
-    const target_apps = app_filter
-      ? config.managed_applications.filter((app) => app.name === app_filter)
-      : config.managed_applications;
-
-    if (app_filter && target_apps.length === 0) {
-      return {
-        status: "error" as const,
-        error: `App "${app_filter}" not found in config`,
-      };
-    }
-
-    // Process each app with pending changes
     const releases: Array<{
       app: ManagedApplication;
-      current_version: string;
+      changes: Array<ChangeWithMetadata<any>>;
       next_version: string;
-      changes: typeof changes_map extends Map<string, infer C> ? C : never;
-      release_branch: string;
     }> = [];
 
-    const now = new Date();
-
-    for (const app of target_apps) {
-      const app_name = app.name;
-      const changes = changes_map.get(app_name) || [];
-
-      if (changes.length === 0) {
+    for (const app of config.managed_applications) {
+      if (filter && !filter.includes(app.name)) {
         continue;
       }
 
-      try {
-        const current_version = app.current_version;
-        const strategy = app.versioning;
+      const changes = await discover_changes_with_metadata_bis(app, config.changes_dir);
+      const next_version = app.versioning.bump({
+        version: app.current_version,
+        changes,
+        date: new Date(),
+      });
 
-        const next_version = strategy.bump({
-          version: current_version,
-          changes,
-          date: now,
-        });
-
-        // Determine release branch name
-        const release_branch = `${release_branch_prefix}/${app_name}`;
-
-        releases.push({
-          app,
-          current_version,
-          next_version,
-          changes,
-          release_branch,
-        });
-      } catch (error: any) {
-        return {
-          status: "error" as const,
-          error: `Failed to get version for ${app_name}: ${error.message}`,
-        };
-      }
+      releases.push({
+        app,
+        changes,
+        next_version,
+      });
     }
 
     if (releases.length === 0) {
-      logger.info("No pending changes to release");
       return {
         status: "success" as const,
-        message: "No pending changes to release",
+        message: "No apps to release",
       };
     }
 
-    // Display plan
-    logger.info("Release PR plan:\n");
     for (const release of releases) {
-      logger.info(`📦 ${release.app.name}`);
-      logger.info(`  Version: ${release.current_version} → ${release.next_version}`);
-      logger.info(`  Branch: ${release.release_branch}`);
-      logger.info(`  Changes: ${release.changes.length} file(s)`);
-      logger.info("");
+      const { app, changes, next_version } = release;
+      logger.note(
+        `Release ${app.name} ${next_version}`,
+        changes.map((change) => `${change.kind} ${change.title} in ${change.file_path}`).join("\n"),
+      );
     }
 
     if (dry_run) {
-      logger.info("✨ Dry run - no changes will be made");
       return {
         status: "success" as const,
         message: "Dry run completed - no changes were made",
       };
     }
 
-    if (!context.git_root) {
-      return {
-        status: "error" as const,
-        error: "Could not determine git root",
-      };
-    }
-
-    // Get default branch (only needed for actual operations, not dry-run)
-    const default_branch = config.git.default_target_branch;
-    let default_branch_sha: string;
-    try {
-      default_branch_sha = await provider.get_branch_sha(default_branch);
-    } catch (error: any) {
-      return {
-        status: "error" as const,
-        error: `Failed to get branch SHA for ${default_branch}: ${error.message}`,
-      };
-    }
-
-    // Process each release
-    const errors: string[] = [];
     for (const release of releases) {
-      logger.info(`\nPreparing release for ${release.app.name}...`);
+      const { app, changes, next_version } = release;
 
-      try {
-        const changelog_relative_path = relative(context.git_root, release.app.changelog);
-        const existing_changelog = await provider.get_file_content(
-          changelog_relative_path,
-          default_branch,
-        );
-
-        const file_changes: FileChange[] = [];
-
-        for (const component of release.app.components) {
-          for (const part of component.parts) {
-            const part_relative_path = relative(context.git_root, part.path);
-            const current_content = await provider.get_file_content(
-              part_relative_path,
-              default_branch,
-            );
-
-            if (!current_content) {
-              errors.push(`Could not read ${part_relative_path} from ${default_branch}`);
-              continue;
-            }
-
-            let updated_content = current_content;
-            try {
-              const parsed = JSON.parse(current_content);
-              if (parsed.version !== undefined) {
-                parsed.version = release.next_version;
-                updated_content = JSON.stringify(parsed, null, 2) + "\n";
-              }
-            } catch {
-              // Non-JSON files are skipped; component-specific handling would be needed
-            }
-
-            file_changes.push({
-              path: part_relative_path,
-              content: updated_content,
-            });
-          }
+      // run all component updates
+      for (const component of app.components) {
+        for (const part of component.parts) {
+          const relative_path = relative(git_root, part.file);
+          const initial_content = await readFile(relative_path, "utf-8");
+          const updated_content = part.update_version(initial_content, next_version);
+          await writeFile(relative_path, updated_content);
         }
-
-        if (errors.length > 0) {
-          continue;
-        }
-
-        const formatter = release.app.versioning.formatter;
-        const parsed_changelog = formatter.transform_markdown(
-          existing_changelog
-            ? fromMarkdown(existing_changelog, {
-                extensions: [gfm()],
-                mdastExtensions: [gfmFromMarkdown()],
-              })
-            : { type: "root", children: [] },
-        );
-
-        const releases = [
-          { version: release.next_version, changes: release.changes },
-          ...parsed_changelog.releases.filter(
-            (existing_release) => existing_release.version !== release.next_version,
-          ),
-        ];
-
-        releases.sort((a, b) => release.app.versioning.compare(a.version, b.version));
-
-        const changelog_content = formatter.format_changelog({
-          ...parsed_changelog,
-          releases,
-        } as typeof parsed_changelog);
-        const updated_changelog = `${changelog_content.trimEnd()}\n`;
-
-        file_changes.push({
-          path: changelog_relative_path,
-          content: updated_changelog,
-        });
-
-        // Delete change files - need to discover changes with metadata
-        const changes_with_metadata = await discover_all_changes_with_metadata(
-          [release.app],
-          config.changes_dir,
-        );
-        const app_changes = changes_with_metadata.get(release.app.name) || [];
-        for (const change of app_changes) {
-          const change_relative_path = relative(context.git_root, change.file_path);
-          file_changes.push({
-            path: change_relative_path,
-            content: null, // null = delete
-          });
-        }
-
-        // Create or update branch
-        const commit_message = `chore: release ${release.app.name} ${release.next_version}`;
-        await provider.create_or_update_branch(
-          release.release_branch,
-          default_branch_sha,
-          file_changes,
-          commit_message,
-        );
-        logger.success(`Updated branch: ${release.release_branch}`);
-
-        const pr_title = `chore: release ${release.app.name} ${release.next_version}`;
-        const pr_body = formatter.generate_pr_body({
-          app: release.app,
-          current_version: release.current_version,
-          next_version: release.next_version,
-          changes: release.changes,
-        });
-
-        // Find existing PR or create new one
-        const existing_pr = await provider.find_pull_request(release.release_branch);
-        if (existing_pr) {
-          await provider.update_pull_request(existing_pr.number, pr_title, pr_body);
-          logger.success(`Updated PR #${existing_pr.number}: ${existing_pr.url}`);
-        } else {
-          const pr = await provider.create_pull_request(
-            release.release_branch,
-            default_branch,
-            pr_title,
-            pr_body,
-          );
-          logger.success(`Created PR #${pr.number}: ${pr.url}`);
-        }
-      } catch (error: any) {
-        errors.push(`Failed to prepare release for ${release.app.name}: ${error.message}`);
+        // TODO: implement component "after" hook
       }
+
+      const formatter = app.versioning.formatter;
+
+      // update changelog
+      const changelog_relative_path = relative(git_root, app.changelog);
+      const initial_changelog_content = await readFile(changelog_relative_path, "utf-8");
+      const changelog_as_mdast = fromMarkdown(initial_changelog_content, {
+        extensions: [gfm()],
+        mdastExtensions: [gfmFromMarkdown()],
+      });
+      const changelog = formatter.transform_markdown(changelog_as_mdast);
+      const updated_changelog_content = formatter.format_changelog({
+        ...changelog,
+        releases: [
+          { version: next_version, changes },
+          ...changelog.releases.filter((release) => release.version !== next_version),
+        ].sort((a, b) => app.versioning.compare(a.version, b.version)),
+      });
+      await writeFile(changelog_relative_path, updated_changelog_content);
+
+      // git diff
+      const file_operations = await git.diff(git_root);
+      // git reset
+      await git.reset(git_root);
+
+      const platform = config.git.platform;
+      const release_branch_name = `${config.git.default_release_branch_prefix}/${app.name}`;
+
+      // create or update branch
+      await platform.create_or_update_branch({
+        branch_name: release_branch_name,
+        base_branch_name: config.git.default_target_branch,
+        file_operations,
+        commit_message: `chore: release ${app.name} ${next_version}`,
+      });
+
+      // create or update PR
+      await platform.create_or_update_pull_request({
+        head_branch_name: release_branch_name,
+        base_branch_name: config.git.default_target_branch,
+        title: `chore: release ${app.name} ${next_version}`,
+        body: formatter.generate_pr_body({
+          app: { name: app.name },
+          current_version: app.current_version,
+          next_version,
+          changes,
+        }),
+        draft: true,
+      });
     }
 
-    if (errors.length > 0) {
+    if (dry_run) {
       return {
-        status: "error" as const,
-        error: errors.join("; "),
+        status: "success" as const,
+        message: "Dry run completed - no changes were made",
       };
     }
 
-    logger.success("\n✨ Release PRs prepared!");
     return {
       status: "success" as const,
-      message: "Release PRs prepared successfully",
+      message: "Release PRs generated successfully",
     };
   },
 });

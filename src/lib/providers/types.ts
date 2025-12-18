@@ -1,73 +1,37 @@
-/**
- * File change representation for provider commits
- */
-export interface FileChange {
-  path: string;
-  content: string | null; // null = delete file
-}
+import type { GitFileOperation } from "../utils/git";
 
 /**
- * Pull request representation
+ * Git platform client interface for abstracting Git platform operations (GitHub/GitLab/...).
  */
-export interface PullRequest {
-  number: number;
-  url: string;
-  head_branch: string;
-  base_branch: string;
-}
+export interface GitPlatformClient {
+  create_or_update_branch(args: {
+    branch_name: string;
+    base_branch_name: string;
+    file_operations: GitFileOperation[];
+    commit_message: string;
+  }): Promise<any>;
 
-/**
- * Git provider interface for abstracting GitHub/GitLab operations
- */
-export interface GitProvider {
-  /**
-   * Get the SHA of a branch
-   */
-  get_branch_sha(branch: string): Promise<string>;
+  create_or_update_pull_request(args: {
+    head_branch_name: string;
+    base_branch_name: string;
+    title: string;
+    body: string;
+    draft?: boolean;
+  }): Promise<any>;
 
-  /**
-   * Get file content from a branch
-   */
-  get_file_content(path: string, branch: string): Promise<string | null>;
+  create_tag(args: {
+    tag: string;
+    commit: {
+      sha: string;
+      message: string;
+    };
+  }): Promise<any>;
 
-  /**
-   * Create or update a branch with file changes
-   * Returns the new commit SHA
-   */
-  create_or_update_branch(
-    name: string,
-    base_sha: string,
-    files: FileChange[],
-    message: string,
-  ): Promise<string>;
-
-  /**
-   * Find an existing pull request by head branch name
-   */
-  find_pull_request(head_branch: string): Promise<PullRequest | null>;
-
-  /**
-   * Create a new pull request
-   */
-  create_pull_request(
-    head: string,
-    base: string,
-    title: string,
-    body: string,
-  ): Promise<PullRequest>;
-
-  /**
-   * Update an existing pull request
-   */
-  update_pull_request(number: number, title: string, body: string): Promise<void>;
-
-  /**
-   * Create a git tag
-   */
-  create_tag(name: string, sha: string, message: string): Promise<void>;
-
-  /**
-   * Create a release (GitHub release or GitLab release)
-   */
-  create_release(tag: string, name: string, body: string): Promise<void>;
+  create_release(args: {
+    tag: string;
+    release: {
+      name: string;
+      body: string;
+    };
+  }): Promise<any>;
 }
