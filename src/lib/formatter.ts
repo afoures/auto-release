@@ -134,7 +134,7 @@ export function default_formatter<change_kinds extends string>({
         if (node.type === "list" && current_release) {
           const kind_for_items = current_kind ?? allowed_changes[0] ?? ("default" as change_kinds);
           for (const item of (node as List).children) {
-            const { title, description } = extract_list_item_text(item);
+            const { title } = extract_list_item_text(item);
             if (!title) {
               continue;
             }
@@ -142,7 +142,6 @@ export function default_formatter<change_kinds extends string>({
               new ChangeFile({
                 kind: kind_for_items,
                 summary: title,
-                details: description,
               }),
             );
           }
@@ -186,9 +185,6 @@ export function default_formatter<change_kinds extends string>({
 
           for (const change of kind_changes) {
             release_lines.push(`- ${change.summary}`);
-            for (const line of change.details) {
-              release_lines.push(`  ${line}`);
-            }
           }
         }
 
@@ -226,9 +222,6 @@ export function default_formatter<change_kinds extends string>({
         lines.push(`## ${heading}`);
         for (const change of items) {
           lines.push(`- ${change.summary}`);
-          for (const line of change.details) {
-            lines.push(`  ${line}`);
-          }
         }
       }
 

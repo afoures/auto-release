@@ -208,7 +208,6 @@ export const record_change = create_command({
       slug: slug,
       folder: join(config.changes_dir, app_name),
       summary: "",
-      details: [],
     });
 
     // Save file
