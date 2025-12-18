@@ -1,6 +1,6 @@
 import { parseArgs } from "node:util";
 import type { ParseArgsOptionsType } from "node:util";
-import { log, cancel } from "@clack/prompts";
+import { log, cancel, outro } from "@clack/prompts";
 import type { Pretty } from "./types";
 
 type CustomOption<type extends ParseArgsOptionsType> = {
@@ -273,6 +273,7 @@ export function create_cli(options: CreateCliOptions) {
       if (result.status === "success") {
         // Success - command completed successfully
         // Message is already displayed by the command if needed
+        outro(result.message ?? "Command completed successfully");
       }
     } catch (error: any) {
       log.error(`Failed to run command: ${error.message}`);

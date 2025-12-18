@@ -1,5 +1,5 @@
 import { define_config } from "./dist/index.mjs";
-import { semver } from "./dist/versioning.mjs";
+import { markver, semver } from "./dist/versioning.mjs";
 import { github } from "./dist/git-providers.mjs";
 import { node } from "./dist/components.mjs";
 
@@ -14,7 +14,7 @@ export default define_config({
     "auto-release": {
       components: [node(".")],
       changelog: "CHANGELOG.md",
-      versioning: semver(),
+      versioning: markver(),
     },
     "another-app": {
       components: [node(".")],

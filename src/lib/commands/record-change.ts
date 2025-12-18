@@ -1,8 +1,90 @@
-import { mkdir, writeFile } from "node:fs/promises";
-import { join } from "node:path";
-import { text, select, confirm, isCancel, intro, log, cancel } from "@clack/prompts";
+import { join, relative } from "node:path";
+import { select, isCancel, intro, log, cancel, text } from "@clack/prompts";
 import { create_command } from "../cli.ts";
 import { find_nearest_config } from "../config.ts";
+import { ChangeFile } from "../change-file.ts";
+import { exec } from "../utils/exec.ts";
+import { exists, read_file } from "../utils/fs.ts";
+import { spawn } from "node:child_process";
+
+async function get_editor_preference(changes_dir: string): Promise<string | null> {
+  const prefs_path = join(changes_dir, ".preferences.json");
+  if (await exists(prefs_path)) {
+    try {
+      const content = await read_file(prefs_path);
+      const prefs = JSON.parse(content);
+      return prefs.editor || null;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+async function get_editor(changes_dir: string): Promise<string | null> {
+  // Check saved preference first
+  const saved_editor = await get_editor_preference(changes_dir);
+  if (saved_editor) {
+    return saved_editor;
+  }
+
+  // Check environment variable
+  if (process.env.EDITOR) {
+    return process.env.EDITOR;
+  }
+
+  const common_editors = ["nvim", "vim", "code", "cursor", "nano", "vi"];
+  for (const editor of common_editors) {
+    try {
+      await exec(`which ${editor}`);
+      return editor;
+    } catch {
+      continue;
+    }
+  }
+
+  return null;
+}
+
+function generate_slug(description: string): string {
+  return description
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, "") // Remove special characters except word chars, spaces, and hyphens
+    .replace(/_/g, "-") // Replace underscores with hyphens
+    .replace(/\s+/g, "-") // Replace spaces with hyphens
+    .replace(/-+/g, "-") // Replace multiple hyphens with single hyphen
+    .replace(/^-+|-+$/g, ""); // Remove leading/trailing hyphens
+}
+
+async function open_file_with_editor(file_path: string, editor: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    // Handle VS Code specially (needs -w flag to wait)
+    const editor_parts = editor.split(" ");
+    const editor_cmd = editor_parts[0];
+    const editor_args = editor_parts.slice(1);
+
+    let args: string[];
+    if (editor_cmd === "code" || editor_cmd.endsWith("/code")) {
+      args = [...editor_args, "-w", file_path];
+    } else {
+      args = [...editor_args, file_path];
+    }
+
+    const proc = spawn(editor_cmd, args, {
+      stdio: "inherit",
+      shell: false,
+    });
+
+    proc.on("close", (code) => {
+      if (code !== 0) {
+        reject(new Error(`Editor exited with code ${code}`));
+      } else {
+        resolve();
+      }
+    });
+  });
+}
 
 export const record_change = create_command({
   name: "record-change",
@@ -10,19 +92,11 @@ export const record_change = create_command({
   schema: {
     app: {
       type: "string",
-      description: "App name (will prompt if not provided)",
+      description: "App name",
     },
     type: {
       type: "string",
-      description: "Change type (will prompt if not provided)",
-    },
-    summary: {
-      type: "string",
-      description: "Summary of the change",
-    },
-    description: {
-      type: "string",
-      description: "Detailed description",
+      description: "Change type",
     },
     config: {
       type: "string",
@@ -30,11 +104,11 @@ export const record_change = create_command({
     },
   },
   get_context: async ({ args, cwd }) => {
-    const { config } = await find_nearest_config({
+    const { config, git_root } = await find_nearest_config({
       config_path: args.config,
       cwd,
     });
-    return { config };
+    return { config, root: git_root || config.folder };
   },
   run: async ({ args, context }) => {
     intro(`record a new change`);
@@ -102,78 +176,60 @@ export const record_change = create_command({
       };
     }
 
-    // Get summary
-    let summary = args.summary;
-    if (!summary) {
-      const input = await text({
-        message: "Enter summary:",
-      });
-      if (isCancel(input)) {
-        cancel("Summary input cancelled");
-        return {
-          status: "success" as const,
-        };
-      }
-      summary = input ?? "";
-    }
+    // Ask user for a description to generate slug
+    const description_input = await text({
+      message: "Enter a short description for this change:",
+      validate: (value = "") => {
+        const trimmed = value.trim();
+        if (trimmed.length === 0) {
+          return "Description is required";
+        }
+        const slug = generate_slug(trimmed);
+        if (slug.length === 0) {
+          return "Description must contain at least one valid character";
+        }
+        return undefined;
+      },
+    });
 
-    if (!summary.trim()) {
+    if (isCancel(description_input)) {
+      cancel("Change recording cancelled");
       return {
-        status: "error" as const,
-        error: "Summary cannot be empty",
+        status: "success" as const,
       };
     }
 
-    // Get description (optional)
-    let description = args.description;
-    if (!description && !args.summary) {
-      // Only prompt if not provided via CLI
-      const has_description = await confirm({
-        message: "Add description?",
-        initialValue: false,
-      });
-      if (!isCancel(has_description) && has_description) {
-        const desc_input = await text({
-          message: "Enter description:",
-        });
-        if (!isCancel(desc_input)) {
-          description = desc_input;
-        }
-      }
-    }
+    // Generate slug from description
+    const slug = generate_slug(description_input as string);
 
-    // Generate slug from summary and timestamp
-    const timestamp = new Date().toISOString().split("T")[0];
-    const slug = summary
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "")
-      .substring(0, 50);
-    const full_slug = `${timestamp}-${slug}`;
+    // Create change file with empty content (user will edit it)
+    const change_file = new ChangeFile({
+      kind: change_type,
+      slug: slug,
+      folder: join(config.changes_dir, app_name),
+      summary: "",
+      details: [],
+    });
 
-    // Generate filename
-    const filename = `${change_type}.${full_slug}.md`;
-
-    // Generate content
-    let content: string;
-    if (description?.trim()) {
-      content = `# ${summary}\n\n${description}\n`;
-    } else {
-      content = `${summary}\n`;
-    }
-
-    // Write file
+    // Save file
     try {
-      const changes_dir = join(config.changes_dir, app_name);
-      await mkdir(changes_dir, { recursive: true });
+      const file_path = await change_file.save();
 
-      const file_path = join(changes_dir, filename);
-      await writeFile(file_path, content, "utf-8");
+      // Open file with editor
+      const editor = await get_editor(config.changes_dir);
+      if (!editor) {
+        return {
+          status: "error" as const,
+          error: "No editor found, you should update the change file manually.",
+        };
+      }
 
-      log.success(`Created change file: ${file_path}`);
+      log.info(`Opening file with ${editor}...`);
+      await open_file_with_editor(file_path, editor);
+
       return {
         status: "success" as const,
-        message: `Created change file: ${file_path}`,
+        message: `Created new change file: ${relative(context.root, file_path)}`,
       };
     } catch (error: any) {
       return {
