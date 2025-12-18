@@ -94,9 +94,7 @@ export const generate_release = create_command({
       const { app, changes, next_version } = release;
       logger.note(
         `Release ${app.name} ${next_version}`,
-        changes
-          .map((change) => `${change.kind} ${change.summary} in ${change.filename}`)
-          .join("\n"),
+        changes.map((change) => `${change.kind} ${change.summary} in ${change.file}`).join("\n"),
       );
     }
 

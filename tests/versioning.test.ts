@@ -14,6 +14,7 @@ describe("semver", () => {
     const changes: ChangeFile<"major" | "minor" | "patch">[] = [
       new ChangeFile<"major" | "minor" | "patch">({
         kind: "major",
+        slug: "breaking-change",
         summary: "Breaking change",
         details: [],
       }),
@@ -31,6 +32,7 @@ describe("semver", () => {
     const changes: ChangeFile<"major" | "minor" | "patch">[] = [
       new ChangeFile<"major" | "minor" | "patch">({
         kind: "minor",
+        slug: "new-feature",
         summary: "New feature",
         details: [],
       }),
@@ -48,6 +50,7 @@ describe("semver", () => {
     const changes: ChangeFile<"major" | "minor" | "patch">[] = [
       new ChangeFile<"major" | "minor" | "patch">({
         kind: "patch",
+        slug: "bug-fix",
         summary: "Bug fix",
         details: [],
       }),
@@ -76,11 +79,13 @@ describe("semver", () => {
     const changes: ChangeFile<"major" | "minor" | "patch">[] = [
       new ChangeFile<"major" | "minor" | "patch">({
         kind: "major",
+        slug: "breaking-change",
         summary: "Breaking change",
         details: [],
       }),
       new ChangeFile<"major" | "minor" | "patch">({
         kind: "minor",
+        slug: "new-feature",
         summary: "New feature",
         details: [],
       }),
@@ -101,6 +106,7 @@ describe("semver", () => {
         changes: [
           new ChangeFile<"major" | "minor" | "patch">({
             kind: "patch",
+            slug: "bug-fix",
             summary: "Bug fix",
             details: [],
           }),
@@ -122,6 +128,7 @@ describe("calver", () => {
     const changes: ChangeFile<"feature" | "fix">[] = [
       new ChangeFile<"feature" | "fix">({
         kind: "feature",
+        slug: "new-feature",
         summary: "New feature",
         details: [],
       }),
@@ -139,6 +146,7 @@ describe("calver", () => {
     const changes: ChangeFile<"feature" | "fix">[] = [
       new ChangeFile<"feature" | "fix">({
         kind: "feature",
+        slug: "new-feature",
         summary: "New feature",
         details: [],
       }),
@@ -171,6 +179,7 @@ describe("calver", () => {
         changes: [
           new ChangeFile<"feature" | "fix">({
             kind: "feature",
+            slug: "new-feature",
             summary: "New feature",
             details: [],
           }),
