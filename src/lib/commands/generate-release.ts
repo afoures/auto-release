@@ -57,7 +57,7 @@ export const generate_release = create_command({
 
       const change_files: ChangeFile<(typeof valid_change_types)[number]>[] = [];
       for (const file of files) {
-        const change_file_or_error = ChangeFile.from_file(file);
+        const change_file_or_error = await ChangeFile.from_file(file);
         if (change_file_or_error instanceof Error) {
           continue;
         }
@@ -92,10 +92,28 @@ export const generate_release = create_command({
 
     for (const release of releases) {
       const { app, changes, next_version } = release;
-      logger.note(
-        `Release ${app.name} ${next_version}`,
-        changes.map((change) => `${change.kind} ${change.summary} in ${change.file}`).join("\n"),
-      );
+
+      // Group changes by kind
+      const changes_by_kind = new Map<string, Array<ChangeFile<any>>>();
+      for (const change of changes) {
+        const existing = changes_by_kind.get(change.kind) ?? [];
+        existing.push(change);
+        changes_by_kind.set(change.kind, existing);
+      }
+
+      // Build formatted message
+      const message_lines: string[] = [];
+      const display_map = app.versioning.display_map;
+
+      for (const [kind, kind_changes] of changes_by_kind.entries()) {
+        const label = display_map[kind]?.plural ?? display_map[kind]?.singular ?? kind;
+        message_lines.push(`\n${label}:`);
+        for (const change of kind_changes) {
+          message_lines.push(`  • ${change.summary}`);
+        }
+      }
+
+      logger.note(`Release ${app.name} ${next_version}`, message_lines.join("\n"));
     }
 
     if (dry_run) {

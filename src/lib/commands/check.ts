@@ -41,7 +41,7 @@ async function validate_changes_files_content(
 
   const errors: string[] = [];
   for (const file of files) {
-    const change_file_or_error = ChangeFile.from_file(file);
+    const change_file_or_error = await ChangeFile.from_file(file);
     if (change_file_or_error instanceof Error) {
       errors.push(`change file ${file} is invalid: ${change_file_or_error.message}`);
       continue;
