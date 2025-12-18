@@ -4,17 +4,11 @@
 
 import type { Component, ResolvedComponent } from "./components/types.ts";
 import type { GitPlatformClient } from "./providers/types.ts";
-import type {
-  VersionManager,
-  Change,
-  Formatter,
-  ChangeKindDisplayMap,
-} from "./versioning/types.ts";
+import type { VersionManager, Formatter, ChangeKindDisplayMap } from "./versioning/types.ts";
 
 export type {
   GitPlatformClient,
   VersionManager,
-  Change,
   Formatter,
   Component,
   ResolvedComponent,

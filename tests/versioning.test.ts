@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { semver } from "../src/lib/versioning/semantic.ts";
 import { calver } from "../src/lib/versioning/calendar.ts";
-import type { Change } from "../src/lib/versioning/types.ts";
+import { ChangeFile } from "../src/lib/change-file.ts";
 
 describe("semver", () => {
   it("should return a strategy with correct allowed_changes", () => {
@@ -11,12 +11,12 @@ describe("semver", () => {
 
   it("should bump major version", () => {
     const strategy = semver();
-    const changes: Change<"major" | "minor" | "patch">[] = [
-      {
+    const changes: ChangeFile<"major" | "minor" | "patch">[] = [
+      new ChangeFile<"major" | "minor" | "patch">({
         kind: "major",
-        title: "Breaking change",
-        description: [],
-      },
+        summary: "Breaking change",
+        details: [],
+      }),
     ];
     const result = strategy.bump({
       version: "1.2.3",
@@ -28,12 +28,12 @@ describe("semver", () => {
 
   it("should bump minor version", () => {
     const strategy = semver();
-    const changes: Change<"major" | "minor" | "patch">[] = [
-      {
+    const changes: ChangeFile<"major" | "minor" | "patch">[] = [
+      new ChangeFile<"major" | "minor" | "patch">({
         kind: "minor",
-        title: "New feature",
-        description: [],
-      },
+        summary: "New feature",
+        details: [],
+      }),
     ];
     const result = strategy.bump({
       version: "1.2.3",
@@ -45,12 +45,12 @@ describe("semver", () => {
 
   it("should bump patch version", () => {
     const strategy = semver();
-    const changes: Change<"major" | "minor" | "patch">[] = [
-      {
+    const changes: ChangeFile<"major" | "minor" | "patch">[] = [
+      new ChangeFile<"major" | "minor" | "patch">({
         kind: "patch",
-        title: "Bug fix",
-        description: [],
-      },
+        summary: "Bug fix",
+        details: [],
+      }),
     ];
     const result = strategy.bump({
       version: "1.2.3",
@@ -73,22 +73,17 @@ describe("semver", () => {
 
   it("should use highest precedence when multiple changes", () => {
     const strategy = semver();
-    const changes: Change<"major" | "minor" | "patch">[] = [
-      {
-        kind: "patch",
-        title: "Bug fix",
-        description: [],
-      },
-      {
+    const changes: ChangeFile<"major" | "minor" | "patch">[] = [
+      new ChangeFile<"major" | "minor" | "patch">({
         kind: "major",
-        title: "Breaking change",
-        description: [],
-      },
-      {
+        summary: "Breaking change",
+        details: [],
+      }),
+      new ChangeFile<"major" | "minor" | "patch">({
         kind: "minor",
-        title: "New feature",
-        description: [],
-      },
+        summary: "New feature",
+        details: [],
+      }),
     ];
     const result = strategy.bump({
       version: "1.2.3",
@@ -104,11 +99,11 @@ describe("semver", () => {
       strategy.bump({
         version: "1.2",
         changes: [
-          {
+          new ChangeFile<"major" | "minor" | "patch">({
             kind: "patch",
-            title: "fix",
-            description: [],
-          },
+            summary: "Bug fix",
+            details: [],
+          }),
         ],
         date: new Date(),
       }),
@@ -124,12 +119,12 @@ describe("calver", () => {
 
   it("should increment minor when same year", () => {
     const strategy = calver();
-    const changes: Change<"feature" | "fix">[] = [
-      {
+    const changes: ChangeFile<"feature" | "fix">[] = [
+      new ChangeFile<"feature" | "fix">({
         kind: "feature",
-        title: "New feature",
-        description: [],
-      },
+        summary: "New feature",
+        details: [],
+      }),
     ];
     const result = strategy.bump({
       version: "2025.1.0",
@@ -141,12 +136,12 @@ describe("calver", () => {
 
   it("should reset when different year", () => {
     const strategy = calver();
-    const changes: Change<"feature" | "fix">[] = [
-      {
+    const changes: ChangeFile<"feature" | "fix">[] = [
+      new ChangeFile<"feature" | "fix">({
         kind: "feature",
-        title: "New feature",
-        description: [],
-      },
+        summary: "New feature",
+        details: [],
+      }),
     ];
     const result = strategy.bump({
       version: "2025.5.0",
@@ -174,11 +169,11 @@ describe("calver", () => {
       strategy.bump({
         version: "invalid-version",
         changes: [
-          {
+          new ChangeFile<"feature" | "fix">({
             kind: "feature",
-            title: "feat",
-            description: [],
-          },
+            summary: "New feature",
+            details: [],
+          }),
         ],
         date: new Date(),
       }),

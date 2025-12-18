@@ -1,22 +1,17 @@
 import type { Root } from "mdast";
-
-export type Change<kind extends string> = {
-  kind: kind;
-  title: string;
-  description: string[];
-};
+import type { ChangeFile } from "../change-file.ts";
 
 export type Formatter<
   change_kinds extends string = string,
   parsed_changelog extends {
     releases: Array<{
       version: string;
-      changes: Array<Change<change_kinds>>;
+      changes: Array<ChangeFile<change_kinds>>;
     }>;
   } = {
     releases: Array<{
       version: string;
-      changes: Array<Change<change_kinds>>;
+      changes: Array<ChangeFile<change_kinds>>;
     }>;
   },
 > = {
@@ -41,7 +36,7 @@ export type Formatter<
     app: { name: string };
     current_version: string;
     next_version: string;
-    changes: Change<change_kinds>[];
+    changes: ChangeFile<change_kinds>[];
   }): string;
   /**
    * Generate release notes for a given app to use in GitHub/GitLab release bodies.
@@ -64,19 +59,19 @@ export type VersionManager<
   parsed_changelog extends {
     releases: Array<{
       version: string;
-      changes: Array<Change<change_kind>>;
+      changes: Array<ChangeFile<change_kind>>;
     }>;
   } = {
     releases: Array<{
       version: string;
-      changes: Array<Change<change_kind>>;
+      changes: Array<ChangeFile<change_kind>>;
     }>;
   },
 > = {
   allowed_changes: readonly change_kind[];
   compare(a: string, b: string): -1 | 0 | 1;
   validate({ version }: { version: string }): boolean;
-  bump(args: { version: string; changes: Array<Change<change_kind>>; date: Date }): string;
+  bump(args: { version: string; changes: Array<ChangeFile<change_kind>>; date: Date }): string;
   formatter: Formatter<change_kind, parsed_changelog>;
   display_map: ChangeKindDisplayMap<change_kind>;
 };

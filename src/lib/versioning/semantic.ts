@@ -1,5 +1,6 @@
 import { regex } from "arkregex";
-import type { Change, ChangeKindDisplayMap, Formatter, VersionManager } from "./types.ts";
+import type { ChangeFile } from "../change-file.ts";
+import type { ChangeKindDisplayMap, Formatter, VersionManager } from "./types.ts";
 import { default_formatter } from "../formatter.ts";
 
 interface SemanticVersion {
@@ -37,7 +38,7 @@ export function semver<
   parsed_changelog extends {
     releases: Array<{
       version: string;
-      changes: Array<Change<SemanticChangeKind>>;
+      changes: Array<ChangeFile<SemanticChangeKind>>;
     }>;
   },
 >({
