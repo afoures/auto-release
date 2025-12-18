@@ -46,7 +46,7 @@ import { node } from 'auto-release/components'
 
 export default define_config({
   git: {
-    provider: github({
+    platform: github({
       token: process.env.GITHUB_TOKEN!,
       owner: 'your-org',
       repo: 'your-repo',
@@ -102,7 +102,7 @@ import { node } from 'auto-release/components'
 export default define_config({
   // Required: Git provider configuration
   git: {
-    provider: github({
+    platform: github({
       token: process.env.GITHUB_TOKEN!,
       owner: 'your-org',
       repo: 'your-repo',

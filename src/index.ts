@@ -7,7 +7,7 @@ export type {
   AutoReleaseConfig,
   VersionManager,
   Change,
-  GitProvider,
+  GitPlatformClient,
   Formatter,
   ChangeKindDisplayMap,
 } from "./lib/types.ts";

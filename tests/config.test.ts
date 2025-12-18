@@ -17,7 +17,7 @@ describe("define_config", () => {
         },
       },
       git: {
-        provider: github({ token: "test", owner: "test", repo: "test" }),
+        platform: github({ token: "test", owner: "test", repo: "test" }),
         default_target_branch: "main",
       },
     });
@@ -40,7 +40,7 @@ describe("define_config", () => {
         },
       },
       git: {
-        provider: github({ token: "test", owner: "test", repo: "test" }),
+        platform: github({ token: "test", owner: "test", repo: "test" }),
         default_target_branch: "main",
       },
     });
@@ -53,8 +53,8 @@ describe("define_config", () => {
     expect(config.changes_dir).toBe(resolve(process.cwd(), ".changes"));
 
     const component_result = resolved_app.components[0];
-    expect(isAbsolute(component_result.path)).toBe(true);
-    expect(component_result.parts.every((part) => isAbsolute(part.path))).toBe(true);
+    expect(isAbsolute(component_result.root)).toBe(true);
+    expect(component_result.parts.every((part) => isAbsolute(part.file))).toBe(true);
   });
 
   it("should support custom strategies", () => {
@@ -63,7 +63,7 @@ describe("define_config", () => {
         releases: [],
       }),
       format_changelog: () => "",
-      generate_release_notes: () => "",
+      generate_release_notes: () => "[View Changelog](CHANGELOG.md)",
       generate_pr_body: () => "",
     };
 
@@ -89,7 +89,7 @@ describe("define_config", () => {
         },
       },
       git: {
-        provider: github({ token: "test", owner: "test", repo: "test" }),
+        platform: github({ token: "test", owner: "test", repo: "test" }),
         default_target_branch: "main",
       },
     });

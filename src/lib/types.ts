@@ -3,7 +3,7 @@
  */
 
 import type { Component, ResolvedComponent } from "./components/types.ts";
-import type { GitProvider } from "./providers/types.ts";
+import type { GitPlatformClient } from "./providers/types.ts";
 import type {
   VersionManager,
   Change,
@@ -12,7 +12,7 @@ import type {
 } from "./versioning/types.ts";
 
 export type {
-  GitProvider,
+  GitPlatformClient,
   VersionManager,
   Change,
   Formatter,
@@ -20,6 +20,8 @@ export type {
   ResolvedComponent,
   ChangeKindDisplayMap,
 };
+
+export type Pretty<T> = { [key in keyof T]: T[key] } & {};
 
 /**
  * Logger interface for structured output
@@ -38,7 +40,7 @@ export interface Logger {
 export interface AutoReleaseConfig {
   changes_dir?: string;
   git: {
-    provider: GitProvider;
+    platform: GitPlatformClient;
     default_target_branch?: string;
     default_release_branch_prefix?: string;
   };

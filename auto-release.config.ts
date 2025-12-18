@@ -14,13 +14,7 @@ export default define_config({
     "auto-release": {
       components: [node(".")],
       changelog: "CHANGELOG.md",
-      versioning: semver({
-        display_map: {
-          major: { singular: "Major", plural: "Major" },
-          minor: { singular: "Minor", plural: "Minor" },
-          patch: { singular: "Patch", plural: "Patch" },
-        },
-      }),
+      versioning: semver(),
     },
     "another-app": {
       components: [node(".")],
@@ -35,7 +29,7 @@ export default define_config({
     },
   },
   git: {
-    provider: github({
+    platform: github({
       token: process.env.GITHUB_TOKEN!,
       owner: process.env.GITHUB_OWNER!,
       repo: process.env.GITHUB_REPO!,

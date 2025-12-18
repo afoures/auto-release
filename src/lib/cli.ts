@@ -1,45 +1,51 @@
 import { parseArgs } from "node:util";
-import type { ParseArgsOptionDescriptor } from "node:util";
+import type { ParseArgsOptionsType } from "node:util";
 import { log, cancel } from "@clack/prompts";
+import type { Pretty } from "./types";
 
-/**
- * Extended option schema with description for help generation
- */
-export interface Option extends ParseArgsOptionDescriptor {
+type CustomOption<type extends ParseArgsOptionsType> = {
+  type: type;
   description?: string;
-}
+  short?: string;
+} & ({ multiple: true; default?: Value<type>[] } | { multiple?: false; default?: Value<type> });
 
-type OptionValue<T> = T extends "string" ? string : T extends "boolean" ? boolean : never;
+type Value<type extends ParseArgsOptionsType> = type extends "string"
+  ? string
+  : type extends "boolean"
+    ? boolean
+    : never;
 
-type convert_to_values<args extends Record<string, Option>> = {
-  [K in keyof args]?: args[K]["multiple"] extends true
-    ? OptionValue<args[K]["type"]>[]
-    : OptionValue<args[K]["type"]>;
-};
+type extract_value<option extends CustomOption<any>> = option extends { multiple: true }
+  ? Value<option["type"]>[]
+  : Value<option["type"]>;
+
+type has_default<option extends CustomOption<any>> = option extends { default: any } ? true : false;
 
 /**
  * Command definition interface
  */
-type ParsedCommandArgs<args extends Record<string, Option>> = convert_to_values<args> & {
-  config?: string;
-};
+type ParsedCommandArgs<args extends Record<string, CustomOption<any>>> = Pretty<{
+  -readonly [key in keyof args]:
+    | extract_value<args[key]>
+    | (has_default<args[key]> extends true ? never : undefined);
+}>;
 
-type CommandGetContextArgs<args extends Record<string, Option>> = {
+type CommandGetContextArgs<args extends Record<string, CustomOption<any>>> = Pretty<{
   args: ParsedCommandArgs<args>;
   cwd: string;
-};
+}>;
 
 type CommandRunContext<
-  args extends Record<string, Option>,
+  args extends Record<string, CustomOption<any>>,
   context extends Record<string, unknown> = Record<string, unknown>,
-> = {
+> = Pretty<{
   args: ParsedCommandArgs<args>;
   context: context;
-};
+}>;
 
 export interface Command<
-  args extends Record<string, Option> = Record<string, Option>,
-  context extends Record<string, unknown> = Record<string, unknown>,
+  args extends Record<string, CustomOption<any>>,
+  context extends Record<string, unknown>,
 > {
   /**
    * Command name (e.g., "check", "record")
@@ -60,21 +66,21 @@ export interface Command<
    * Run the command with parsed arguments and config
    */
   run: (
-    args: CommandRunContext<args, context>,
+    args: CommandRunContext<NoInfer<args>, NoInfer<context>>,
   ) => Promise<{ status: "success"; message?: string } | { status: "error"; error: string }>;
   /**
    * Build the execution context (loads config, resolves root, etc.)
    */
-  get_context: (args: CommandGetContextArgs<args>) => Promise<context>;
+  get_context: (args: CommandGetContextArgs<NoInfer<args>>) => Promise<context>;
 }
 
 /**
  * Command helper function
  */
 export function create_command<
-  args extends Record<string, Option>,
-  context extends Record<string, unknown> = never,
->(command: Command<args, context>): Command<args, context> {
+  const args extends Record<string, CustomOption<any>>,
+  const context extends Record<string, unknown> = never,
+>(command: Command<args, context>): typeof command {
   return command;
 }
 
@@ -84,7 +90,7 @@ export function create_command<
 export function generate_help(
   name: string,
   description: string,
-  schema: Record<string, Option>,
+  schema: Record<string, CustomOption<any>>,
 ): string {
   const options: Array<{ name: string; description: string }> = [];
 
@@ -169,8 +175,8 @@ export interface CreateCliOptions {
 function show_help(
   name: string,
   description: string,
-  commands: Record<string, Command<any>>,
-  command?: Command<any>,
+  commands: Record<string, Command<any, any>>,
+  command?: Command<any, any>,
 ) {
   if (!command) {
     // Calculate max command name length for proper alignment

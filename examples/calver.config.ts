@@ -15,7 +15,7 @@ export default define_config({
     },
   },
   git: {
-    provider: gitlab({
+    platform: gitlab({
       token: process.env.GITLAB_TOKEN!,
       project_id: process.env.GITLAB_PROJECT_ID!,
     }),

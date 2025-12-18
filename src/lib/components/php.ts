@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import type { Component, Part } from "./types.ts";
 
@@ -15,25 +15,23 @@ export function php(path: string): Component {
     }
 
     parts.push({
-      path: composer_json_path,
+      file: composer_json_path,
       exists: composer_json_exists,
-      get_current_version: () => {
-        const content = readFileSync(composer_json_path, "utf-8");
-        const composer_json = JSON.parse(content);
+      get_current_version: (file_content) => {
+        const composer_json = JSON.parse(file_content);
         return composer_json.version;
       },
-      update_version: (version: string) => {
-        const content = readFileSync(composer_json_path, "utf-8");
-        const composer_json = JSON.parse(content);
+      update_version: (file_content, version) => {
+        const composer_json = JSON.parse(file_content);
         composer_json.version = version;
-        writeFileSync(composer_json_path, JSON.stringify(composer_json, null, 2) + "\n", "utf-8");
+        return JSON.stringify(composer_json, null, 2) + "\n";
       },
     });
 
     return {
-      path: base_path,
+      root: base_path,
       parts,
-      warnings,
+      issues: warnings,
     };
   };
 }

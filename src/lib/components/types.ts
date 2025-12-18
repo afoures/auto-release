@@ -1,14 +1,15 @@
 export type Part = {
-  path: string;
+  file: string;
   exists: boolean;
-  get_current_version: () => string;
-  update_version: (version: string) => void;
+  get_current_version: (file_content: string) => string;
+  update_version: (file_content: string, version: string) => string;
+  issues?: Array<string>;
 };
 
 export type ResolvedComponent = {
-  path: string;
+  root: string;
   parts: Array<Part>;
-  warnings: Array<string>;
+  issues: Array<string>;
 };
 
 export type Component = (config_folder: string) => ResolvedComponent;

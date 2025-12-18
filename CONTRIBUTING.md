@@ -111,7 +111,7 @@ The `default_changelog_formatter()` provides a simple default, but custom format
 
 ### Git Provider Abstraction
 
-Git operations are abstracted through the `GitProvider` interface, supporting:
+Git operations are abstracted through the `GitPlatformClient` interface, supporting:
 
 - GitHub (via REST API)
 - GitLab (via REST API)

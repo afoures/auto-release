@@ -194,74 +194,47 @@ export function default_formatter<change_kinds extends string>({
 
       return lines.join("\n\n");
     },
-    generate_release_notes({ app, next_version, changes }) {
-      return build_grouped_sections({
-        title: `Release ${app.name} ${next_version}`,
-        allowed_changes,
-        display_map: resolved_display_map,
-        changes,
-      }).join("\n");
+    generate_release_notes({ app, version }) {
+      const hash = version.replaceAll(".", "");
+      const file = `${app.changelog}#${hash}`;
+      return `[See the changelog for ${app.name}@${version} release notes](${file})`;
     },
     generate_pr_body({ app, current_version, next_version, changes }) {
-      return build_grouped_sections({
-        title: `Release ${app.name} ${next_version}`,
-        version_line: `Version: ${current_version} → ${next_version}`,
-        allowed_changes,
-        display_map: resolved_display_map,
-        changes,
-      }).join("\n");
+      const lines: string[] = [];
+      lines.push(`# Release ${app.name} ${next_version}`);
+      lines.push(`Version: ${current_version} → ${next_version}`);
+
+      const grouped = new Map<change_kinds, Array<Change<change_kinds>>>();
+      for (const change of changes) {
+        const group = grouped.get(change.kind) ?? [];
+        group.push(change);
+        grouped.set(change.kind, group);
+      }
+
+      for (const kind of allowed_changes) {
+        const items = grouped.get(kind);
+        if (!items || items.length === 0) {
+          continue;
+        }
+
+        const labels = resolved_display_map[kind];
+        const heading = labels?.plural ?? labels?.singular ?? kind;
+        lines.push("");
+        lines.push(`## ${heading}`);
+        for (const change of items) {
+          lines.push(`- ${change.title}`);
+          for (const line of change.description) {
+            lines.push(`  ${line}`);
+          }
+        }
+      }
+
+      if (grouped.size === 0) {
+        lines.push("");
+        lines.push("No changes in this release.");
+      }
+
+      return lines.join("\n");
     },
   };
-}
-
-function build_grouped_sections<change_kinds extends string>({
-  title,
-  version_line,
-  allowed_changes,
-  display_map,
-  changes,
-}: {
-  title: string;
-  version_line?: string;
-  allowed_changes: readonly change_kinds[];
-  display_map: ChangeKindDisplayMap<change_kinds>;
-  changes: Array<Change<change_kinds>>;
-}): string[] {
-  const lines: string[] = [];
-  lines.push(`# ${title}`);
-  if (version_line) {
-    lines.push(version_line);
-  }
-
-  const grouped = new Map<change_kinds, Array<Change<change_kinds>>>();
-  for (const change of changes) {
-    const group = grouped.get(change.kind) ?? [];
-    group.push(change);
-    grouped.set(change.kind, group);
-  }
-
-  for (const kind of allowed_changes) {
-    const items = grouped.get(kind);
-    if (!items || items.length === 0) {
-      continue;
-    }
-
-    const labels = display_map[kind];
-    const heading = labels?.plural ?? labels?.singular ?? kind;
-    lines.push("");
-    lines.push(`## ${heading}`);
-    for (const change of items) {
-      lines.push(`- ${change.title}`);
-      for (const line of change.description) {
-        lines.push(`  ${line}`);
-      }
-    }
-  }
-
-  if (grouped.size === 0) {
-    lines.push("");
-    lines.push("No changes in this release.");
-  }
-
-  return lines;
 }

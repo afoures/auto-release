@@ -143,57 +143,61 @@ export async function discover_all_changes_with_metadata(
   const changes_map = new Map<string, ChangeWithMetadata<any>[]>();
 
   for (const app of apps) {
-    const app_name = app.name;
-    const valid_change_types = app.versioning.allowed_changes;
-    const app_changes_dir = join(changes_dir, app_name);
-
-    let files: string[];
-    try {
-      files = await readdir(app_changes_dir);
-    } catch (error: any) {
-      // Directory doesn't exist or can't be read - no changes
-      if (error.code === "ENOENT") {
-        changes_map.set(app_name, []);
-        continue;
-      }
-      throw error;
-    }
-
-    const changes: ChangeWithMetadata<any>[] = [];
-
-    for (const file of files) {
-      if (!file.endsWith(".md")) {
-        continue;
-      }
-
-      const parsed = parse_change_filename(file);
-      if (!parsed) {
-        throw new Error(`Invalid change filename format: ${file} (expected: type.slug-words.md)`);
-      }
-
-      if (!valid_change_types.includes(parsed.kind)) {
-        throw new Error(
-          `Invalid change kind "${
-            parsed.kind
-          }" in file ${file}. Valid kinds: ${valid_change_types.join(", ")}`,
-        );
-      }
-
-      const file_path = join(app_changes_dir, file);
-      const content = await readFile(file_path, "utf-8");
-      const { title, description } = parse_change_markdown(content);
-
-      changes.push({
-        kind: parsed.kind,
-        title,
-        description,
-        file_path,
-        app_name,
-      });
-    }
-
-    changes_map.set(app_name, changes);
   }
 
   return changes_map;
+}
+
+export async function discover_changes_with_metadata_bis(
+  app: ManagedApplication,
+  changes_dir: string,
+): Promise<ChangeWithMetadata<any>[]> {
+  const valid_change_types = app.versioning.allowed_changes;
+  const app_changes_dir = join(changes_dir, app.name);
+
+  let files: string[];
+  try {
+    files = await readdir(app_changes_dir);
+  } catch (error: any) {
+    // Directory doesn't exist or can't be read - no changes
+    if (error.code === "ENOENT") {
+      return [];
+    }
+    throw error;
+  }
+
+  const changes: ChangeWithMetadata<any>[] = [];
+
+  for (const file of files) {
+    if (!file.endsWith(".md")) {
+      continue;
+    }
+
+    const parsed = parse_change_filename(file);
+    if (!parsed) {
+      throw new Error(`Invalid change filename format: ${file} (expected: type.slug-words.md)`);
+    }
+
+    if (!valid_change_types.includes(parsed.kind)) {
+      throw new Error(
+        `Invalid change kind "${
+          parsed.kind
+        }" in file ${file}. Valid kinds: ${valid_change_types.join(", ")}`,
+      );
+    }
+
+    const file_path = join(app_changes_dir, file);
+    const content = await readFile(file_path, "utf-8");
+    const { title, description } = parse_change_markdown(content);
+
+    changes.push({
+      kind: parsed.kind,
+      title,
+      description,
+      file_path,
+      app_name: app.name,
+    });
+  }
+
+  return changes;
 }

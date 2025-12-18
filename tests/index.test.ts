@@ -34,7 +34,7 @@ describe("Public API exports", () => {
         },
       },
       git: {
-        provider: github({ token: "test", owner: "test", repo: "test" }),
+        platform: github({ token: "test", owner: "test", repo: "test" }),
         default_target_branch: "main",
       },
     });

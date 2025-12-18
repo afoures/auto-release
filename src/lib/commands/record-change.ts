@@ -79,7 +79,10 @@ export const record_change = create_command({
     if (!change_type) {
       const selected = await select({
         message: "Select change type:",
-        options: valid_types.map((t) => ({ value: t, label: t })),
+        options: valid_types.map((t) => ({
+          value: t,
+          label: app.versioning.display_map[t]?.singular ?? t,
+        })),
       });
       if (isCancel(selected)) {
         cancel("Change type selection cancelled");

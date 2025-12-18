@@ -15,7 +15,7 @@ describe("generate_config_source", () => {
       changes_dir: ".changes",
       release_branch_prefix: "release",
       git: {
-        provider: "github",
+        platform: "github",
         owner: "acme",
         repo: "web",
         token_env: "GITHUB_TOKEN",
@@ -45,7 +45,7 @@ describe("generate_config_source", () => {
       changes_dir: "changes",
       release_branch_prefix: "releases",
       git: {
-        provider: "gitlab",
+        platform: "gitlab",
         project_id: "acme/mobile",
         host: "gitlab.example.com",
         token_env: "GITLAB_TOKEN",

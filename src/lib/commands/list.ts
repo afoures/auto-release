@@ -45,7 +45,7 @@ export const list = create_command({
 
       const parts = app.components.flatMap((component) =>
         component.parts.map((part) => ({
-          relative_path: relative(root, part.path),
+          relative_path: relative(root, part.file),
           missing: part.exists === false,
         })),
       );
