@@ -2,7 +2,7 @@ import { join, relative } from "node:path";
 import { select, isCancel, intro, log, cancel, text } from "@clack/prompts";
 import { create_command } from "../cli.ts";
 import { find_nearest_config } from "../config.ts";
-import { ChangeFile } from "../change-file.ts";
+import { ChangeFile, save_change_file } from "../change-file.ts";
 import { exec } from "../utils/exec.ts";
 import { exists, read_file } from "../utils/fs.ts";
 import { spawn } from "node:child_process";
@@ -206,13 +206,12 @@ export const record_change = create_command({
     const change_file = new ChangeFile({
       kind: change_type,
       slug: slug,
-      folder: join(config.changes_dir, app_name),
       summary: "",
     });
 
     // Save file
     try {
-      const file_path = await change_file.save();
+      const file_path = await save_change_file(change_file, join(config.changes_dir, app_name));
 
       // Open file with editor
       const editor = await get_editor(config.changes_dir);

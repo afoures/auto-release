@@ -5,11 +5,9 @@ import { find_nearest_config } from "../config.ts";
 import { fromMarkdown } from "mdast-util-from-markdown";
 import { gfmFromMarkdown } from "mdast-util-gfm";
 import { gfm } from "micromark-extension-gfm";
-import { readFile, writeFile } from "node:fs/promises";
-import type { ManagedApplication } from "../types.ts";
 import * as git from "../utils/git.ts";
 import * as fs from "../utils/fs.ts";
-import { ChangeFile } from "../change-file.ts";
+import { ChangeFile, find_change_files } from "../change-file.ts";
 
 export const generate_release = create_command({
   name: "generate-release",
@@ -39,63 +37,37 @@ export const generate_release = create_command({
   run: async ({ args: { filter, "dry-run": dry_run = false }, context: { config, root } }) => {
     const logger = create_logger();
 
-    const releases: Array<{
-      app: ManagedApplication;
-      changes: Array<ChangeFile<any>>;
-      next_version: string;
-    }> = [];
+    const filtered_applications = filter
+      ? config.managed_applications.filter((app) => filter.includes(app.name))
+      : config.managed_applications;
 
-    for (const app of config.managed_applications) {
-      if (filter && !filter.includes(app.name)) {
-        continue;
-      }
-
-      const valid_change_types = app.versioning.allowed_changes;
-      const app_changes_dir = join(config.changes_dir, app.name);
-
-      const files = await fs.list_files(app_changes_dir);
-
-      const change_files: ChangeFile<(typeof valid_change_types)[number]>[] = [];
-      for (const file of files) {
-        const change_file_or_error = await ChangeFile.from_file(file);
-        if (change_file_or_error instanceof Error) {
-          continue;
-        }
-        const change_file = change_file_or_error;
-        if (!valid_change_types.includes(change_file.kind)) {
-          throw new Error(
-            `Invalid change kind "${change_file.kind}" in file ${file}. Valid kinds: ${valid_change_types.join(", ")}`,
-          );
-        }
-        change_files.push(change_file);
-      }
-
-      const next_version = app.versioning.bump({
-        version: app.current_version,
-        changes: change_files,
-        date: new Date(),
-      });
-
-      releases.push({
-        app,
-        changes: change_files,
-        next_version,
-      });
-    }
-
-    if (releases.length === 0) {
+    if (filtered_applications.length === 0) {
       return {
         status: "success" as const,
         message: "No apps to release",
       };
     }
 
-    for (const release of releases) {
-      const { app, changes, next_version } = release;
+    for (const app of filtered_applications) {
+      const changes = await find_change_files(join(config.changes_dir, app.name), {
+        allowed_kinds: app.versioning.allowed_changes,
+      });
+
+      if (changes.warnings.length > 0) {
+        for (const warning of changes.warnings) {
+          logger.warn(warning);
+        }
+      }
+
+      const next_version = app.versioning.bump({
+        version: app.current_version,
+        changes: changes.list,
+        date: new Date(),
+      });
 
       // Group changes by kind
       const changes_by_kind = new Map<string, Array<ChangeFile<any>>>();
-      for (const change of changes) {
+      for (const change of changes.list) {
         const existing = changes_by_kind.get(change.kind) ?? [];
         existing.push(change);
         changes_by_kind.set(change.kind, existing);
@@ -114,25 +86,24 @@ export const generate_release = create_command({
       }
 
       logger.note(`Release ${app.name} ${next_version}`, message_lines.join("\n"));
-    }
 
-    if (dry_run) {
-      return {
-        status: "success" as const,
-        message: "Dry run completed - no changes were made",
-      };
-    }
+      if (dry_run) {
+        continue;
+      }
 
-    for (const release of releases) {
-      const { app, changes, next_version } = release;
+      // delete change files
+      for (const change of changes.list) {
+        const relative_path = relative(root, change.filename);
+        await fs.delete_file(relative_path);
+      }
 
       // run all component updates
       for (const component of app.components) {
         for (const part of component.parts) {
           const relative_path = relative(root, part.file);
-          const initial_content = await readFile(relative_path, "utf-8");
+          const initial_content = await fs.read_file(relative_path);
           const updated_content = part.update_version(initial_content, next_version);
-          await writeFile(relative_path, updated_content);
+          await fs.write_file(relative_path, updated_content);
         }
         // TODO: implement component "after" hook
       }
@@ -141,7 +112,7 @@ export const generate_release = create_command({
 
       // update changelog
       const changelog_relative_path = relative(root, app.changelog);
-      const initial_changelog_content = await readFile(changelog_relative_path, "utf-8");
+      const initial_changelog_content = await fs.read_file(changelog_relative_path);
       const changelog_as_mdast = fromMarkdown(initial_changelog_content, {
         extensions: [gfm()],
         mdastExtensions: [gfmFromMarkdown()],
@@ -150,15 +121,14 @@ export const generate_release = create_command({
       const updated_changelog_content = formatter.format_changelog({
         ...changelog,
         releases: [
-          { version: next_version, changes },
+          { version: next_version, changes: changes.list },
           ...changelog.releases.filter((release) => release.version !== next_version),
         ].sort((a, b) => app.versioning.compare(a.version, b.version)),
       });
-      await writeFile(changelog_relative_path, updated_changelog_content);
+      await fs.write_file(changelog_relative_path, updated_changelog_content);
 
-      // git diff
+      // git diff then reset
       const file_operations = await git.diff(root);
-      // git reset
       await git.reset(root);
 
       const platform = config.git.platform;
@@ -169,19 +139,19 @@ export const generate_release = create_command({
         branch_name: release_branch_name,
         base_branch_name: config.git.default_target_branch,
         file_operations,
-        commit_message: `chore: release ${app.name} ${next_version}`,
+        commit_message: `release: ${app.name}@${next_version}`,
       });
 
       // create or update PR
       await platform.create_or_update_pull_request({
         head_branch_name: release_branch_name,
         base_branch_name: config.git.default_target_branch,
-        title: `chore: release ${app.name} ${next_version}`,
+        title: `release: ${app.name}@${next_version}`,
         body: formatter.generate_pr_body({
           app: { name: app.name },
           current_version: app.current_version,
           next_version,
-          changes,
+          changes: changes.list,
         }),
         draft: true,
       });
