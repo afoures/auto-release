@@ -4,7 +4,7 @@ import { find_nearest_config } from "../config.ts";
 import type { ManagedApplication } from "../types.ts";
 import { join } from "node:path";
 import * as fs from "../utils/fs.ts";
-import { ChangeFile } from "../change-file.ts";
+import { find_change_files } from "../change-file.ts";
 
 async function verify_component_version_consistency(
   app: ManagedApplication,
@@ -36,22 +36,20 @@ async function validate_changes_files_content(
   changes_dir: string,
   app: ManagedApplication,
 ): Promise<{ ok: true } | { ok: false; errors: string[] }> {
-  const changes_dir_path = join(changes_dir, app.name);
-  const files = await fs.list_files(changes_dir_path);
-
   const errors: string[] = [];
-  for (const file of files) {
-    const change_file_or_error = await ChangeFile.from_file(file);
-    if (change_file_or_error instanceof Error) {
-      errors.push(`change file ${file} is invalid: ${change_file_or_error.message}`);
-      continue;
+  const change_files = await find_change_files(join(changes_dir, app.name), {
+    allowed_kinds: app.versioning.allowed_changes,
+  });
+
+  if (change_files.warnings.length > 0) {
+    for (const warning of change_files.warnings) {
+      errors.push(warning);
     }
-    const change_file = change_file_or_error;
-    if (!app.versioning.allowed_changes.includes(change_file.kind)) {
-      errors.push(`change file ${file} has an invalid kind: ${change_file.kind}`);
-    }
+  }
+
+  for (const change_file of change_files.list) {
     if (change_file.summary.length === 0) {
-      errors.push(`change file ${file} has no summary`);
+      errors.push(`change file ${change_file.filename} has no summary`);
     }
   }
 
