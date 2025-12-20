@@ -60,7 +60,7 @@ export default define_config({
       owner: process.env.GITHUB_OWNER!,
       repo: process.env.GITHUB_REPO!,
     }),
-    default_target_branch: "main",
+    target_branch: "main",
   },
   apps: {
     "custom-app": {

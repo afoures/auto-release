@@ -35,7 +35,7 @@ export interface AutoReleaseConfig {
   changes_dir?: string;
   git: {
     platform: GitPlatformClient;
-    default_target_branch?: string;
+    target_branch?: string;
     default_release_branch_prefix?: string;
   };
   apps: Record<string, AppDefinition>;

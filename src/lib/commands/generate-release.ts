@@ -9,6 +9,7 @@ import * as git from "../utils/git.ts";
 import * as fs from "../utils/fs.ts";
 import { compute_current_version } from "../utils/version.ts";
 import { ChangeFile, find_change_files } from "../change-file.ts";
+import { check_branch_protection } from "../utils/branch-protection.ts";
 
 export const generate_release = create_command({
   name: "generate-release",
@@ -37,6 +38,15 @@ export const generate_release = create_command({
   },
   run: async ({ args: { filter, "dry-run": dry_run = false }, context: { config, root } }) => {
     const logger = create_logger();
+
+    // Check branch protection
+    const branch_check = await check_branch_protection(root, config.git.target_branch);
+    if (!branch_check.ok) {
+      return {
+        status: "error" as const,
+        error: branch_check.error,
+      };
+    }
 
     const filtered_applications = filter
       ? config.managed_applications.filter((app) => filter.includes(app.name))
@@ -146,7 +156,7 @@ export const generate_release = create_command({
       // create or update branch
       await platform.create_or_update_branch({
         branch_name: release_branch_name,
-        base_branch_name: config.git.default_target_branch,
+        base_branch_name: config.git.target_branch,
         file_operations,
         commit_message: `chore: prepare release ${app.name}@${next_version}`,
       });
@@ -154,7 +164,7 @@ export const generate_release = create_command({
       // create or update PR
       await platform.create_or_update_pull_request({
         head_branch_name: release_branch_name,
-        base_branch_name: config.git.default_target_branch,
+        base_branch_name: config.git.target_branch,
         title: `chore: prepare release ${app.name}@${next_version}`,
         body: formatter.generate_pr_body({
           app: { name: app.name },

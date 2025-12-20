@@ -51,7 +51,7 @@ export default define_config({
       owner: 'your-org',
       repo: 'your-repo',
     }),
-    default_target_branch: 'main',
+    target_branch: 'main',
   },
   apps: {
     'my-app': {
@@ -108,7 +108,7 @@ export default define_config({
       repo: 'your-repo',
     }),
     // Optional: Default target branch for PRs and releases (default: 'main')
-    default_target_branch: 'main',
+    target_branch: 'main',
     // Optional: Release branch prefix (default: 'release')
     default_release_branch_prefix: 'release',
   },
