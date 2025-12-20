@@ -7,6 +7,7 @@ import { gfmFromMarkdown } from "mdast-util-gfm";
 import { gfm } from "micromark-extension-gfm";
 import * as git from "../utils/git.ts";
 import * as fs from "../utils/fs.ts";
+import { compute_current_version } from "../utils/version.ts";
 import { ChangeFile, find_change_files } from "../change-file.ts";
 
 export const generate_release = create_command({
@@ -59,8 +60,13 @@ export const generate_release = create_command({
         }
       }
 
+      const current_version =
+        (await compute_current_version(app, {
+          get_file_content: (file_path: string) => fs.read_file(file_path),
+        })) ?? app.versioning.initial_version;
+
       const next_version = app.versioning.bump({
-        version: app.current_version,
+        version: current_version,
         changes: changes.list,
         date: new Date(),
       });
@@ -102,6 +108,9 @@ export const generate_release = create_command({
         for (const part of component.parts) {
           const relative_path = relative(root, part.file);
           const initial_content = await fs.read_file(relative_path);
+          if (initial_content === null) {
+            continue;
+          }
           const updated_content = part.update_version(initial_content, next_version);
           await fs.write_file(relative_path, updated_content);
         }
@@ -112,7 +121,7 @@ export const generate_release = create_command({
 
       // update changelog
       const changelog_relative_path = relative(root, app.changelog);
-      const initial_changelog_content = await fs.read_file(changelog_relative_path);
+      const initial_changelog_content = (await fs.read_file(changelog_relative_path)) ?? "";
       const changelog_as_mdast = fromMarkdown(initial_changelog_content, {
         extensions: [gfm()],
         mdastExtensions: [gfmFromMarkdown()],
@@ -149,7 +158,7 @@ export const generate_release = create_command({
         title: `chore: prepare release ${app.name}@${next_version}`,
         body: formatter.generate_pr_body({
           app: { name: app.name },
-          current_version: app.current_version,
+          current_version,
           next_version,
           changes: changes.list,
         }),

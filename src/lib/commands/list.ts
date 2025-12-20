@@ -1,6 +1,8 @@
 import { create_logger } from "../utils/logger.ts";
 import { create_command } from "../cli.ts";
 import { find_nearest_config } from "../config.ts";
+import { compute_current_version } from "../utils/version.ts";
+import * as fs from "../utils/fs.ts";
 import { relative } from "node:path";
 
 export const list = create_command({
@@ -35,12 +37,12 @@ export const list = create_command({
     logger.info("");
 
     for (const app of config.managed_applications) {
-      let version: string;
-      try {
-        version = app.current_version;
-      } catch (error: any) {
-        warnings.push(`${app.name} has no version: ${error.message}`);
-        version = `unknown`;
+      const version = await compute_current_version(app, {
+        get_file_content: (file_path: string) => fs.read_file(file_path),
+      });
+      if (version === null) {
+        warnings.push(`${app.name} has no version`);
+        continue;
       }
 
       const parts = app.components.flatMap((component) =>

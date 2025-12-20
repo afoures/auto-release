@@ -65,6 +65,7 @@ export function semver<
 
   return {
     allowed_changes,
+    initial_version: "0.0.0",
     formatter,
     display_map,
     compare(version_a, version_b) {

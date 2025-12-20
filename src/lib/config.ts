@@ -1,8 +1,7 @@
-import { constants, readFileSync } from "node:fs";
-import { access } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 import { dirname, isAbsolute, resolve } from "node:path";
 import type { AutoReleaseConfig, GitPlatformClient, ManagedApplication } from "./types.ts";
+import * as fs from "./utils/fs.ts";
 
 export function define_config<const config extends AutoReleaseConfig>(
   config: config,
@@ -59,37 +58,10 @@ export class InternalConfig {
     return Object.entries(this.#config.apps).map(([name, definition]) => {
       const components = definition.components.map((component) => component(this.folder));
 
-      let current_version: string | undefined;
-      function get_current_version(): string {
-        if (current_version) {
-          return current_version;
-        }
-        const versions = new Set<string>();
-        for (const component of components) {
-          for (const part of component.parts) {
-            const file_content = readFileSync(part.file, "utf-8");
-            versions.add(part.get_current_version(file_content));
-          }
-        }
-        if (versions.size === 0) {
-          throw new Error(`App "${name}" has no components`);
-        }
-        if (versions.size > 1) {
-          throw new Error(
-            `App "${name}" has mismatched versions: ${Array.from(versions).join(", ")}`,
-          );
-        }
-        current_version = versions.values().next().value as string;
-        return current_version;
-      }
-
       return {
         name,
         ...definition,
         components,
-        get current_version(): string {
-          return get_current_version();
-        },
       };
     });
   }
@@ -136,20 +108,11 @@ const CONFIG_CANDIDATES = [
   "auto-release.config.cjs",
 ] as const;
 
-async function path_exists(path: string): Promise<boolean> {
-  try {
-    await access(path, constants.F_OK);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 async function find_git_root(start_dir: string): Promise<string | undefined> {
   let current_dir = start_dir;
   while (true) {
     const git_dir = resolve(current_dir, ".git");
-    if (await path_exists(git_dir)) {
+    if (await fs.exists(git_dir)) {
       return current_dir;
     }
     const parent_dir = dirname(current_dir);
@@ -168,7 +131,7 @@ async function find_config_candidate(
   while (true) {
     for (const candidate of CONFIG_CANDIDATES) {
       const candidate_path = resolve(current_dir, candidate);
-      if (await path_exists(candidate_path)) {
+      if (await fs.exists(candidate_path)) {
         return candidate_path;
       }
     }
@@ -195,7 +158,7 @@ async function resolve_config_path(options?: {
 
   if (explicit_path) {
     const resolved_explicit = resolve(cwd, explicit_path);
-    const exists = await path_exists(resolved_explicit);
+    const exists = await fs.exists(resolved_explicit);
     if (!exists) {
       throw new Error(`Config file not found at ${resolved_explicit}`);
     }

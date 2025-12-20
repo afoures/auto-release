@@ -55,5 +55,4 @@ export type ManagedApplication = {
   components: Array<ResolvedComponent>;
   versioning: VersionManager;
   changelog: string;
-  current_version: string;
 };

@@ -69,6 +69,7 @@ export type VersionManager<
   },
 > = {
   allowed_changes: readonly change_kind[];
+  initial_version: string;
   compare(a: string, b: string): -1 | 0 | 1;
   validate({ version }: { version: string }): boolean;
   bump(args: { version: string; changes: Array<ChangeFile<change_kind>>; date: Date }): string;

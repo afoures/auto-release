@@ -1,17 +1,25 @@
+import { constants } from "node:fs";
 import { access, mkdir, readdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
 export async function exists(path: string): Promise<boolean> {
   try {
-    await access(path);
+    await access(path, constants.F_OK);
     return true;
   } catch {
     return false;
   }
 }
 
-export async function read_file(file: string): Promise<string> {
-  return readFile(file, "utf-8");
+export async function read_file(file: string): Promise<string | null> {
+  if (!(await exists(file))) {
+    return null;
+  }
+  try {
+    return await readFile(file, "utf-8");
+  } catch {
+    return null;
+  }
 }
 
 export async function write_file(file: string, content: string): Promise<void> {

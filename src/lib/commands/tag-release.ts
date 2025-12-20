@@ -3,6 +3,7 @@ import { create_command } from "../cli.ts";
 import { find_nearest_config } from "../config.ts";
 import type { ManagedApplication } from "../types.ts";
 import * as git from "../utils/git.ts";
+import { compute_current_version } from "../utils/version.ts";
 import { relative } from "node:path";
 
 /**
@@ -13,57 +14,30 @@ async function get_app_version_at_revision(
   root: string,
   revision: string,
 ): Promise<{ ok: true; version: string } | { ok: false; error: string }> {
-  const versions = new Set<string>();
+  try {
+    const version =
+      (await compute_current_version(app, {
+        get_file_content: (file_path: string) => {
+          const relative_path = relative(root, file_path);
+          return git.read_file_at_revision(root, revision, relative_path);
+        },
+      })) ?? app.versioning.initial_version;
 
-  for (const component of app.components) {
-    for (const part of component.parts) {
-      const relative_path = relative(root, part.file);
-      const file_content = await git.read_file_at_revision(root, revision, relative_path);
-
-      if (file_content === null) {
-        return {
-          ok: false,
-          error: `File ${relative_path} does not exist at revision ${revision}`,
-        };
-      }
-
-      try {
-        const version = part.get_current_version(file_content);
-        versions.add(version);
-      } catch (error: any) {
-        return {
-          ok: false,
-          error: `Failed to extract version from ${relative_path} at ${revision}: ${error.message}`,
-        };
-      }
+    // Validate version format
+    if (!app.versioning.validate({ version })) {
+      return {
+        ok: false,
+        error: `Invalid version format for ${app.name} at revision ${revision}: ${version}`,
+      };
     }
-  }
 
-  if (versions.size === 0) {
+    return { ok: true, version };
+  } catch (error: any) {
     return {
       ok: false,
-      error: `Application ${app.name} has no version sources at revision ${revision}`,
+      error: `Failed to get version for ${app.name} at revision ${revision}: ${error.message}`,
     };
   }
-
-  if (versions.size > 1) {
-    return {
-      ok: false,
-      error: `Application ${app.name} has mismatched versions at revision ${revision}: ${Array.from(versions).join(", ")}`,
-    };
-  }
-
-  const version = versions.values().next().value as string;
-
-  // Validate version format
-  if (!app.versioning.validate({ version })) {
-    return {
-      ok: false,
-      error: `Invalid version format for ${app.name} at revision ${revision}: ${version}`,
-    };
-  }
-
-  return { ok: true, version };
 }
 
 export const tag_release = create_command({

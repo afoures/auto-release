@@ -12,6 +12,9 @@ async function get_editor_preference(changes_dir: string): Promise<string | null
   if (await exists(prefs_path)) {
     try {
       const content = await read_file(prefs_path);
+      if (content === null) {
+        return null;
+      }
       const prefs = JSON.parse(content);
       return prefs.editor || null;
     } catch {

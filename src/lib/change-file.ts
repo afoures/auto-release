@@ -52,6 +52,9 @@ export async function parse_change_file<kind extends string>(
     return new Error(`Invalid change filename format: ${path} (expected: <kind>.<slug>.md)`);
   }
   const content = await fs.read_file(path);
+  if (content === null) {
+    return new Error(`Change file is missing: ${path}`);
+  }
   const lines = content.split("\n");
   const non_empty_lines = lines.filter((line) => line.trim() !== "");
 
