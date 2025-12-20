@@ -117,7 +117,7 @@ Git operations are abstracted through the `GitPlatformClient` interface, support
 - GitLab (via REST API)
 - Extensible for other providers
 
-All provider calls use `config.git.default_target_branch` consistently.
+All provider calls use `config.git.target_branch` consistently.
 
 ## Development Workflow
 

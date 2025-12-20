@@ -72,7 +72,7 @@ describe("tag-release", () => {
     managed_applications: [mock_app],
     git: {
       platform: mock_platform,
-      default_target_branch: "main",
+      target_branch: "main",
       default_release_branch_prefix: "release",
     },
     changes_dir: ".changes",

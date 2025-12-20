@@ -44,12 +44,12 @@ export class InternalConfig {
 
   get git(): {
     platform: GitPlatformClient;
-    default_target_branch: string;
+    target_branch: string;
     default_release_branch_prefix: string;
   } {
     return {
       platform: this.#config.git.platform,
-      default_target_branch: this.#config.git.default_target_branch || "main",
+      target_branch: this.#config.git.target_branch || "main",
       default_release_branch_prefix: this.#config.git.default_release_branch_prefix || "release",
     };
   }

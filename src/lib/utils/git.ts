@@ -188,3 +188,25 @@ export async function read_file_at_revision(
     return null;
   }
 }
+
+/**
+ * Get the current git branch name
+ *
+ * Returns the branch name or null if not in a git repository or detached HEAD
+ */
+export async function get_current_branch(cwd?: string): Promise<string | null> {
+  const options = cwd ? { cwd } : undefined;
+  try {
+    // Try to get branch name from symbolic-ref first (works for normal branches)
+    try {
+      const { stdout } = await exec("git symbolic-ref --short HEAD", options);
+      return stdout.trim();
+    } catch {
+      // If symbolic-ref fails, try to get branch from git branch --show-current
+      const { stdout } = await exec("git branch --show-current", options);
+      return stdout.trim() ?? null;
+    }
+  } catch {
+    return null;
+  }
+}

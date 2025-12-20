@@ -18,7 +18,7 @@ describe("define_config", () => {
       },
       git: {
         platform: github({ token: "test", owner: "test", repo: "test" }),
-        default_target_branch: "main",
+        target_branch: "main",
       },
     });
 
@@ -41,7 +41,7 @@ describe("define_config", () => {
       },
       git: {
         platform: github({ token: "test", owner: "test", repo: "test" }),
-        default_target_branch: "main",
+        target_branch: "main",
       },
     });
 
@@ -90,7 +90,7 @@ describe("define_config", () => {
       },
       git: {
         platform: github({ token: "test", owner: "test", repo: "test" }),
-        default_target_branch: "main",
+        target_branch: "main",
       },
     });
 
