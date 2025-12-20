@@ -210,3 +210,82 @@ export async function get_current_branch(cwd?: string): Promise<string | null> {
     return null;
   }
 }
+
+/**
+ * Check if there are any uncommitted changes (staged or unstaged)
+ *
+ * Returns true if there are uncommitted changes, false otherwise
+ */
+export async function has_uncommitted_changes(cwd?: string): Promise<boolean> {
+  const options = cwd ? { cwd } : undefined;
+  try {
+    const { stdout } = await exec("git status --porcelain", options);
+    return stdout.trim().length > 0;
+  } catch {
+    // If git status fails, assume there might be changes
+    return true;
+  }
+}
+
+/**
+ * Stage specific files in the working directory
+ */
+export async function stage_files(file_paths: string[], cwd?: string): Promise<void> {
+  const options = cwd ? { cwd } : undefined;
+  if (file_paths.length === 0) {
+    return;
+  }
+  // Escape file paths and join them
+  const escaped_paths = file_paths.map((path) => JSON.stringify(path)).join(" ");
+  await exec(`git add ${escaped_paths}`, options);
+}
+
+/**
+ * Create a git commit with the given message
+ */
+export async function commit(message: string, cwd?: string): Promise<void> {
+  const options = cwd ? { cwd } : undefined;
+  await exec(`git commit -m ${JSON.stringify(message)}`, options);
+}
+
+/**
+ * Create a git tag with the given name and message
+ */
+export async function create_tag(tag: string, message: string, cwd?: string): Promise<void> {
+  const options = cwd ? { cwd } : undefined;
+  await exec(`git tag -a ${tag} -m ${JSON.stringify(message)}`, options);
+}
+
+/**
+ * Check if a git tag exists
+ */
+export async function tag_exists(tag: string, cwd?: string): Promise<boolean> {
+  const options = cwd ? { cwd } : undefined;
+  try {
+    await exec(`git rev-parse ${tag}`, options);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Get the staged diff (changes that will be committed)
+ */
+export async function get_staged_diff(cwd?: string): Promise<string> {
+  const options = cwd ? { cwd } : undefined;
+  try {
+    const { stdout } = await exec("git diff --cached --stat", options);
+    return stdout.trim();
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Unstage all staged files
+ */
+export async function reset_staged(cwd?: string): Promise<void> {
+  const options = cwd ? { cwd } : undefined;
+  await exec("git reset HEAD", options);
+}
