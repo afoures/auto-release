@@ -3,7 +3,6 @@ import { tag_release } from "../src/lib/commands/tag-release.ts";
 import type { GitPlatformClient } from "../src/lib/providers/types.ts";
 import type { ManagedApplication } from "../src/lib/types.ts";
 import { semver } from "../src/lib/versioning/semantic.ts";
-import { node } from "../src/lib/components/node.ts";
 
 // Mock git utilities
 vi.mock("../src/lib/utils/git.ts", () => {
@@ -67,7 +66,6 @@ describe("tag-release", () => {
     ],
     versioning: semver(),
     changelog: "CHANGELOG.md",
-    current_version: "1.0.0",
   };
 
   const mock_config = {
@@ -97,17 +95,19 @@ describe("tag-release", () => {
     });
 
     const context = await tag_release.get_context({
-      args: {},
+      args: { config: undefined, "dry-run": false },
       cwd: "/tmp/repo",
     });
 
     const result = await tag_release.run({
-      args: { "dry-run": false },
+      args: { config: undefined, "dry-run": false },
       context,
     });
 
     expect(result.status).toBe("success");
-    expect(result.message).toContain("no parent commit");
+    if (result.status === "success") {
+      expect(result.message).toContain("no parent commit");
+    }
     expect(mock_platform.create_tag).not.toHaveBeenCalled();
     expect(mock_platform.create_release).not.toHaveBeenCalled();
   });
@@ -122,17 +122,19 @@ describe("tag-release", () => {
     vi.mocked(git.read_file_at_revision).mockResolvedValue('{"version": "1.0.0"}');
 
     const context = await tag_release.get_context({
-      args: {},
+      args: { config: undefined, "dry-run": false },
       cwd: "/tmp/repo",
     });
 
     const result = await tag_release.run({
-      args: { "dry-run": false },
+      args: { config: undefined, "dry-run": false },
       context,
     });
 
     expect(result.status).toBe("success");
-    expect(result.message).toContain("No version changes detected");
+    if (result.status === "success") {
+      expect(result.message).toContain("No version changes detected");
+    }
     expect(mock_platform.create_tag).not.toHaveBeenCalled();
     expect(mock_platform.create_release).not.toHaveBeenCalled();
   });
@@ -156,17 +158,19 @@ describe("tag-release", () => {
     });
 
     const context = await tag_release.get_context({
-      args: {},
+      args: { config: undefined, "dry-run": false },
       cwd: "/tmp/repo",
     });
 
     const result = await tag_release.run({
-      args: { "dry-run": false },
+      args: { config: undefined, "dry-run": false },
       context,
     });
 
     expect(result.status).toBe("success");
-    expect(result.message).toContain("Tagged 1 app");
+    if (result.status === "success") {
+      expect(result.message).toContain("Tagged 1 app");
+    }
     expect(mock_platform.create_tag).toHaveBeenCalledWith({
       tag: "test-app@1.1.0",
       commit_sha: "abc123",
@@ -199,18 +203,20 @@ describe("tag-release", () => {
     });
 
     const context = await tag_release.get_context({
-      args: {},
+      args: { config: undefined, "dry-run": false },
       cwd: "/tmp/repo",
     });
 
     const result = await tag_release.run({
-      args: { "dry-run": false },
+      args: { config: undefined, "dry-run": false },
       context,
     });
 
     expect(result.status).toBe("success");
-    expect(mock_platform.create_tag).not.toHaveBeenCalled();
-    expect(mock_platform.create_release).not.toHaveBeenCalled();
+    if (result.status === "success") {
+      expect(mock_platform.create_tag).not.toHaveBeenCalled();
+      expect(mock_platform.create_release).not.toHaveBeenCalled();
+    }
   });
 
   it("should return error if tag exists on different commit", async () => {
@@ -231,17 +237,19 @@ describe("tag-release", () => {
     });
 
     const context = await tag_release.get_context({
-      args: {},
+      args: { config: undefined, "dry-run": false },
       cwd: "/tmp/repo",
     });
 
     const result = await tag_release.run({
-      args: { "dry-run": false },
+      args: { config: undefined, "dry-run": false },
       context,
     });
 
     expect(result.status).toBe("error");
-    expect(result.error).toContain("already exists but points to different commit");
+    if (result.status === "error") {
+      expect(result.error).toContain("already exists but points to different commit");
+    }
     expect(mock_platform.create_tag).not.toHaveBeenCalled();
     expect(mock_platform.create_release).not.toHaveBeenCalled();
   });
@@ -263,69 +271,86 @@ describe("tag-release", () => {
     });
 
     const context = await tag_release.get_context({
-      args: {},
+      args: { config: undefined, "dry-run": false },
       cwd: "/tmp/repo",
     });
 
     const result = await tag_release.run({
-      args: { "dry-run": true },
+      args: { config: undefined, "dry-run": true },
       context,
     });
 
     expect(result.status).toBe("success");
-    expect(result.message).toContain("Dry run completed");
+    if (result.status === "success") {
+      expect(result.message).toContain("Dry run completed");
+    }
     expect(mock_platform.create_tag).not.toHaveBeenCalled();
     expect(mock_platform.create_release).not.toHaveBeenCalled();
   });
 
-  it("should return error if HEAD version cannot be read", async () => {
+  it("should use initial version when HEAD version cannot be read", async () => {
     vi.mocked(git.get_head_and_parent_shas).mockResolvedValue({
       head_sha: "abc123",
       parent_sha: "def456",
     });
 
     vi.mocked(git.read_file_at_revision).mockResolvedValue(null);
+    vi.mocked(mock_platform.get_tag).mockResolvedValue(null);
 
     const context = await tag_release.get_context({
-      args: {},
+      args: { config: undefined, "dry-run": false },
       cwd: "/tmp/repo",
     });
 
     const result = await tag_release.run({
-      args: { "dry-run": false },
+      args: { config: undefined, "dry-run": false },
       context,
     });
 
-    expect(result.status).toBe("error");
-    expect(result.error).toContain("Failed to get HEAD version");
+    // When files can't be read, it uses initial_version (0.0.0)
+    // If base also uses 0.0.0, no version change is detected
+    expect(result.status).toBe("success");
+    if (result.status === "success") {
+      expect(result.message).toContain("No version changes detected");
+    }
   });
 
-  it("should return error if base version cannot be read", async () => {
+  it("should use initial version when base version cannot be read", async () => {
     vi.mocked(git.get_head_and_parent_shas).mockResolvedValue({
       head_sha: "abc123",
       parent_sha: "def456",
     });
+    vi.mocked(mock_platform.get_tag).mockResolvedValue(null);
 
     vi.mocked(git.read_file_at_revision).mockImplementation(async (_cwd, revision) => {
       if (revision === "abc123") {
         return '{"version": "1.1.0"}';
       }
-      // Base revision returns null
+      // Base revision returns null, will use initial_version (0.0.0)
       return null;
     });
 
     const context = await tag_release.get_context({
-      args: {},
+      args: { config: undefined, "dry-run": false },
       cwd: "/tmp/repo",
     });
 
     const result = await tag_release.run({
-      args: { "dry-run": false },
+      args: { config: undefined, "dry-run": false },
       context,
     });
 
-    expect(result.status).toBe("error");
-    expect(result.error).toContain("Failed to get base version");
+    // HEAD version is 1.1.0, base version falls back to 0.0.0 (initial_version)
+    // So version change is detected: 0.0.0 -> 1.1.0
+    expect(result.status).toBe("success");
+    if (result.status === "success") {
+      expect(result.message).toContain("Tagged 1 app");
+    }
+    expect(mock_platform.create_tag).toHaveBeenCalledWith({
+      tag: "test-app@1.1.0",
+      commit_sha: "abc123",
+      message: "release: test-app@1.1.0",
+    });
   });
 
   it("should handle multiple apps with version changes", async () => {
@@ -354,7 +379,6 @@ describe("tag-release", () => {
       ],
       versioning: semver(),
       changelog: "CHANGELOG2.md",
-      current_version: "2.0.0",
     };
 
     const multi_app_config = {
@@ -390,17 +414,19 @@ describe("tag-release", () => {
     });
 
     const context = await tag_release.get_context({
-      args: {},
+      args: { config: undefined, "dry-run": false },
       cwd: "/tmp/repo",
     });
 
     const result = await tag_release.run({
-      args: { "dry-run": false },
+      args: { config: undefined, "dry-run": false },
       context,
     });
 
     expect(result.status).toBe("success");
-    expect(result.message).toContain("Tagged 2 apps");
+    if (result.status === "success") {
+      expect(result.message).toContain("Tagged 2 apps");
+    }
     expect(mock_platform.create_tag).toHaveBeenCalledTimes(2);
     expect(mock_platform.create_release).toHaveBeenCalledTimes(2);
   });

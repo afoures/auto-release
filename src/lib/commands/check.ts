@@ -10,24 +10,27 @@ async function verify_component_version_consistency(
   app: ManagedApplication,
 ): Promise<{ ok: true } | { ok: false; errors: string[] }> {
   const versions = new Set<string>();
+  const errors: string[] = [];
   for (const component of app.components) {
     for (const part of component.parts) {
       const file_content = await fs.read_file(part.file);
+      if (file_content === null) {
+        errors.push(`component ${component.root} has no version`);
+        continue;
+      }
       const version = part.get_current_version(file_content);
       versions.add(version);
     }
   }
   if (versions.size === 0) {
-    return {
-      ok: false,
-      errors: [`application ${app.name} has no versions`],
-    };
+    errors.push(`application ${app.name} has no versions`);
+    return { ok: false, errors };
   }
   if (versions.size > 1) {
-    return {
-      ok: false,
-      errors: [`application ${app.name} has multiple versions: ${Array.from(versions).join(", ")}`],
-    };
+    errors.push(
+      `application ${app.name} has multiple versions: ${Array.from(versions).join(", ")}`,
+    );
+    return { ok: false, errors };
   }
   return { ok: true };
 }
@@ -79,7 +82,6 @@ export const check = create_command({
     const logger = create_logger();
 
     const errors: string[] = [];
-    const warnings: string[] = [];
 
     const config = context.config;
 
@@ -101,10 +103,6 @@ export const check = create_command({
     } else {
       logger.error("Validation failed:");
       errors.forEach((err) => logger.error(`  ${err}`));
-    }
-
-    if (warnings.length > 0) {
-      warnings.forEach((warn) => logger.warn(`  ${warn}`));
     }
 
     if (valid) {
