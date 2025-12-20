@@ -147,3 +147,44 @@ export async function reset(cwd?: string): Promise<void> {
   const options = cwd ? { cwd } : undefined;
   await exec("git reset --hard HEAD", options);
 }
+
+/**
+ * Get the SHA of the current HEAD commit and its first parent
+ *
+ * Returns both SHAs in a single call for efficiency
+ */
+export async function get_head_and_parent_shas(
+  cwd?: string,
+): Promise<{ head_sha: string; parent_sha: string | null }> {
+  const options = cwd ? { cwd } : undefined;
+  const head_sha = (await exec("git rev-parse HEAD", options)).stdout.trim();
+
+  let parent_sha: string | null = null;
+  try {
+    parent_sha = (await exec("git rev-parse HEAD^1", options)).stdout.trim();
+  } catch {
+    // HEAD has no parent (e.g., initial commit)
+    parent_sha = null;
+  }
+
+  return { head_sha, parent_sha };
+}
+
+/**
+ * Read file content at a specific git revision
+ *
+ * Returns null if the file doesn't exist at that revision
+ */
+export async function read_file_at_revision(
+  cwd: string | undefined,
+  revision: string,
+  file_path: string,
+): Promise<string | null> {
+  const options = cwd ? { cwd } : undefined;
+  try {
+    const { stdout } = await exec(`git show ${revision}:${file_path}`, options);
+    return stdout;
+  } catch {
+    return null;
+  }
+}

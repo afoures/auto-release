@@ -9,7 +9,7 @@ A Changesets-inspired release management tool for monorepos with app-centric ver
 - 🔄 **Flexible versioning**: Built-in semver and calver strategies, plus custom strategies
 - 📝 **Human-friendly changesets**: Markdown change files with validation
 - 📋 **Automated changelogs**: Generate formatted changelogs per app
-- 🚀 **Deployment integration**: Run commands or custom handlers with git tagging
+- 🏷️ **Git tagging**: Automatically create tags and releases when versions change
 - ✅ **CI-friendly**: Validation, dry-run modes, and JSON output
 
 ## Requirements
@@ -81,10 +81,10 @@ auto-release generate-release --dry-run
 auto-release release
 ```
 
-5. Deploy and tag:
+5. Tag releases (usually in CI after release PR merge):
 
 ```bash
-auto-release deploy
+auto-release tag-release
 ```
 
 ## Configuration
@@ -408,47 +408,37 @@ Options:
 - `--yes`: Skip confirmation prompt
 - `--config <path>`: Custom config file path
 
-**Note**: This command does NOT create git commits or tags. Use `deploy` for that.
+**Note**: This command does NOT create git commits or tags. Use `tag-release` for that.
 
-### `deploy`
+### `tag-release`
 
-Deploy apps and create git tags:
+Detect version changes and create git tags and releases:
 
 ```bash
-# Interactive (prompts for confirmation)
-auto-release deploy
+# Detect and tag version changes
+auto-release tag-release
 
-# With confirmation
-auto-release deploy --yes
-
-# Dry run
-auto-release deploy --dry-run
-
-# Specific app only
-auto-release deploy --app web-app
+# Dry run (show what would be done)
+auto-release tag-release --dry-run
 ```
 
 Actions performed:
 
-1. Reads current version from components
-2. Runs deployment command/handler for each app
-3. If ALL deployments succeed, creates git tags
-4. If ANY deployment fails, no tags are created
+1. Compares app versions between HEAD and HEAD^1 (parent commit)
+2. For each app with a version change, creates:
+   - A git tag in format `app_name@version` (e.g., `my-app@1.2.3`)
+   - A GitHub/GitLab release with changelog notes
+3. Skips apps that already have tags on the current commit (idempotent)
+4. Returns error if a tag exists but points to a different commit
 
 Options:
 
-- `--app <name>`: Filter by app name
-- `--dry-run`: Show plan without executing
-- `--yes`: Skip confirmation prompt
+- `--dry-run`: Show what would be done without making changes
 - `--config <path>`: Custom config file path
 
 **Tag format**: Always uses `app_name@version` format (not customizable)
 
-After successful deployment:
-
-```bash
-git push --tags
-```
+**Note**: Tags are created remotely via the git platform API. Local tags are also created as a best-effort, but remote tags take precedence. No need to run `git push --tags` - tags are already on the remote.
 
 ### Components
 
@@ -495,10 +485,9 @@ You can create custom components by implementing the `Component` interface.
    auto-release generate-release  # Create/update release PRs
    ```
 
-5. **Deploy** (usually in CI after release commit):
+5. **Tag releases** (usually in CI after release PR merge):
    ```bash
-   auto-release deploy
-   git push --tags
+   auto-release tag-release
    ```
 
 ### Recommended CI Setup
@@ -552,16 +541,13 @@ jobs:
           git commit -m "chore: release [skip ci]"
           git push
 
-      # Deploy and tag
+      # Tag releases (creates tags and releases on the platform)
       - if: steps.check-changes.outputs.has_changes == 'true'
-        run: pnpm auto-release deploy --yes
+        run: pnpm auto-release tag-release
         env:
           # Add any deployment secrets here
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      # Push tags
-      - if: steps.check-changes.outputs.has_changes == 'true'
-        run: git push --tags
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 ## Examples
@@ -585,7 +571,7 @@ See the [`examples/`](./examples) directory for complete configuration examples:
 Unlike traditional Changesets:
 
 - **App-focused** rather than package-focused
-- **Built-in deployment** support with git tagging
+- **Automatic tagging** when versions change
 - **Flexible strategies** beyond semver
 - **Simpler model** for multi-package apps
 

@@ -161,22 +161,30 @@ export function gitlab(options: GitLabOptions): GitPlatformClient {
       }
     },
 
-    async create_tag(args: {
-      tag: string;
-      commit: {
-        sha: string;
-        message: string;
-      };
-    }): Promise<any> {
-      const { tag, commit } = args;
+    async create_tag(args: { tag: string; commit_sha: string; message: string }): Promise<any> {
+      const { tag, commit_sha, message } = args;
       return await api_request("/repository/tags", {
         method: "POST",
         body: JSON.stringify({
           tag_name: tag,
-          ref: commit.sha,
-          message: commit.message,
+          ref: commit_sha,
+          message: message,
         }),
       });
+    },
+
+    async get_tag(args: { tag: string }): Promise<{ commit_sha: string } | null> {
+      const { tag } = args;
+      try {
+        const tag_info = await api_request(`/repository/tags/${encodeURIComponent(tag)}`);
+        return { commit_sha: tag_info.commit.id };
+      } catch (error: any) {
+        // Tag doesn't exist (404) or other error
+        if (error.message.includes("404")) {
+          return null;
+        }
+        throw error;
+      }
     },
 
     async create_release(args: {
