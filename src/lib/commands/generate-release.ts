@@ -79,6 +79,7 @@ export const generate_release = create_command({
         version: current_version,
         changes: changes.list,
         date: new Date(),
+        reason: "prepare-release",
       });
 
       // Group changes by kind

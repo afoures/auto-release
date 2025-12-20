@@ -65,6 +65,7 @@ export function markver<
 
   return {
     allowed_changes,
+    hotfix_allowed_changes: ["fix"] as const,
     initial_version: "0.0.0",
     formatter,
     display_map,
