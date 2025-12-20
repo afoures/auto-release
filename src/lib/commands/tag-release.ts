@@ -1,24 +1,82 @@
-import { relative } from "node:path";
 import { create_logger } from "../utils/logger.ts";
 import { create_command } from "../cli.ts";
 import { find_nearest_config } from "../config.ts";
 import type { ManagedApplication } from "../types.ts";
+import * as git from "../utils/git.ts";
+import { relative } from "node:path";
+
+/**
+ * Get the version of an app at a specific git revision
+ */
+async function get_app_version_at_revision(
+  app: ManagedApplication,
+  root: string,
+  revision: string,
+): Promise<{ ok: true; version: string } | { ok: false; error: string }> {
+  const versions = new Set<string>();
+
+  for (const component of app.components) {
+    for (const part of component.parts) {
+      const relative_path = relative(root, part.file);
+      const file_content = await git.read_file_at_revision(root, revision, relative_path);
+
+      if (file_content === null) {
+        return {
+          ok: false,
+          error: `File ${relative_path} does not exist at revision ${revision}`,
+        };
+      }
+
+      try {
+        const version = part.get_current_version(file_content);
+        versions.add(version);
+      } catch (error: any) {
+        return {
+          ok: false,
+          error: `Failed to extract version from ${relative_path} at ${revision}: ${error.message}`,
+        };
+      }
+    }
+  }
+
+  if (versions.size === 0) {
+    return {
+      ok: false,
+      error: `Application ${app.name} has no version sources at revision ${revision}`,
+    };
+  }
+
+  if (versions.size > 1) {
+    return {
+      ok: false,
+      error: `Application ${app.name} has mismatched versions at revision ${revision}: ${Array.from(versions).join(", ")}`,
+    };
+  }
+
+  const version = versions.values().next().value as string;
+
+  // Validate version format
+  if (!app.versioning.validate({ version })) {
+    return {
+      ok: false,
+      error: `Invalid version format for ${app.name} at revision ${revision}: ${version}`,
+    };
+  }
+
+  return { ok: true, version };
+}
 
 export const tag_release = create_command({
   name: "tag-release",
-  description: "Create git tags and releases after release PR merge",
+  description: "Detect version changes and create git tags and releases",
   schema: {
-    app: {
-      type: "string",
-      description: "App name (if not provided, will try to detect from branch)",
-    },
-    branch: {
-      type: "string",
-      description: "Branch name to detect app from (default: detect from git)",
-    },
     config: {
       type: "string",
       description: "Path to config file",
+    },
+    "dry-run": {
+      type: "boolean",
+      description: "Show what would be done without making changes",
     },
   },
   get_context: async ({ args, cwd }) => {
@@ -26,105 +84,129 @@ export const tag_release = create_command({
       config_path: args.config,
       cwd,
     });
-    return { config, git_root };
+    return { config, root: git_root || config.folder };
   },
-  run: async ({ args, context }) => {
-    const app_filter = args.app;
-    const branch_name = args.branch;
-    const config = context.config;
+  run: async ({ args: { "dry-run": dry_run = false }, context: { config, root } }) => {
     const logger = create_logger();
-    const platform = config.git.platform;
-    const release_branch_prefix = config.git.default_release_branch_prefix;
 
-    if (!context.git_root) {
+    // Get HEAD and parent commit SHAs
+    const { head_sha, parent_sha: base_sha } = await git.get_head_and_parent_shas(root);
+
+    if (base_sha === null) {
       return {
-        status: "error" as const,
-        error: "Could not determine git root",
+        status: "success" as const,
+        message: "HEAD has no parent commit - nothing to tag",
       };
     }
 
-    // Get default branch
-    const default_branch = config.git.default_target_branch;
-    let default_branch_sha: string;
-    try {
-      default_branch_sha = await platform.get_branch_sha(default_branch);
-    } catch (error: any) {
+    const changed_apps: Array<{
+      app: ManagedApplication;
+      head_version: string;
+      base_version: string;
+    }> = [];
+
+    // Detect apps with version changes
+    for (const app of config.managed_applications) {
+      const head_result = await get_app_version_at_revision(app, root, head_sha);
+      if (!head_result.ok) {
+        return {
+          status: "error" as const,
+          error: `Failed to get HEAD version for ${app.name}: ${head_result.error}`,
+        };
+      }
+
+      const base_result = await get_app_version_at_revision(app, root, base_sha);
+      if (!base_result.ok) {
+        return {
+          status: "error" as const,
+          error: `Failed to get base version for ${app.name}: ${base_result.error}`,
+        };
+      }
+
+      if (head_result.version !== base_result.version) {
+        changed_apps.push({
+          app,
+          head_version: head_result.version,
+          base_version: base_result.version,
+        });
+      }
+    }
+
+    if (changed_apps.length === 0) {
       return {
-        status: "error" as const,
-        error: `Failed to get branch SHA for ${default_branch}: ${error.message}`,
+        status: "success" as const,
+        message: "No version changes detected",
       };
     }
 
-    let target_apps: Array<ManagedApplication> = [];
-
-    // If app is specified, use it
-    if (app_filter) {
-      const app = config.managed_applications.find((item) => item.name === app_filter);
-      if (!app) {
-        return {
-          status: "error" as const,
-          error: `App "${app_filter}" not found in config`,
-        };
-      }
-      target_apps = [app];
-    } else if (branch_name) {
-      // Try to detect app from branch name
-      // Expected format: release/{app_name} or custom/{app_name}
-      const branch_parts = branch_name.split("/");
-      if (branch_parts.length >= 2) {
-        const app_name = branch_parts.slice(1).join("/"); // Handle nested app names
-        const app =
-          config.managed_applications.find((item) => item.name === app_name) ||
-          config.managed_applications.find(
-            (item) => `${release_branch_prefix}/${item.name}` === branch_name,
-          );
-        if (app) {
-          target_apps = [app];
-        }
-      }
-      if (target_apps.length === 0) {
-        return {
-          status: "error" as const,
-          error: `Could not detect app from branch "${branch_name}". Please specify --app`,
-        };
-      }
-    } else {
-      // No app or branch specified - publish all apps that have been released
-      // This is a fallback - ideally CI should pass branch name
-      logger.warn("No app or branch specified. Publishing all apps (this may not be intended)");
-      target_apps = config.managed_applications;
+    // Log detected changes
+    logger.info(`Detected version changes in ${changed_apps.length} app(s):`);
+    for (const { app, head_version, base_version } of changed_apps) {
+      logger.info(`  ${app.name}: ${base_version} → ${head_version}`);
     }
 
-    // Process each app
+    if (dry_run) {
+      logger.info("\nDry run - would create tags and releases:");
+      for (const { app, head_version } of changed_apps) {
+        const tag = `${app.name}@${head_version}`;
+        logger.info(`  - Tag: ${tag}`);
+        logger.info(`  - Release: ${tag}`);
+      }
+      return {
+        status: "success" as const,
+        message: "Dry run completed - no changes were made",
+      };
+    }
+
+    // Create tags and releases
+    const tagged_apps: string[] = [];
     const errors: string[] = [];
-    for (const app of target_apps) {
-      const app_name = app.name;
-      logger.info(`\nPublishing release for ${app_name}...`);
+
+    for (const { app, head_version } of changed_apps) {
+      const tag = `${app.name}@${head_version}`;
 
       try {
-        // Get current version from components
-        const current_version = app.current_version;
-        logger.info(`Version: ${current_version}`);
+        // Check if tag already exists via platform API (more reliable than local git)
+        const existing_tag = await config.git.platform.get_tag({ tag });
+        if (existing_tag !== null) {
+          if (existing_tag.commit_sha === head_sha) {
+            logger.info(`Tag ${tag} already exists on commit ${head_sha} - skipping`);
+            tagged_apps.push(tag);
+            continue;
+          } else {
+            errors.push(
+              `Tag ${tag} already exists but points to different commit (${existing_tag.commit_sha} vs ${head_sha})`,
+            );
+            continue;
+          }
+        }
 
-        // Get changelog content for release notes
-        const changelog_relative_path = relative(context.git_root, app.changelog);
-
-        const release_body = app.versioning.formatter.generate_release_notes({
-          app: { name: app.name, changelog: changelog_relative_path },
-          version: current_version,
+        // Create remote tag
+        await config.git.platform.create_tag({
+          tag,
+          commit_sha: head_sha,
+          message: `release: ${tag}`,
         });
 
-        // Create git tag
-        const tag_name = `${app_name}@${current_version}`;
-        await platform.create_tag(tag_name, default_branch_sha, release_body);
-        logger.success(`Created tag: ${tag_name}`);
-
         // Create release
-        const release_name = `${app_name} ${current_version}`;
-        await platform.create_release(tag_name, release_name, release_body);
-        logger.success(`Created release: ${release_name}`);
+        await config.git.platform.create_release({
+          tag,
+          release: {
+            name: tag,
+            body: app.versioning.formatter.generate_release_notes({
+              app: {
+                name: app.name,
+                changelog: app.changelog,
+              },
+              version: head_version,
+            }),
+          },
+        });
+
+        tagged_apps.push(tag);
+        logger.success(`Tagged and released ${tag}`);
       } catch (error: any) {
-        errors.push(`Failed to publish release for ${app_name}: ${error.message}`);
+        errors.push(`Failed to tag/release ${tag}: ${error.message}`);
       }
     }
 
@@ -135,10 +217,14 @@ export const tag_release = create_command({
       };
     }
 
-    logger.success("\n✨ Release published!");
+    const summary =
+      tagged_apps.length === 1
+        ? `Tagged 1 app: ${tagged_apps[0]}`
+        : `Tagged ${tagged_apps.length} apps: ${tagged_apps.join(", ")}`;
+
     return {
       status: "success" as const,
-      message: "Release published successfully",
+      message: summary,
     };
   },
 });

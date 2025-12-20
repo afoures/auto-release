@@ -139,14 +139,14 @@ export const generate_release = create_command({
         branch_name: release_branch_name,
         base_branch_name: config.git.default_target_branch,
         file_operations,
-        commit_message: `release: ${app.name}@${next_version}`,
+        commit_message: `chore: prepare release ${app.name}@${next_version}`,
       });
 
       // create or update PR
       await platform.create_or_update_pull_request({
         head_branch_name: release_branch_name,
         base_branch_name: config.git.default_target_branch,
-        title: `release: ${app.name}@${next_version}`,
+        title: `chore: prepare release ${app.name}@${next_version}`,
         body: formatter.generate_pr_body({
           app: { name: app.name },
           current_version: app.current_version,

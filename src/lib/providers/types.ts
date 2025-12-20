@@ -19,13 +19,13 @@ export interface GitPlatformClient {
     draft?: boolean;
   }): Promise<any>;
 
-  create_tag(args: {
-    tag: string;
-    commit: {
-      sha: string;
-      message: string;
-    };
-  }): Promise<any>;
+  create_tag(args: { tag: string; commit_sha: string; message: string }): Promise<any>;
+
+  /**
+   * Get tag information if it exists, including the commit SHA it points to
+   * Returns null if the tag doesn't exist
+   */
+  get_tag(args: { tag: string }): Promise<{ commit_sha: string } | null>;
 
   create_release(args: {
     tag: string;

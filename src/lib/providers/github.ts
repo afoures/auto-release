@@ -216,21 +216,15 @@ export function github(options: GitHubOptions): GitPlatformClient {
       }
     },
 
-    async create_tag(args: {
-      tag: string;
-      commit: {
-        sha: string;
-        message: string;
-      };
-    }): Promise<any> {
-      const { tag, commit } = args;
+    async create_tag(args: { tag: string; commit_sha: string; message: string }): Promise<any> {
+      const { tag, commit_sha, message } = args;
       // Create annotated tag
       const tag_obj = await api_request("/git/tags", {
         method: "POST",
         body: JSON.stringify({
           tag: tag,
-          message: commit.message,
-          object: commit.sha,
+          message: message,
+          object: commit_sha,
           type: "commit",
         }),
       });
@@ -245,6 +239,32 @@ export function github(options: GitHubOptions): GitPlatformClient {
       });
 
       return tag_obj;
+    },
+
+    async get_tag(args: { tag: string }): Promise<{ commit_sha: string } | null> {
+      const { tag } = args;
+      try {
+        // Get the tag ref
+        const ref = await api_request(`/git/ref/tags/${tag}`);
+
+        // Handle both annotated and lightweight tags
+        if (ref.object.type === "tag") {
+          // Annotated tag: need to get the tag object to find the commit SHA
+          const tag_obj = await api_request(`/git/tags/${ref.object.sha}`);
+          return { commit_sha: tag_obj.object.sha };
+        } else if (ref.object.type === "commit") {
+          // Lightweight tag: ref.object.sha is directly the commit SHA
+          return { commit_sha: ref.object.sha };
+        }
+
+        return null;
+      } catch (error: any) {
+        // Tag doesn't exist (404) or other error
+        if (error.message.includes("404")) {
+          return null;
+        }
+        throw error;
+      }
     },
 
     async create_release(args: {
