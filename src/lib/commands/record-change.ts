@@ -6,6 +6,7 @@ import { ChangeFile, save_change_file } from "../change-file.ts";
 import { exec } from "../utils/exec.ts";
 import { exists, read_file } from "../utils/fs.ts";
 import { spawn } from "node:child_process";
+import { humanId as human_id } from "human-id";
 
 async function get_editor_preference(changes_dir: string): Promise<string | null> {
   const prefs_path = join(changes_dir, ".preferences.json");
@@ -179,20 +180,11 @@ export const record_change = create_command({
       };
     }
 
+    const initial_slug = human_id({ separator: "-", capitalize: false });
+
     // Ask user for a description to generate slug
     const description_input = await text({
-      message: "Enter a short description for this change:",
-      validate: (value = "") => {
-        const trimmed = value.trim();
-        if (trimmed.length === 0) {
-          return "Description is required";
-        }
-        const slug = generate_slug(trimmed);
-        if (slug.length === 0) {
-          return "Description must contain at least one valid character";
-        }
-        return undefined;
-      },
+      message: `Enter a short description for this change: (default: "${initial_slug}")`,
     });
 
     if (isCancel(description_input)) {
@@ -203,7 +195,7 @@ export const record_change = create_command({
     }
 
     // Generate slug from description
-    const slug = generate_slug(description_input as string);
+    const slug = generate_slug(description_input as string) || initial_slug;
 
     // Create change file with empty content (user will edit it)
     const change_file = new ChangeFile({
