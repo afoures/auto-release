@@ -64,7 +64,6 @@ export function calver<
 
   return {
     allowed_changes,
-    hotfix_allowed_changes: ["fix"] as const,
     initial_version: "0.0.0",
     formatter,
     display_map,
@@ -85,8 +84,9 @@ export function calver<
     validate({ version }) {
       return CALVER_REGEX.test(version);
     },
-    bump({ version, changes, date, reason }): string {
+    bump({ version, changes, date }): string {
       const parsed = parse(version);
+
       const current_year = BigInt(date.getFullYear());
 
       let highest_type: CalendarChangeKind = "fix";
@@ -98,12 +98,7 @@ export function calver<
         }
       }
 
-      // For hotfixes, use the year of the current version instead of the current date's year
-      // This allows hotfixing older versions without changing the year
-      const year_to_use =
-        reason === "hotfix" && parsed.year !== current_year ? parsed.year : current_year;
-
-      if (parsed.year === year_to_use) {
+      if (parsed.year === current_year) {
         if (highest_type === "feature") {
           parsed.minor++;
           parsed.patch = 0n;
@@ -111,7 +106,7 @@ export function calver<
           parsed.patch++;
         }
       } else {
-        parsed.year = year_to_use;
+        parsed.year = current_year;
         parsed.minor = 1n;
         parsed.patch = 0n;
       }

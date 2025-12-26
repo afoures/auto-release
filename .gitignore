@@ -2,5 +2,5 @@ node_modules
 dist
 *.log
 .DS_Store
-.changes
+.changes/.preferences.json
 changelogs

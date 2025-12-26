@@ -65,7 +65,6 @@ export function semver<
 
   return {
     allowed_changes,
-    hotfix_allowed_changes: ["patch"] as const,
     initial_version: "0.0.0",
     formatter,
     display_map,
