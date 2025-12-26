@@ -1,18 +1,19 @@
-import { relative } from "node:path";
+import { join, relative } from "node:path";
 import { intro, log, cancel, confirm, select, text, isCancel, outro, note } from "@clack/prompts";
 import { create_command } from "../cli.ts";
 import { find_nearest_config } from "../config.ts";
-import { ChangeFile } from "../change-file.ts";
+import { find_change_files } from "../change-file.ts";
 import * as git from "../utils/git.ts";
 import * as fs from "../utils/fs.ts";
 import { compute_current_version } from "../utils/version.ts";
 import { fromMarkdown } from "mdast-util-from-markdown";
 import { gfmFromMarkdown } from "mdast-util-gfm";
 import { gfm } from "micromark-extension-gfm";
+import { is_ci } from "../utils/branch-protection.ts";
 
-export const hotfix = create_command({
-  name: "hotfix",
-  description: "Create a hotfix release from an old version branch",
+export const manual_release = create_command({
+  name: "manual-release",
+  description: "Create a manual release using change files on disk",
   schema: {
     config: {
       type: "string",
@@ -27,7 +28,40 @@ export const hotfix = create_command({
     return { config, root: git_root || config.folder };
   },
   run: async ({ context: { config, root } }) => {
-    intro("Create a hotfix release");
+    intro("Create a manual release");
+
+    // Prevent execution in CI
+    if (is_ci()) {
+      return {
+        status: "error" as const,
+        error:
+          "Manual release command cannot be run in CI environments. Use the automated release workflow instead.",
+      };
+    }
+
+    // Show warning about intended use
+    log.warn("⚠️  This command is not the intended use of the auto-release workflow.");
+    log.warn(
+      "⚠️  The recommended workflow is to use 'record-change' and 'generate-release' commands.",
+    );
+    const proceed_warning = await confirm({
+      message: "Do you want to proceed with manual release anyway?",
+      initialValue: false,
+    });
+
+    if (isCancel(proceed_warning)) {
+      cancel("Manual release cancelled");
+      return {
+        status: "success" as const,
+      };
+    }
+
+    if (!proceed_warning) {
+      return {
+        status: "error" as const,
+        error: "Manual release cancelled by user",
+      };
+    }
 
     // Check for uncommitted changes
     const has_changes = await git.has_uncommitted_changes(root);
@@ -35,7 +69,7 @@ export const hotfix = create_command({
       return {
         status: "error" as const,
         error:
-          "You have uncommitted changes. Please commit or stash them before creating a hotfix.",
+          "You have uncommitted changes. Please commit or stash them before creating a manual release.",
       };
     }
 
@@ -49,33 +83,6 @@ export const hotfix = create_command({
     }
     log.info(`Current branch: ${current_branch}`);
 
-    // Show hotfix instructions
-    log.info("Hotfix workflow:");
-    log.info("1. You should be on a branch based on an old version");
-    log.info("2. The hotfix will create a new version bump from the current version");
-    log.info("3. Changes will be committed and tagged locally");
-    log.info("4. You'll need to push and merge to main branch");
-
-    // Confirm branch is based on old version
-    const branch_confirmation = await confirm({
-      message: "Are you currently working on a branch that was based on an old version?",
-      initialValue: false,
-    });
-
-    if (isCancel(branch_confirmation)) {
-      cancel("Hotfix cancelled");
-      return {
-        status: "success" as const,
-      };
-    }
-
-    if (!branch_confirmation) {
-      return {
-        status: "error" as const,
-        error: "Hotfix can only be created from a branch based on an old version",
-      };
-    }
-
     // Select app
     const app_names = config.managed_applications.map((app) => app.name);
     let app_name: string;
@@ -84,11 +91,11 @@ export const hotfix = create_command({
       log.success(`Defaulting to app: ${app_name}`);
     } else {
       const selected = await select({
-        message: "Select app to hotfix:",
+        message: "Select app to release:",
         options: app_names.map((name) => ({ value: name, label: name })),
       });
       if (isCancel(selected)) {
-        cancel("Hotfix cancelled");
+        cancel("Manual release cancelled");
         return {
           status: "success" as const,
         };
@@ -104,6 +111,26 @@ export const hotfix = create_command({
       };
     }
 
+    // Read change files from disk
+    const changes = await find_change_files(join(config.changes_dir, app_name), {
+      allowed_kinds: app.versioning.allowed_changes,
+    });
+
+    if (changes.warnings.length > 0) {
+      for (const warning of changes.warnings) {
+        log.warn(warning);
+      }
+    }
+
+    if (changes.list.length === 0) {
+      return {
+        status: "error" as const,
+        error: `No change files found for app ${app_name}. Use 'record-change' to create change files first.`,
+      };
+    }
+
+    log.success(`Found ${changes.list.length} change file(s)`);
+
     // Get current version
     const current_version =
       (await compute_current_version(app, {
@@ -112,94 +139,83 @@ export const hotfix = create_command({
 
     log.info(`Current version: ${current_version}`);
 
-    // Ask for hotfix description
-    const description_input = await text({
-      message: "Enter a description for this hotfix:",
+    // Calculate next version
+    const next_version = app.versioning.bump({
+      version: current_version,
+      changes: changes.list,
+      date: new Date(),
+    });
+
+    log.info(`Next version will be: ${next_version}`);
+
+    // Ask for tag
+    const tag_input = await text({
+      message: "Enter tag name:",
+      placeholder: `${app_name}@${next_version}`,
+      defaultValue: `${app_name}@${next_version}`,
       validate: (value = "") => {
         const trimmed = value.trim();
         if (trimmed.length === 0) {
-          return "Description is required";
+          return "Tag name is required";
         }
         return undefined;
       },
     });
 
-    if (isCancel(description_input)) {
-      cancel("Hotfix cancelled");
+    if (isCancel(tag_input)) {
+      cancel("Manual release cancelled");
       return {
         status: "success" as const,
       };
     }
 
-    const hotfix_description = description_input as string;
+    const tag = (tag_input as string).trim();
 
-    // Get hotfix-allowed change types
-    const hotfix_allowed_changes = Array.from(app.versioning.hotfix_allowed_changes);
-    if (hotfix_allowed_changes.length === 0) {
+    // Check if tag already exists locally
+    const local_tag_exists = await git.tag_exists(tag, root);
+    if (local_tag_exists) {
       return {
         status: "error" as const,
-        error: `No hotfix-allowed change types found for app ${app_name}`,
+        error: `Tag ${tag} already exists locally. This tag has already been created.`,
       };
     }
 
-    // Select hotfix change type if multiple options available
-    let hotfix_change_type: string;
-    if (hotfix_allowed_changes.length === 1) {
-      hotfix_change_type = hotfix_allowed_changes[0];
-      const display_label =
-        app.versioning.display_map[hotfix_change_type]?.singular ?? hotfix_change_type;
-      log.success(`Using change type: ${display_label}`);
-    } else {
-      const selected = await select({
-        message: "Select hotfix change type:",
-        options: hotfix_allowed_changes.map((kind) => {
-          const display_label = app.versioning.display_map[kind]?.singular ?? kind;
-          return { value: kind, label: display_label };
-        }),
-      });
-      if (isCancel(selected)) {
-        cancel("Hotfix cancelled");
-        return {
-          status: "success" as const,
-        };
+    // Check if tag already exists remotely via platform API
+    try {
+      const existing_tag = await config.git.platform.get_tag({ tag });
+      if (existing_tag !== null) {
+        // Get current HEAD SHA for comparison
+        const { head_sha } = await git.get_head_and_parent_shas(root);
+        if (existing_tag.commit_sha === head_sha) {
+          return {
+            status: "error" as const,
+            error: `Tag ${tag} already exists remotely on commit ${head_sha}. This tag has already been created.`,
+          };
+        } else {
+          return {
+            status: "error" as const,
+            error: `Tag ${tag} already exists remotely but points to different commit (${existing_tag.commit_sha} vs ${head_sha}).`,
+          };
+        }
       }
-      hotfix_change_type = selected as string;
-    }
-
-    // Create change file for version calculation (not saved to disk)
-    const change_file = new ChangeFile({
-      kind: hotfix_change_type,
-      summary: hotfix_description,
-    });
-
-    // Calculate next version with hotfix reason
-    const next_version = app.versioning.bump({
-      version: current_version,
-      changes: [change_file],
-      date: new Date(),
-      reason: "hotfix",
-    });
-
-    log.info(`Next version will be: ${next_version}`);
-
-    // Check if tag already exists
-    const tag = `${app_name}@${next_version}`;
-    const tag_exists = await git.tag_exists(tag, root);
-    if (tag_exists) {
-      return {
-        status: "error" as const,
-        error: `Tag ${tag} already exists. This version has already been released.`,
-      };
+    } catch (error: any) {
+      // If platform API check fails, log warning but continue
+      // (might be network issue or platform not configured)
+      log.warn(`Could not check remote tag existence: ${error.message}`);
+      log.warn("Continuing with local tag check only...");
     }
 
     // Show what will be done
+    const changes_summary = changes.list.map((change) => `  • ${change.summary}`).join("\n");
     note(
-      `Hotfix plan:
+      `Manual release plan:
 - App: ${app_name}
 - Current version: ${current_version}
 - Next version: ${next_version}
-- Description: ${hotfix_description}`,
-      "Hotfix details",
+- Tag: ${tag}
+- Change files:
+${changes_summary}`,
+      "Release details",
     );
 
     // Confirm before proceeding
@@ -209,7 +225,7 @@ export const hotfix = create_command({
     });
 
     if (isCancel(proceed_confirmation) || !proceed_confirmation) {
-      cancel("Hotfix cancelled");
+      cancel("Manual release cancelled");
       return {
         status: "success" as const,
       };
@@ -217,6 +233,16 @@ export const hotfix = create_command({
 
     // Track files that will be modified
     const files_to_stage: string[] = [];
+
+    // Delete change files
+    const changes_dir = join(config.changes_dir, app_name);
+    for (const change of changes.list) {
+      const change_file_path = join(changes_dir, change.filename);
+      const relative_path = relative(root, change_file_path);
+      await fs.delete_file(relative_path);
+      files_to_stage.push(relative_path);
+    }
+    log.success("Deleted change files");
 
     // Update components
     for (const component of app.components) {
@@ -245,7 +271,7 @@ export const hotfix = create_command({
     const updated_changelog_content = formatter.format_changelog({
       ...changelog,
       releases: [
-        { version: next_version, changes: [change_file] },
+        { version: next_version, changes: changes.list },
         ...changelog.releases.filter((release) => release.version !== next_version),
       ].sort((a, b) => app.versioning.compare(a.version, b.version)),
     });
@@ -256,7 +282,8 @@ export const hotfix = create_command({
     // Ask for commit message
     const commit_message_input = await text({
       message: "Enter commit message:",
-      placeholder: `chore: hotfix ${app_name}@${next_version}`,
+      placeholder: `release: ${app_name}@${next_version}`,
+      defaultValue: `release: ${app_name}@${next_version}`,
       validate: (value = "") => {
         const trimmed = value.trim();
         if (trimmed.length === 0) {
@@ -267,7 +294,7 @@ export const hotfix = create_command({
     });
 
     if (isCancel(commit_message_input)) {
-      cancel("Hotfix cancelled");
+      cancel("Manual release cancelled");
       return {
         status: "success" as const,
       };
@@ -292,7 +319,7 @@ export const hotfix = create_command({
 
     if (isCancel(confirm_commit) || !confirm_commit) {
       await git.reset_staged(root);
-      cancel("Hotfix cancelled, changes unstaged");
+      cancel("Manual release cancelled, changes unstaged");
       return {
         status: "success" as const,
       };
@@ -302,22 +329,21 @@ export const hotfix = create_command({
     await git.commit(commit_message, root);
     log.success(`Committed: ${commit_message}`);
 
-    // Create tag (moved tag variable declaration earlier)
-    const tag_message = `hotfix: ${tag}`;
+    // Create tag
+    const tag_message = `release: ${tag}`;
     await git.create_tag(tag, tag_message, root);
     log.success(`Tagged: ${tag}`);
 
     // Show final instructions
-    outro(`Hotfix ${tag} created successfully!`);
+    outro(`Manual release ${tag} created successfully!`);
 
     log.info("Next steps:");
     log.info(`1. Push commit and tag: git push --follow-tags`);
     log.warn("⚠️  Pushing will trigger the release pipeline");
-    log.info(`2. Make sure to merge this commit into the ${config.git.target_branch} branch`);
 
     return {
       status: "success" as const,
-      message: `Hotfix ${tag} created successfully`,
+      message: `Manual release ${tag} created successfully`,
     };
   },
 });

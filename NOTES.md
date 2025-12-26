@@ -21,8 +21,9 @@
 # Open questions
 
 - procédure de hotfix ?
-  - on peut proposer une solution qui viendrait poser le tag + update le changelog pour le user
-  - et qui revert le changement de version dans un commit juste après le tag
+  - ~~on peut proposer une solution qui viendrait poser le tag + update le changelog pour le user~~
+  - ~~et qui revert le changement de version dans un commit juste après le tag~~
+  -> encore + simple : une commande qui genere le changelog + tag avec warning couplé a un record-change
 - on garde que main ou on veut une release branch
 - 1 ou 2 CI différente suite au merge ? 2 CI permet de retrouver facilement la CI de deploy car sera dispo sur l'interface des tags dans gitlab, mais ça fait 2 CI...
 - quid de proposer des tools pour get la version depuis JS (pour l'afficher dans les logs ou sur le front)

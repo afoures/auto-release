@@ -7,7 +7,7 @@ import { generate_release } from "./lib/commands/generate-release.ts";
 import { tag_release } from "./lib/commands/tag-release.ts";
 import { init } from "./lib/commands/init.ts";
 import { list } from "./lib/commands/list.ts";
-import { hotfix } from "./lib/commands/hotfix.ts";
+import { manual_release } from "./lib/commands/manual-release.ts";
 
 const run = create_cli({
   name: "auto-release",
@@ -19,7 +19,7 @@ const run = create_cli({
     "record-change": record_change,
     "generate-release": generate_release,
     "tag-release": tag_release,
-    hotfix,
+    "manual-release": manual_release,
   },
 });
 

@@ -10,6 +10,7 @@ function custom_version(): VersionManager<AllowedChangeKind> {
   const allowed_changes = ["breaking", "feature", "fix"] as const;
   return {
     allowed_changes,
+    initial_version: "0.0.0",
     formatter: {} as Formatter<AllowedChangeKind, any>,
     display_map: {} as ChangeKindDisplayMap<AllowedChangeKind>,
     compare(version_a, version_b) {
