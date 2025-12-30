@@ -17,11 +17,11 @@ Release management should be simple. `auto-release` lets you focus on building f
 ## Quick Start
 
 ```bash
-npx auto-release init
+npx --package=@afoures/auto-release@latest auto-release init
 # or
-pnpm dlx auto-release init
+pnpx --package=@afoures/auto-release@latest auto-release init
 # or
-bunx auto-release init
+bunx --package=@afoures/auto-release@latest auto-release init
 ```
 
 This creates `auto-release.config.ts` and sets up the `.changes` directory.
