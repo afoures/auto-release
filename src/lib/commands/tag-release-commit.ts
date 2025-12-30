@@ -41,8 +41,8 @@ async function get_app_version_at_revision(
   }
 }
 
-export const tag_release = create_command({
-  name: "tag-release",
+export const tag_release_commit = create_command({
+  name: "tag-release-commit",
   description: "Detect version changes and create git tags and releases",
   schema: {
     config: {

@@ -1,6 +1,6 @@
 {
   "name": "auto-release",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "description": "A changesets-inspired release management tool for monorepos",
   "homepage": "https://github.com/afoures/auto-release#readme",
   "bugs": {
@@ -23,9 +23,9 @@
       "import": "./dist/components.mjs"
     },
     "./package.json": "./package.json",
-    "./providers": {
-      "types": "./dist/git-providers.d.mts",
-      "import": "./dist/git-providers.mjs"
+    "./platforms": {
+      "types": "./dist/git-platforms.d.mts",
+      "import": "./dist/git-platforms.mjs"
     },
     "./versioning": {
       "types": "./dist/versioning.d.mts",
@@ -71,6 +71,6 @@
   },
   "packageManager": "pnpm@8.15.9+sha512.499434c9d8fdd1a2794ebf4552b3b25c0a633abcee5bb15e7b5de90f32f47b513aca98cd5cfd001c31f0db454bc3804edccd578501e4ca293a6816166bbd9f81",
   "engines": {
-    "node": ">=22.0.0"
+    "node": ">=24.0.0"
   }
 }

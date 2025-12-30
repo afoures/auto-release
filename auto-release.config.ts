@@ -1,6 +1,6 @@
 import { define_config } from "./dist/index.mjs";
 import { markver } from "./dist/versioning.mjs";
-import { github } from "./dist/git-providers.mjs";
+import { github } from "./dist/git-platforms.mjs";
 import { node } from "./dist/components.mjs";
 
 export default define_config({

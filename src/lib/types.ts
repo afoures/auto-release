@@ -3,7 +3,7 @@
  */
 
 import type { Component, ResolvedComponent } from "./components/types.ts";
-import type { GitPlatformClient } from "./providers/types.ts";
+import type { GitPlatformClient } from "./platforms/types.ts";
 import type { VersionManager, Formatter, ChangeKindDisplayMap } from "./versioning/types.ts";
 
 export type {
