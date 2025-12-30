@@ -44,6 +44,17 @@ export const manual_release = create_command({
     log.warn(
       "⚠️  The recommended workflow is to use 'record-change' and 'generate-release-pr' commands.",
     );
+
+    // Check for uncommitted changes
+    const has_changes = await git.has_uncommitted_changes(root);
+    if (has_changes) {
+      return {
+        status: "error" as const,
+        error:
+          "You have uncommitted changes. Please commit or stash them before creating a manual release.",
+      };
+    }
+
     const proceed_warning = await confirm({
       message: "Do you want to proceed with manual release anyway?",
       initialValue: false,
@@ -60,16 +71,6 @@ export const manual_release = create_command({
       return {
         status: "error" as const,
         error: "Manual release cancelled by user",
-      };
-    }
-
-    // Check for uncommitted changes
-    const has_changes = await git.has_uncommitted_changes(root);
-    if (has_changes) {
-      return {
-        status: "error" as const,
-        error:
-          "You have uncommitted changes. Please commit or stash them before creating a manual release.",
       };
     }
 
@@ -274,7 +275,7 @@ ${changes_summary}`,
         releases: [
           { version: next_version, changes: changes.list },
           ...changelog.releases.filter((release) => release.version !== next_version),
-        ].sort((a, b) => app.versioning.compare(a.version, b.version)),
+        ].sort((a, b) => app.versioning.compare(b.version, a.version)),
       },
       {
         app: { name: app_name },
