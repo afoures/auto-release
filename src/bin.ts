@@ -11,7 +11,7 @@ import { manual_release } from "./lib/commands/manual-release.ts";
 
 const run = create_cli({
   name: "auto-release",
-  description: "Changesets-inspired release management tool",
+  description: "A file based release management tool for monorepos",
   commands: {
     init,
     check,
