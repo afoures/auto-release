@@ -137,13 +137,18 @@ export const generate_release_pr = create_command({
         mdastExtensions: [gfmFromMarkdown()],
       });
       const changelog = formatter.transform_markdown(changelog_as_mdast);
-      const updated_changelog_content = formatter.format_changelog({
-        ...changelog,
-        releases: [
-          { version: next_version, changes: changes.list },
-          ...changelog.releases.filter((release) => release.version !== next_version),
-        ].sort((a, b) => app.versioning.compare(a.version, b.version)),
-      });
+      const updated_changelog_content = formatter.format_changelog(
+        {
+          ...changelog,
+          releases: [
+            { version: next_version, changes: changes.list },
+            ...changelog.releases.filter((release) => release.version !== next_version),
+          ].sort((a, b) => app.versioning.compare(a.version, b.version)),
+        },
+        {
+          app: { name: app.name },
+        },
+      );
       await fs.write_file(changelog_relative_path, updated_changelog_content);
 
       // git diff then reset

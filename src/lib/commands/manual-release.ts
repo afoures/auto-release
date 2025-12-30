@@ -1,4 +1,4 @@
-import { join, relative } from "node:path";
+import { join } from "node:path";
 import { intro, log, cancel, confirm, select, text, isCancel, outro, note } from "@clack/prompts";
 import { create_command } from "../cli.ts";
 import { find_nearest_config } from "../config.ts";
@@ -42,7 +42,7 @@ export const manual_release = create_command({
     // Show warning about intended use
     log.warn("⚠️  This command is not the intended use of the auto-release workflow.");
     log.warn(
-      "⚠️  The recommended workflow is to use 'record-change' and 'generate-release' commands.",
+      "⚠️  The recommended workflow is to use 'record-change' and 'generate-release-pr' commands.",
     );
     const proceed_warning = await confirm({
       message: "Do you want to proceed with manual release anyway?",
@@ -152,7 +152,7 @@ export const manual_release = create_command({
     const tag_input = await text({
       message: "Enter tag name:",
       placeholder: `${app_name}@${next_version}`,
-      defaultValue: `${app_name}@${next_version}`,
+      initialValue: `${app_name}@${next_version}`,
       validate: (value = "") => {
         const trimmed = value.trim();
         if (trimmed.length === 0) {
@@ -206,7 +206,10 @@ export const manual_release = create_command({
     }
 
     // Show what will be done
-    const changes_summary = changes.list.map((change) => `  • ${change.summary}`).join("\n");
+    const changes_summary = changes.list
+      .map((change) => `  • ${change.summary.split("\n").join("\n    ")}`)
+      .join("\n");
+
     note(
       `Manual release plan:
 - App: ${app_name}
@@ -238,52 +241,54 @@ ${changes_summary}`,
     const changes_dir = join(config.changes_dir, app_name);
     for (const change of changes.list) {
       const change_file_path = join(changes_dir, change.filename);
-      const relative_path = relative(root, change_file_path);
-      await fs.delete_file(relative_path);
-      files_to_stage.push(relative_path);
+      await fs.delete_file(change_file_path);
+      files_to_stage.push(change_file_path);
     }
     log.success("Deleted change files");
 
     // Update components
     for (const component of app.components) {
       for (const part of component.parts) {
-        const relative_path = relative(root, part.file);
-        const initial_content = await fs.read_file(relative_path);
+        const initial_content = await fs.read_file(part.file);
         if (initial_content === null) {
           continue;
         }
         const updated_content = part.update_version(initial_content, next_version);
-        await fs.write_file(relative_path, updated_content);
-        files_to_stage.push(relative_path);
+        await fs.write_file(part.file, updated_content);
+        files_to_stage.push(part.file);
       }
     }
     log.success("Updated component versions");
 
     // Update changelog
     const formatter = app.versioning.formatter;
-    const changelog_relative_path = relative(root, app.changelog);
-    const initial_changelog_content = (await fs.read_file(changelog_relative_path)) ?? "";
+    const initial_changelog_content = (await fs.read_file(app.changelog)) ?? "";
     const changelog_as_mdast = fromMarkdown(initial_changelog_content, {
       extensions: [gfm()],
       mdastExtensions: [gfmFromMarkdown()],
     });
     const changelog = formatter.transform_markdown(changelog_as_mdast);
-    const updated_changelog_content = formatter.format_changelog({
-      ...changelog,
-      releases: [
-        { version: next_version, changes: changes.list },
-        ...changelog.releases.filter((release) => release.version !== next_version),
-      ].sort((a, b) => app.versioning.compare(a.version, b.version)),
-    });
-    await fs.write_file(changelog_relative_path, updated_changelog_content);
-    files_to_stage.push(changelog_relative_path);
+    const updated_changelog_content = formatter.format_changelog(
+      {
+        ...changelog,
+        releases: [
+          { version: next_version, changes: changes.list },
+          ...changelog.releases.filter((release) => release.version !== next_version),
+        ].sort((a, b) => app.versioning.compare(a.version, b.version)),
+      },
+      {
+        app: { name: app_name },
+      },
+    );
+    await fs.write_file(app.changelog, updated_changelog_content);
+    files_to_stage.push(app.changelog);
     log.success("Updated changelog");
 
     // Ask for commit message
     const commit_message_input = await text({
       message: "Enter commit message:",
       placeholder: `release: ${app_name}@${next_version}`,
-      defaultValue: `release: ${app_name}@${next_version}`,
+      initialValue: `release: ${app_name}@${next_version}`,
       validate: (value = "") => {
         const trimmed = value.trim();
         if (trimmed.length === 0) {
@@ -318,8 +323,8 @@ ${changes_summary}`,
     });
 
     if (isCancel(confirm_commit) || !confirm_commit) {
-      await git.reset_staged(root);
-      cancel("Manual release cancelled, changes unstaged");
+      await git.reset(root);
+      cancel("Manual release cancelled, resetting changes");
       return {
         status: "success" as const,
       };

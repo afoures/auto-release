@@ -30,8 +30,8 @@ export async function write_file(file: string, content: string): Promise<void> {
 export async function delete_file(path: string): Promise<void> {
   try {
     await unlink(path);
-  } catch {
-    throw new Error(`Failed to delete file ${path}`);
+  } catch (error) {
+    throw new Error(`Failed to delete file ${path}`, { cause: error });
   }
 }
 

@@ -160,18 +160,22 @@ export function default_formatter<change_kinds extends string>({
 
       return changelog;
     },
-    format_changelog(changelog) {
+    format_changelog(changelog, context) {
       const lines: string[] = [];
 
       if (changelog.root.title) {
         lines.push(`# ${changelog.root.title}`);
+      } else {
+        lines.push(`# \`${context.app.name}\` Changelog`);
       }
       if (changelog.root.description.length > 0) {
         lines.push(changelog.root.description.join("\n"));
+      } else {
+        lines.push(`This is the changelog for \`${context.app.name}\`.`);
       }
 
       for (const release of changelog.releases) {
-        const release_lines: string[] = [`## ${release.version}`];
+        const release_lines: string[] = [`## ${release.version}`, ""];
 
         for (const change_kind of allowed_changes) {
           const kind_changes = release.changes.filter((change) => change.kind === change_kind);
@@ -181,11 +185,12 @@ export function default_formatter<change_kinds extends string>({
 
           const labels = resolved_display_map[change_kind];
           const heading = labels?.plural ?? labels?.singular ?? change_kind;
-          release_lines.push(`### ${heading}`);
+          release_lines.push(`### ${heading}`, "");
 
           for (const change of kind_changes) {
-            release_lines.push(`- ${change.summary}`);
+            release_lines.push(`- ${change.summary.split("\n").join("\n  ")}`, "");
           }
+          release_lines.push("");
         }
 
         lines.push(release_lines.join("\n"));
