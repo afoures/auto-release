@@ -2,11 +2,18 @@
 
 This is the changelog for auto-release.
 
+## 0.2.0
+
+### Features
+
+- Improve `init` command automatic config generation.
+
+
 ## 0.1.2
 
 ### Bug Fixes
 
-- Update `init` command with new package name.
+- Update init command with new package name.
 
 
 ## 0.1.1
