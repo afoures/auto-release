@@ -26,7 +26,12 @@ export type Formatter<
    * @param changelog - The parsed changelog to format
    * @returns Markdown string that will be written to the changelog file
    */
-  format_changelog(changelog: NoInfer<parsed_changelog>): string;
+  format_changelog(
+    changelog: NoInfer<parsed_changelog>,
+    context: {
+      app: { name: string };
+    },
+  ): string;
   /**
    * Generate pull/merge request body content.
    * @param options - The options for generating the PR body

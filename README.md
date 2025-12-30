@@ -1,42 +1,40 @@
 # auto-release
 
-A Changesets-inspired release management tool for monorepos with app-centric versioning.
+A release management tool inspired by Changesets and Release Please, designed for monorepos with app-centric versioning.
 
-## Features
+## Why auto-release?
 
-- 🎯 **App-centric**: Manage multiple apps with independent versioning in a monorepo
-- 📦 **Multi-package support**: Apps can span multiple `package.json` files
-- 🔄 **Flexible versioning**: Built-in semver and calver strategies, plus custom strategies
-- 📝 **Human-friendly changesets**: Markdown change files with validation
-- 📋 **Automated changelogs**: Generate formatted changelogs per app
-- 🏷️ **Git tagging**: Automatically create tags and releases when versions change
-- ✅ **CI-friendly**: Validation, dry-run modes, and JSON output
+Release management should be simple. `auto-release` lets you focus on building features while it handles versioning, changelogs, and releases.
 
-## Requirements
+**Language agnostic**: Works with any project type. Built-in components for Node, Bun, Expo, and PHP projects, but you can add custom components for anything.
 
-- Node.js >= 22.0.0
+**Built for monorepos**: Each app can have its own versioning strategy (semver, calver, marketing) and release independently.
 
-## Installation
+**Developer-friendly**: Record changes with markdown files as you work. No complex conventions or strict commit messages required.
+
+**CI-native**: Release branches let you test before production. Tags trigger deployments automatically.
+
+## Quick Start
+
+```bash
+npx auto-release init
+# or
+pnpm dlx auto-release init
+# or
+bunx auto-release init
+```
+
+This creates `auto-release.config.ts` and sets up the `.changes` directory.
+
+### Manual Installation
 
 ```bash
 npm install auto-release
 # or
 pnpm add auto-release
-# or
-yarn add auto-release
 ```
 
-## Quick Start
-
-1. Run the interactive setup:
-
-   ```bash
-   npx auto-release init
-   # or
-   pnpm auto-release init
-   ```
-
-   This creates `auto-release.config.ts`, bootstraps the `.changes` directory, and installs the dependency. Prefer manual setup? Create `auto-release.config.ts` yourself:
+Create `auto-release.config.ts`:
 
 ```typescript
 import { define_config } from 'auto-release'
@@ -63,522 +61,270 @@ export default define_config({
 })
 ```
 
-2. Create a change file:
+## Workflow
+
+### 1. Development
+
+Make changes and record them:
 
 ```bash
-auto-release record
+auto-release record-change
 ```
 
-3. Preview what would be released (dry-run):
+Commit everything including the change file:
 
 ```bash
-auto-release generate-release --dry-run
+git add .
+git commit -m "feat: add new feature"
+git push
 ```
 
-4. Prepare release PRs:
+### 2. Generate Release PR
+
+On `main` branch, CI should automatically run:
 
 ```bash
-auto-release release
+auto-release generate-release-pr
 ```
 
-5. Tag releases (usually in CI after release PR merge):
+This creates/updates a release branch with:
+- Updated versions in component files
+- Generated changelog entries
+- Change files removed
+
+### 3. Test on Release Branch
+
+CI on release branch runs:
+- Tests and quality checks
+- Build and deploy to test/staging environment
+
+### 4. Merge Release PR
+
+When ready, merge the release PR to `main`.
+
+### 5. Tag and Deploy
+
+CI on `main` runs:
 
 ```bash
-auto-release tag-release
+auto-release tag-release-commit
 ```
 
-## Configuration
-
-### Config File Format
-
-Create `auto-release.config.ts` at your repository root:
-
-```typescript
-import { define_config } from 'auto-release'
-import { semver, calver } from 'auto-release/versioning'
-import { github } from 'auto-release/providers'
-import { node } from 'auto-release/components'
-
-export default define_config({
-  // Required: Git provider configuration
-  git: {
-    platform: github({
-      token: process.env.GITHUB_TOKEN!,
-      owner: 'your-org',
-      repo: 'your-repo',
-    }),
-    // Optional: Default target branch for PRs and releases (default: 'main')
-    target_branch: 'main',
-    // Optional: Release branch prefix (default: 'release')
-    default_release_branch_prefix: 'release',
-  },
-
-  // Required: Apps record (object keyed by app name)
-  apps: {
-    'web-app': {
-      // Components that define version sources (e.g., package.json files)
-      components: [
-        node('packages/web'),
-        node('packages/shared'),
-      ],
-
-      // Versioning strategy with optional formatter
-      versioning: semver({
-        // Optional: Custom formatter for changelog/release notes
-        formatter: default_changelog_formatter({
-          kind_map: {
-            major: 'Major Changes',
-            minor: 'Minor Changes',
-            patch: 'Patch Changes',
-          },
-        }),
-      }),
-
-      // Required: Changelog file path (relative to repo root)
-      changelog: 'apps/web/CHANGELOG.md',
-    },
-  },
-
-  // Optional: Directory for change files (default: '.changes')
-  changes_dir: '.changes',
-})
-```
-
-### Apps Configuration
-
-The `apps` configuration is a **record** (object) keyed by app name. Each app represents a releasable unit:
-
-- **App name** (key): Unique identifier used in change file paths and git tags
-- **`components`**: Array of component functions that define version sources
-  - Components like `node()` read/write versions from `package.json` files
-  - All components must have the same version
-  - Versions will be updated together on release
-- **`versioning`**: Version manager (created via `semver()` or `calver()`)
-  - Includes `allowed_changes` (change types) and `bump()` function
-  - Optional `formatter` for custom changelog/release notes formatting
-- **`changelog`**: Required string path to changelog file (relative to repo root)
-
-### Versioning Strategies
-
-Versioning strategies are created via factory functions (`semver()` or `calver()`) that return a `VersionManager` object.
-
-#### Semver Strategy
-
-Standard semantic versioning (X.Y.Z):
-
-```typescript
-import { semver } from 'auto-release/versioning'
-import { default_changelog_formatter } from 'auto-release'
-
-// With default formatter
-versioning: semver()
-
-// With custom formatter
-versioning: semver({
-  formatter: default_changelog_formatter({
-    kind_map: {
-      major: 'Major Changes',
-      minor: 'Minor Changes',
-      patch: 'Patch Changes',
-    },
-  }),
-})
-```
-
-- **Allowed changes**: `['major', 'minor', 'patch']`
-- `major`: Breaking changes (X.0.0)
-- `minor`: New features (0.Y.0)
-- `patch`: Bug fixes (0.0.Z)
-- When multiple changes exist, the highest precedence wins (major > minor > patch)
-- Returns current version if no changes provided
-
-#### Calver Strategy
-
-Calendar versioning (YYYY.MINOR.PATCH):
-
-```typescript
-import { calver } from 'auto-release/versioning'
-
-// With default formatter
-versioning: calver()
-
-// With custom formatter
-versioning: calver({
-  formatter: default_changelog_formatter({
-    kind_map: {
-      feature: 'Features',
-      fix: 'Bug Fixes',
-    },
-  }),
-})
-```
-
-- **Allowed changes**: `['feature', 'fix']`
-- Format: `YYYY.MINOR.PATCH` (e.g., `2025.1.2`)
-- Year from current date
-- `MINOR` increments for features, `PATCH` increments for fixes
-- Resets to `YYYY.1.0` when year changes
-- Returns current version if no changes provided
-
-#### Formatters
-
-Formatters control how changelogs and release notes are generated. The `default_changelog_formatter()` provides a simple default, but you can create custom formatters that implement the `Formatter` interface for full control over markdown parsing and generation.
-
-## Change Files
-
-Change files are stored in `.changes/<appName>/` with the format:
-
-```
-<kind>.<slug>.md
-```
-
-Example: `major.add-authentication.md`, `patch.fix-login-bug.md`
-
-The `kind` must match one of the `allowed_changes` from your app's versioning strategy.
-
-### Creating Change Files
-
-#### Interactive Mode
-
-```bash
-auto-release record
-```
-
-Prompts you for:
-
-- App selection
-- Change type
-- Summary
-- Optional description
-
-#### Non-Interactive Mode
-
-```bash
-auto-release record \
-  --app web-app \
-  --type minor \
-  --summary "Add dark mode support" \
-  --description "Users can now toggle between light and dark themes"
-```
-
-Note: `--type` refers to the change `kind` (must be one of the versioning strategy's `allowed_changes`).
-
-### Change File Format
-
-**Simple format** (title only):
-
-```markdown
-Fix authentication bug in login flow
-```
-
-**Detailed format** (with heading and description):
-
-```markdown
-# Add user profile page
-
-This adds a comprehensive user profile page with the following features:
-
-- Avatar upload and management
-- Bio and social links
-- Privacy settings
-```
-
-The description (body) is parsed as an array of lines and can be used by formatters to generate rich changelog entries.
+This creates git tags for all releases, which can trigger deployment to pre-production and production.
 
 ## Commands
 
 ### `init`
 
-Interactively scaffold `auto-release` in a repository:
+Set up auto-release in your repository:
 
 ```bash
 auto-release init
 ```
 
-What it does:
-
-- Detects or prompts for your package manager and installs `auto-release`
-- Asks for apps, packages, changelog paths, and versioning strategies
-- Configures GitHub or GitLab provider details
-- Generates `auto-release.config.ts`, `.changes/`, and empty changelog files (one per app)
+Interactively configures apps, versioning strategies, and git platform.
 
 ### `check`
 
-Validate configuration, packages, and change files:
+Validate configuration and change files:
 
 ```bash
 auto-release check
 ```
 
-Options:
+Use in CI to ensure everything is valid before merging.
 
-- `--config <path>`: Custom config file path
-- `--json`: Output results as JSON
+### `record-change`
 
-Validates:
-
-- Config structure and schema
-- All packages exist and versions match per app
-- Change file naming and types
-- Markdown parsing
-
-Exit code: 0 if valid, 1 if errors found (CI-friendly).
-
-### `record`
-
-Record a new change:
+Create a new change file:
 
 ```bash
 # Interactive
-auto-release record
+auto-release record-change
 
 # Non-interactive
-auto-release record \
-  --app my-app \
-  --type minor \
-  --summary "Add new feature"
+auto-release record-change --app my-app --type minor
 ```
 
-Options:
+### `list`
 
-- `--app <name>`: App name
-- `--type <type>`: Change type
-- `--summary <text>`: Change summary
-- `--description <text>`: Detailed description
-- `--config <path>`: Custom config file path
-
-### `generate-release`
-
-Create or update release PRs from change files:
+List all apps managed by `auto-release` with their current versions:
 
 ```bash
-# Create/update release PRs
-auto-release generate-release
-
-# Preview what would be released (dry-run)
-auto-release generate-release --dry-run
-
-# Specific app only
-auto-release generate-release --app web-app
+auto-release list
 ```
 
-When using `--dry-run`, shows:
+### `generate-release-pr`
 
-- Apps with pending changes
-- Current → next version
-- Release branch name
-- Detailed list of changes with types, titles, and file paths
-
-Options:
-
-- `--app <name>`: Filter by app name
-- `--dry-run`: Show what would be done without making changes
-- `--config <path>`: Custom config file path
-
-### `release`
-
-Release apps with pending changes:
+Create or update release PRs:
 
 ```bash
-# Interactive (prompts for confirmation)
-auto-release release
+# Preview changes
+auto-release generate-release-pr --dry-run
 
-# With confirmation
-auto-release release --yes
+# Create/update PRs
+auto-release generate-release-pr
 
-# Dry run (show plan without making changes)
-auto-release release --dry-run
-
-# Specific app only
-auto-release release --app web-app
+# Specific apps only
+auto-release generate-release-pr --app my-app --app another-app
 ```
 
-Actions performed:
+### `tag-release-commit`
 
-1. Computes next versions using version strategies (`bump()` function)
-2. Updates version in all app's component files (via component `update_version()`)
-3. Generates changelog section using versioning formatter
-4. Appends new section to changelog file
-5. Deletes consumed change files
-
-Options:
-
-- `--app <name>`: Filter by app name
-- `--dry-run`: Show plan without making changes
-- `--yes`: Skip confirmation prompt
-- `--config <path>`: Custom config file path
-
-**Note**: This command does NOT create git commits or tags. Use `tag-release` for that.
-
-### `tag-release`
-
-Detect version changes and create git tags and releases:
+Create git tags and releases for version changes:
 
 ```bash
-# Detect and tag version changes
-auto-release tag-release
+# Preview what would be tagged
+auto-release tag-release-commit --dry-run
 
-# Dry run (show what would be done)
-auto-release tag-release --dry-run
+# Create tags and releases
+auto-release tag-release-commit
 ```
 
-Actions performed:
+Compares HEAD with HEAD^1 to detect version changes. Creates tags in format `app-name@version`.
 
-1. Compares app versions between HEAD and HEAD^1 (parent commit)
-2. For each app with a version change, creates:
-   - A git tag in format `app_name@version` (e.g., `my-app@1.2.3`)
-   - A GitHub/GitLab release with changelog notes
-3. Skips apps that already have tags on the current commit (idempotent)
-4. Returns error if a tag exists but points to a different commit
+### `manual-release`
 
-Options:
+Create a manual release using existing change files:
 
-- `--dry-run`: Show what would be done without making changes
-- `--config <path>`: Custom config file path
+```bash
+auto-release manual-release
+```
 
-**Tag format**: Always uses `app_name@version` format (not customizable)
+Useful for local testing or emergency releases.
 
-**Note**: Tags are created remotely via the git platform API. Local tags are also created as a best-effort, but remote tags take precedence. No need to run `git push --tags` - tags are already on the remote.
+## Configuration
+
+### Apps
+
+The `apps` object defines each releasable unit:
+
+```typescript
+apps: {
+  'my-app': {
+    // Components: where versions are read/written
+    components: [
+      node('packages/my-app'),
+      node('packages/shared'),
+    ],
+
+    // Versioning strategy
+    versioning: semver(),
+
+    // Changelog file path
+    changelog: 'apps/my-app/CHANGELOG.md',
+  },
+}
+```
+
+### Versioning Strategies
+
+```typescript
+import { semver, calver, markver } from 'auto-release/versioning'
+
+// Semantic versioning: 1.2.3
+versioning: semver()  // Change types: major, minor, patch
+
+// Calendar versioning: 2025.1.2
+versioning: calver()  // Change types: feature, fix
+
+// Marketing versioning: 1.0.0
+versioning: markver()  // Change types: marketing, feature, fix
+```
+
+### Git Platforms
+
+#### GitHub
+
+```typescript
+import { github } from 'auto-release/providers'
+
+git: {
+  platform: github({
+    token: process.env.GITHUB_TOKEN!,
+    owner: 'your-org',
+    repo: 'your-repo',
+  }),
+  target_branch: 'main',
+}
+```
+
+#### GitLab
+
+```typescript
+import { gitlab } from 'auto-release/providers'
+
+git: {
+  platform: gitlab({
+    token: process.env.GITLAB_TOKEN!,
+    project_id: 'your-project-id',
+  }),
+  target_branch: 'main',
+}
+```
 
 ### Components
 
-Components define where versions are read from and written to. Built-in components:
+Components define version sources:
 
-- **`node(path)`**: Reads/writes version from `package.json` at the given path
-- **`expo(path)`**: Reads/writes version from `app.json` (Expo projects)
-- **`php(path)`**: Reads/writes version from `composer.json` (PHP projects)
+- **`node(path)`**: any node project with package.json
+- **`bun(path)`**: any bun project with package.json
+- **`expo(path)`**: any Expo project with package.json and app.json
+- **`php(path)`**: any PHP project with composer.json
 
-Components are functions that return an object with:
+```typescript
+import { node, expo, php } from 'auto-release/components'
 
-- `path`: Base path of the component
-- `parts`: Array of parts, each with:
-  - `path`: File path
-  - `get_current_version()`: Function to read current version
-  - `update_version(version)`: Function to write new version
-
-You can create custom components by implementing the `Component` interface.
-
-## Workflows
-
-### Typical Development Workflow
-
-1. **Make changes** to your code
-
-2. **Create change file**:
-
-   ```bash
-   auto-release record
-   ```
-
-3. **Commit everything** (including change file):
-
-   ```bash
-   git add .
-   git commit -m "feat: add new feature"
-   git push
-   ```
-
-4. **On main branch**, when ready to release:
-
-   ```bash
-   auto-release generate-release --dry-run  # Review what will be released
-   auto-release generate-release  # Create/update release PRs
-   ```
-
-5. **Tag releases** (usually in CI after release PR merge):
-   ```bash
-   auto-release tag-release
-   ```
-
-### Recommended CI Setup
-
-#### GitHub Actions Example
-
-```yaml
-name: Release
-
-on:
-  push:
-    branches: [main]
-
-jobs:
-  release:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 22
-
-      - run: pnpm install
-
-      # Validate on every push
-      - run: pnpm auto-release check
-
-      # Preview what would be released
-      - run: pnpm auto-release generate-release --dry-run
-
-      # Check if there are changes to release
-      - id: check-changes
-        run: |
-          if pnpm auto-release generate-release --dry-run | grep -q "No pending changes"; then
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-          else
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-          fi
-
-      # Release (update versions, changelogs)
-      - if: steps.check-changes.outputs.has_changes == 'true'
-        run: pnpm auto-release release --yes
-
-      # Commit release changes
-      - if: steps.check-changes.outputs.has_changes == 'true'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add .
-          git commit -m "chore: release [skip ci]"
-          git push
-
-      # Tag releases (creates tags and releases on the platform)
-      - if: steps.check-changes.outputs.has_changes == 'true'
-        run: pnpm auto-release tag-release
-        env:
-          # Add any deployment secrets here
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+components: [
+  node('packages/web'),
+  bun('packages/bff'),
+  expo('apps/mobile'),
+  php('packages/api'),
+]
 ```
 
-## Examples
+## Change Files
 
-See the [`examples/`](./examples) directory for complete configuration examples:
+Change files are stored in `.changes/<app-name>/` with format:
 
-- **[single-app.config.ts](./examples/single-app.config.ts)**: Single app repository
-- **[monorepo.config.ts](./examples/monorepo.config.ts)**: Monorepo with multiple apps
-- **[calver.config.ts](./examples/calver.config.ts)**: Calendar versioning
-- **[custom-strategy.config.ts](./examples/custom-strategy.config.ts)**: Custom version strategy
+```
+<type>.<slug>.md
+```
+
+Examples:
+- `.changes/my-app/major.add-authentication.md`
+- `.changes/my-app/patch.fix-login-bug.md`
+
+The change files folder can be customized.
+
+### Format
+
+**Simple** (title only):
+
+```markdown
+Fix authentication bug in login flow
+```
+
+**Detailed** (with description):
+
+```markdown
+This adds a comprehensive user profile page with:
+- Avatar upload
+- Bio and social links
+- Privacy settings
+```
 
 ## Philosophy
 
-`auto-release` is inspired by Changesets but designed for app-centric monorepos where:
+Inspired by Changesets and Release Please, designed for app-centric monorepos where:
 
-- Multiple apps share packages but release independently
-- Each app can have its own versioning strategy
+- Multiple apps release independently with different versioning strategies
 - Change files are organized by app for clarity
-- Deployment is tightly integrated with versioning
-
-Unlike traditional Changesets:
-
-- **App-focused** rather than package-focused
-- **Automatic tagging** when versions change
-- **Flexible strategies** beyond semver
-- **Simpler model** for multi-package apps
+- Release branches allow testing before production
+- Deployment is integrated with the release process
 
 ## License
 
 MIT
 
-## Contributing
-
-Contributions welcome! Please open an issue or PR.
+See [LICENSE](./LICENSE)

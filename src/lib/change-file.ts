@@ -66,7 +66,11 @@ export async function parse_change_file<kind extends string>(
 
   // If only one line, use it as-is
   if (non_empty_lines.length === 1) {
-    return new ChangeFile<kind>({ kind: match.groups.kind as kind, summary: first_line });
+    return new ChangeFile<kind>({
+      slug: match.groups.slug,
+      kind: match.groups.kind as kind,
+      summary: first_line,
+    });
   }
 
   // If multiple lines, first line is summary, rest should be list items
@@ -90,7 +94,11 @@ export async function parse_change_file<kind extends string>(
   // Combine first line with list items
   const summary = [first_line, ...remaining_lines].join("\n");
 
-  return new ChangeFile<kind>({ kind: match.groups.kind as kind, summary: summary });
+  return new ChangeFile<kind>({
+    slug: match.groups.slug,
+    kind: match.groups.kind as kind,
+    summary: summary,
+  });
 }
 
 export async function find_change_files<kind extends string>(
