@@ -2,11 +2,14 @@
 
 This is the changelog for auto-release.
 
+## 0.2.1
+
+
 ## 0.2.0
 
 ### Features
 
-- Improve `init` command automatic config generation.
+- Improve init command automatic config generation.
 
 
 ## 0.1.2
