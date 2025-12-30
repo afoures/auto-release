@@ -14,6 +14,7 @@ import {
 } from "@clack/prompts";
 import { create_command } from "../cli.ts";
 import { exec } from "../utils/exec.ts";
+import package_json from "../../../package.json";
 
 type PackageManager = "npm" | "pnpm" | "yarn" | "bun";
 
@@ -167,13 +168,13 @@ async function detect_package_manager(
 function get_install_command(package_manager: PackageManager): string {
   switch (package_manager) {
     case "pnpm":
-      return "pnpm add -D auto-release";
+      return `pnpm add -D ${package_json.name}`;
     case "yarn":
-      return "yarn add -D auto-release";
+      return `yarn add -D ${package_json.name}`;
     case "bun":
-      return "bun add -d auto-release";
+      return `bun add -d ${package_json.name}`;
     default:
-      return "npm install --save-dev auto-release";
+      return `npm install --save-dev ${package_json.name}`;
   }
 }
 
