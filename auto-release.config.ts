@@ -1,7 +1,7 @@
-import { define_config } from "./dist/index.mjs";
-import { markver } from "./dist/versioning.mjs";
-import { github } from "./dist/git-platforms.mjs";
-import { node } from "./dist/components.mjs";
+import { define_config } from "@afoures/auto-release";
+import { markver } from "@afoures/auto-release/versioning";
+import { github } from "@afoures/auto-release/platforms";
+import { node } from "@afoures/auto-release/components";
 
 export default define_config({
   changes_dir: ".changes",
