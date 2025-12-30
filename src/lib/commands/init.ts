@@ -14,7 +14,6 @@ import {
 } from "@clack/prompts";
 import { create_command } from "../cli.ts";
 import { exec } from "../utils/exec.ts";
-import package_json from "../../../package.json";
 
 type PackageManager = "npm" | "pnpm" | "yarn" | "bun";
 
@@ -30,9 +29,9 @@ interface PackageJson {
 
 export interface AppTemplate {
   name: string;
-  packages: string[];
+  components: Array<{ type: "node" | "bun" | "expo" | "php"; path: string }>;
   changelog_path: string;
-  versioning: "semver" | "calver";
+  versioning: "semver" | "calver" | "markver";
 }
 
 type GitPlatformClientAnswers =
@@ -52,65 +51,95 @@ type GitPlatformClientAnswers =
 export interface GenerateConfigOptions {
   apps: AppTemplate[];
   changes_dir: string;
-  release_branch_prefix: string;
+  target_branch: string;
+  default_release_branch_prefix: string;
   git: GitPlatformClientAnswers;
 }
 
 export function generate_config_source(options: GenerateConfigOptions): string {
-  const { apps, changes_dir, release_branch_prefix, git } = options;
+  const { apps, changes_dir, target_branch, default_release_branch_prefix, git } = options;
 
-  const imports: string[] = ['import { define_config } from "auto-release";'];
+  const imports: string[] = ['import { define_config } from "@afoures/auto-release";'];
 
-  if (apps.some((app) => app.versioning === "semver")) {
-    imports.push('import { semver } from "auto-release/versioning/semver";');
+  // Collect needed component imports
+  const component_types = new Set<string>();
+  for (const app of apps) {
+    for (const component of app.components) {
+      component_types.add(component.type);
+    }
+  }
+  if (component_types.size > 0) {
+    const components = Array.from(component_types).sort();
+    imports.push(`import { ${components.join(", ")} } from "@afoures/auto-release/components";`);
   }
 
-  if (apps.some((app) => app.versioning === "calver")) {
-    imports.push('import { calver } from "auto-release/versioning/calver";');
+  // Collect needed versioning imports
+  const versioning_types = new Set<string>();
+  for (const app of apps) {
+    versioning_types.add(app.versioning);
+  }
+  if (versioning_types.size > 0) {
+    const versioning = Array.from(versioning_types).sort();
+    imports.push(`import { ${versioning.join(", ")} } from "@afoures/auto-release/versioning";`);
   }
 
   if (git.platform === "github") {
-    imports.push('import { github } from "auto-release/git/github";');
+    imports.push('import { github } from "@afoures/auto-release/platforms";');
   } else {
-    imports.push('import { gitlab } from "auto-release/git/gitlab";');
+    imports.push('import { gitlab } from "@afoures/auto-release/platforms";');
   }
 
   const lines: string[] = [...imports, "", "export default define_config({"];
-  lines.push(`  changes_dir: ${JSON.stringify(changes_dir)},`);
-  lines.push(`  release_branch_prefix: ${JSON.stringify(release_branch_prefix)},`);
 
-  lines.push("  apps: [");
+  // Only include changes_dir if it's not the default
+  if (changes_dir !== ".changes") {
+    lines.push(`  changes_dir: ${JSON.stringify(changes_dir)},`);
+  }
+
+  lines.push("  apps: {");
   apps.forEach((app, index) => {
-    lines.push("    {");
-    lines.push(`      name: ${JSON.stringify(app.name)},`);
-    lines.push("      packages: [");
-    app.packages.forEach((pkg) => {
-      lines.push(`        ${JSON.stringify(pkg)},`);
+    lines.push(`    ${JSON.stringify(app.name)}: {`);
+    lines.push("      components: [");
+    app.components.forEach((component) => {
+      lines.push(`        ${component.type}(${JSON.stringify(component.path)}),`);
     });
     lines.push("      ],");
-    lines.push(`      versioning: ${app.versioning === "semver" ? "semver()" : "calver()"},`);
-    lines.push("      changelog: {");
-    lines.push(`        path: ${JSON.stringify(app.changelog_path)},`);
-    lines.push("      },");
-    lines.push(index === apps.length - 1 ? "    }" : "    },");
+    lines.push(`      versioning: ${app.versioning}(),`);
+    lines.push(`      changelog: ${JSON.stringify(app.changelog_path)},`);
+    lines.push(index === apps.length - 1 ? "    }," : "    },");
   });
-  lines.push("  ],");
+  lines.push("  },");
 
+  lines.push("  git: {");
   if (git.platform === "github") {
-    lines.push("  git: github({");
-    lines.push(`    token: process.env.${git.token_env}!,`);
-    lines.push(`    owner: ${JSON.stringify(git.owner)},`);
-    lines.push(`    repo: ${JSON.stringify(git.repo)},`);
-    lines.push("  }),");
+    lines.push("    platform: github({");
+    lines.push(`      token: process.env.${git.token_env}!,`);
+    lines.push(`      owner: ${JSON.stringify(git.owner)},`);
+    lines.push(`      repo: ${JSON.stringify(git.repo)},`);
+    lines.push("    }),");
   } else {
-    lines.push("  git: gitlab({");
-    lines.push(`    token: process.env.${git.token_env}!,`);
-    lines.push(`    project_id: ${JSON.stringify(git.project_id)},`);
+    lines.push("    platform: gitlab({");
+    lines.push(`      token: process.env.${git.token_env}!,`);
+    lines.push(`      project_id: ${JSON.stringify(git.project_id)},`);
     if (git.host) {
-      lines.push(`    host: ${JSON.stringify(git.host)},`);
+      lines.push(`      host: ${JSON.stringify(git.host)},`);
     }
-    lines.push("  }),");
+    lines.push("    }),");
   }
+
+  // Only include target_branch if it's not the default
+  if (target_branch !== "main") {
+    lines.push(`    target_branch: ${JSON.stringify(target_branch)},`);
+  }
+
+  // Only include default_release_branch_prefix if it's not the default
+  if (default_release_branch_prefix !== "release") {
+    lines.push(
+      `    default_release_branch_prefix: ${JSON.stringify(default_release_branch_prefix)},`,
+    );
+  }
+
+  lines.push("  },");
 
   lines.push("});", "");
 
@@ -168,13 +197,13 @@ async function detect_package_manager(
 function get_install_command(package_manager: PackageManager): string {
   switch (package_manager) {
     case "pnpm":
-      return `pnpm add -D ${package_json.name}`;
+      return "pnpm add -D @afoures/auto-release";
     case "yarn":
-      return `yarn add -D ${package_json.name}`;
+      return "yarn add -D @afoures/auto-release";
     case "bun":
-      return `bun add -d ${package_json.name}`;
+      return "bun add -d @afoures/auto-release";
     default:
-      return `npm install --save-dev ${package_json.name}`;
+      return "npm install --save-dev @afoures/auto-release";
   }
 }
 
@@ -262,8 +291,8 @@ export const init = create_command({
       }
 
       const has_dependency =
-        Boolean(package_json.dependencies?.["auto-release"]) ||
-        Boolean(package_json.devDependencies?.["auto-release"]);
+        Boolean(package_json.dependencies?.["@afoures/auto-release"]) ||
+        Boolean(package_json.devDependencies?.["@afoures/auto-release"]);
 
       if (!has_dependency) {
         const install_spinner = spinner();
@@ -303,7 +332,19 @@ export const init = create_command({
         cancel("Initialization cancelled");
         return { status: "success" as const };
       }
-      const release_branch_prefix = (release_prefix_input as string).trim();
+      const default_release_branch_prefix = (release_prefix_input as string).trim();
+
+      const target_branch_input = await text({
+        message: "Target branch (main branch for PRs)",
+        initialValue: "main",
+        validate: (value = "") =>
+          value.trim().length === 0 ? "Target branch cannot be empty" : undefined,
+      });
+      if (isCancel(target_branch_input)) {
+        cancel("Initialization cancelled");
+        return { status: "success" as const };
+      }
+      const target_branch = (target_branch_input as string).trim();
 
       const app_count_input = await text({
         message: "How many apps should auto-release manage?",
@@ -337,20 +378,55 @@ export const init = create_command({
         }
         const app_name = normalize_app_name(app_name_input as string);
 
-        const package_paths_input = await text({
-          message: `Package paths for ${app_name} (comma separated)`,
-          initialValue: app_count === 1 ? "." : `apps/${app_name}`,
-          validate: (value = "") =>
-            value.trim().length === 0 ? "At least one package path is required" : undefined,
+        const component_count_input = await text({
+          message: `How many components for ${app_name}?`,
+          initialValue: "1",
+          validate: (value = "") => {
+            const parsed = Number.parseInt(value, 10);
+            return Number.isNaN(parsed) || parsed <= 0 ? "Enter a positive number" : undefined;
+          },
         });
-        if (isCancel(package_paths_input)) {
+        if (isCancel(component_count_input)) {
           cancel("Initialization cancelled");
           return { status: "success" as const };
         }
-        const package_paths = (package_paths_input as string)
-          .split(",")
-          .map((path) => path.trim())
-          .filter(Boolean);
+        const component_count = Number.parseInt(component_count_input as string, 10);
+
+        const components: Array<{ type: "node" | "bun" | "expo" | "php"; path: string }> = [];
+        for (let comp_index = 0; comp_index < component_count; comp_index++) {
+          const component_type_choice = await select({
+            message: `Component #${comp_index + 1} type for ${app_name}`,
+            options: [
+              { value: "node", label: "Node (package.json)" },
+              { value: "bun", label: "Bun (package.json)" },
+              { value: "expo", label: "Expo (package.json + app.json)" },
+              { value: "php", label: "PHP (composer.json)" },
+            ],
+          });
+          if (isCancel(component_type_choice)) {
+            cancel("Initialization cancelled");
+            return { status: "success" as const };
+          }
+          const component_type = component_type_choice as "node" | "bun" | "expo" | "php";
+
+          const default_path = app_count === 1 && component_count === 1 ? "." : `apps/${app_name}`;
+          const component_path_input = await text({
+            message: `Component #${comp_index + 1} path for ${app_name}`,
+            initialValue: default_path,
+            validate: (value = "") =>
+              value.trim().length === 0 ? "Component path is required" : undefined,
+          });
+          if (isCancel(component_path_input)) {
+            cancel("Initialization cancelled");
+            return { status: "success" as const };
+          }
+          const component_path = (component_path_input as string).trim();
+
+          components.push({
+            type: component_type,
+            path: component_path,
+          });
+        }
 
         const changelog_input = await text({
           message: `Changelog path for ${app_name}`,
@@ -368,8 +444,9 @@ export const init = create_command({
           message: `Versioning strategy for ${app_name}`,
           initialValue: "semver",
           options: [
-            { value: "semver", label: "Semver (1.2.3)" },
-            { value: "calver", label: "Calver (YYYY.MM.micro)" },
+            { value: "semver", label: "Semver (1.2.3) - major, minor, patch" },
+            { value: "calver", label: "Calver (YYYY.MM.micro) - feature, fix" },
+            { value: "markver", label: "Markver (1.0.0) - marketing, feature, fix" },
           ],
         });
         if (isCancel(version_choice)) {
@@ -379,7 +456,7 @@ export const init = create_command({
 
         apps.push({
           name: app_name,
-          packages: package_paths,
+          components,
           changelog_path,
           versioning: version_choice as AppTemplate["versioning"],
         });
@@ -496,7 +573,8 @@ export const init = create_command({
       const config_source = generate_config_source({
         apps,
         changes_dir,
-        release_branch_prefix,
+        target_branch,
+        default_release_branch_prefix,
         git: git_answers,
       });
       await writeFile(config_path, config_source, "utf-8");
@@ -509,7 +587,7 @@ export const init = create_command({
       log.success("Generated auto-release.config.ts");
       log.success(`Change files directory: ${changes_dir}`);
       apps.forEach((app) => {
-        log.success(`App ${app.name} ready with ${app.packages.length} package(s)`);
+        log.success(`App ${app.name} ready with ${app.components.length} component(s)`);
       });
 
       outro("auto-release init complete!");
