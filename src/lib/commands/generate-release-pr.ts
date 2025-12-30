@@ -40,13 +40,13 @@ export const generate_release_pr = create_command({
     const logger = create_logger();
 
     // Check branch protection
-    const branch_check = await check_branch_protection(root, config.git.target_branch);
-    if (!branch_check.ok) {
-      return {
-        status: "error" as const,
-        error: branch_check.error,
-      };
-    }
+    // const branch_check = await check_branch_protection(root, config.git.target_branch);
+    // if (!branch_check.ok) {
+    //   return {
+    //     status: "error" as const,
+    //     error: branch_check.error,
+    //   };
+    // }
 
     const filtered_applications = filter
       ? config.managed_applications.filter((app) => filter.includes(app.name))

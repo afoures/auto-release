@@ -123,13 +123,6 @@ export const manual_release = create_command({
       }
     }
 
-    if (changes.list.length === 0) {
-      return {
-        status: "error" as const,
-        error: `No change files found for app ${app_name}. Use 'record-change' to create change files first.`,
-      };
-    }
-
     log.success(`Found ${changes.list.length} change file(s)`);
 
     // Get current version

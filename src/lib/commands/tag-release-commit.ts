@@ -65,13 +65,13 @@ export const tag_release_commit = create_command({
     const logger = create_logger();
 
     // Check branch protection
-    const branch_check = await check_branch_protection(root, config.git.target_branch);
-    if (!branch_check.ok) {
-      return {
-        status: "error" as const,
-        error: branch_check.error,
-      };
-    }
+    // const branch_check = await check_branch_protection(root, config.git.target_branch);
+    // if (!branch_check.ok) {
+    //   return {
+    //     status: "error" as const,
+    //     error: branch_check.error,
+    //   };
+    // }
 
     // Get HEAD and parent commit SHAs
     const { head_sha, parent_sha: base_sha } = await git.get_head_and_parent_shas(root);
