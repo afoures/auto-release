@@ -63,8 +63,32 @@ export async function parse_change_file<kind extends string>(
   }
 
   const first_line = non_empty_lines[0].trim();
-  // Remove # if present (for backward compatibility)
-  const summary = first_line.startsWith("#") ? first_line.replace(/^#+\s*/, "").trim() : first_line;
+
+  // If only one line, use it as-is
+  if (non_empty_lines.length === 1) {
+    return new ChangeFile<kind>({ kind: match.groups.kind as kind, summary: first_line });
+  }
+
+  // If multiple lines, first line is summary, rest should be list items
+  const remaining_lines = non_empty_lines.slice(1);
+  const invalid_lines: number[] = [];
+
+  remaining_lines.forEach((line, index) => {
+    const trimmed = line.trim();
+    // Check if line starts with a list marker (-, *, +)
+    if (!trimmed.match(/^[-*+]\s/)) {
+      invalid_lines.push(index + 2); // +2 because we start from line 2 (1-indexed)
+    }
+  });
+
+  if (invalid_lines.length > 0) {
+    return new Error(
+      `Change file ${path} has invalid format: lines ${invalid_lines.join(", ")} should be list items (starting with -, *, or +)`,
+    );
+  }
+
+  // Combine first line with list items
+  const summary = [first_line, ...remaining_lines].join("\n");
 
   return new ChangeFile<kind>({ kind: match.groups.kind as kind, summary: summary });
 }
@@ -73,12 +97,12 @@ export async function find_change_files<kind extends string>(
   folder: string,
   { allowed_kinds }: { allowed_kinds: readonly kind[] },
 ): Promise<{ list: ChangeFile<kind>[]; warnings: string[] }> {
-  const files = await fs.list_files(folder);
+  const files = await fs.list_files(folder, { sort: "creation" });
   const list: ChangeFile<kind>[] = [];
   const warnings: string[] = [];
+
   for (const filename of files) {
     const file_path = join(folder, filename);
-    console.log(file_path);
     const change_file_or_error = await parse_change_file<kind>(file_path);
     if (change_file_or_error instanceof Error) {
       continue;

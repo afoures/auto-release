@@ -11,8 +11,8 @@ import { compute_current_version } from "../utils/version.ts";
 import { ChangeFile, find_change_files } from "../change-file.ts";
 import { check_branch_protection } from "../utils/branch-protection.ts";
 
-export const generate_release = create_command({
-  name: "generate-release",
+export const generate_release_pr = create_command({
+  name: "generate-release-pr",
   description: "Create or update release PRs from change files",
   schema: {
     config: {
