@@ -109,8 +109,8 @@ export const generate_release_pr = create_command({
 
       // delete change files
       for (const change of changes.list) {
-        const relative_path = relative(root, change.filename);
-        await fs.delete_file(relative_path);
+        const change_file_path = join(config.changes_dir, app.name, change.filename);
+        await fs.delete_file(change_file_path);
       }
 
       // run all component updates
