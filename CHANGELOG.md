@@ -2,11 +2,14 @@
 
 This is the changelog for auto-release.
 
+## 0.2.3
+
+
 ## 0.2.2
 
 ### Bug Fixes
 
-- Make sure that all path are not relative when deleting them in `generate-release-pr` command.
+- Make sure that all path are not relative when deleting them in generate-release-pr command.
 
 
 ## 0.2.1
