@@ -143,7 +143,7 @@ export const generate_release_pr = create_command({
           releases: [
             { version: next_version, changes: changes.list },
             ...changelog.releases.filter((release) => release.version !== next_version),
-          ].sort((a, b) => app.versioning.compare(a.version, b.version)),
+          ].sort((a, b) => app.versioning.compare(b.version, a.version)),
         },
         {
           app: { name: app.name },

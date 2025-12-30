@@ -190,7 +190,6 @@ export function default_formatter<change_kinds extends string>({
           for (const change of kind_changes) {
             release_lines.push(`- ${change.summary.split("\n").join("\n  ")}`, "");
           }
-          release_lines.push("");
         }
 
         lines.push(release_lines.join("\n"));
