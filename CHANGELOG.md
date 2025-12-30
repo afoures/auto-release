@@ -2,6 +2,13 @@
 
 This is the changelog for auto-release.
 
+## 0.1.2
+
+### Bug Fixes
+
+- Update `init` command with new package name.
+
+
 ## 0.1.1
 
 ### Bug Fixes
