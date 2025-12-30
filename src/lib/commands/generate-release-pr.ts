@@ -116,13 +116,12 @@ export const generate_release_pr = create_command({
       // run all component updates
       for (const component of app.components) {
         for (const part of component.parts) {
-          const relative_path = relative(root, part.file);
-          const initial_content = await fs.read_file(relative_path);
+          const initial_content = await fs.read_file(part.file);
           if (initial_content === null) {
             continue;
           }
           const updated_content = part.update_version(initial_content, next_version);
-          await fs.write_file(relative_path, updated_content);
+          await fs.write_file(part.file, updated_content);
         }
         // TODO: implement component "after" hook
       }
@@ -130,8 +129,7 @@ export const generate_release_pr = create_command({
       const formatter = app.versioning.formatter;
 
       // update changelog
-      const changelog_relative_path = relative(root, app.changelog);
-      const initial_changelog_content = (await fs.read_file(changelog_relative_path)) ?? "";
+      const initial_changelog_content = (await fs.read_file(app.changelog)) ?? "";
       const changelog_as_mdast = fromMarkdown(initial_changelog_content, {
         extensions: [gfm()],
         mdastExtensions: [gfmFromMarkdown()],
@@ -149,7 +147,7 @@ export const generate_release_pr = create_command({
           app: { name: app.name },
         },
       );
-      await fs.write_file(changelog_relative_path, updated_changelog_content);
+      await fs.write_file(app.changelog, updated_changelog_content);
 
       // git diff then reset
       const file_operations = await git.diff(root);
