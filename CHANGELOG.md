@@ -2,12 +2,18 @@
 
 This is the changelog for `auto-release`.
 
+## 0.2.12
+
+### Bug Fixes
+
+- Update cli message formatting.
+
+
 ## 0.2.11
 
 ### Bug Fixes
 
 - Fixed a lot of small issues after first test.
-  
 
 
 ## 0.2.3
