@@ -2,6 +2,14 @@
 
 This is the changelog for `auto-release`.
 
+## 0.2.11
+
+### Bug Fixes
+
+- Fixed a lot of small issues after first test.
+  
+
+
 ## 0.2.3
 
 No changes in this release.
