@@ -6,10 +6,8 @@ import { find_change_files } from "../change-file.ts";
 import * as git from "../utils/git.ts";
 import * as fs from "../utils/fs.ts";
 import { compute_current_version } from "../utils/version.ts";
-import { fromMarkdown } from "mdast-util-from-markdown";
-import { gfmFromMarkdown } from "mdast-util-gfm";
-import { gfm } from "micromark-extension-gfm";
 import { is_ci } from "../utils/branch-protection.ts";
+import * as mdast from "../utils/mdast.ts";
 
 export const manual_release = create_command({
   name: "manual-release",
@@ -233,12 +231,9 @@ ${changes_summary}`,
 
     // Delete change files
     const changes_dir = join(config.changes_dir, app_name);
-    for (const change of changes.list) {
-      const change_file_path = join(changes_dir, change.filename);
-      await fs.delete_file(change_file_path);
-      files_to_stage.push(change_file_path);
-    }
-    log.success("Deleted change files");
+    const deleted_change_files = await fs.delete_all_files_from_folder(changes_dir);
+    files_to_stage.push(...deleted_change_files);
+    log.success(`Deleted ${deleted_change_files.length} change file(s)`);
 
     // Update components
     for (const component of app.components) {
@@ -256,12 +251,12 @@ ${changes_summary}`,
 
     // Update changelog
     const formatter = app.versioning.formatter;
-    const initial_changelog_content = (await fs.read_file(app.changelog)) ?? "";
-    const changelog_as_mdast = fromMarkdown(initial_changelog_content, {
-      extensions: [gfm()],
-      mdastExtensions: [gfmFromMarkdown()],
-    });
-    const changelog = formatter.transform_markdown(changelog_as_mdast);
+    const initial_changelog_content = await fs.read_file(app.changelog);
+    const changelog_as_mdast = mdast.parse_markdown(initial_changelog_content ?? "");
+    const changelog = formatter.transform_markdown(
+      changelog_as_mdast,
+      initial_changelog_content ?? "",
+    );
     const updated_changelog_content = formatter.format_changelog(
       {
         ...changelog,

@@ -39,7 +39,11 @@ export async function save_change_file<kind extends string>(
   to: string,
 ): Promise<string> {
   const file_path = join(to, change_file.filename);
-  await fs.write_file(file_path, change_file.summary);
+  const text = change_file.summary
+    .split("\n")
+    .map((line) => line.slice(2))
+    .join("\n");
+  await fs.write_file(file_path, text);
   return file_path;
 }
 
@@ -51,53 +55,21 @@ export async function parse_change_file<kind extends string>(
   if (!match) {
     return new Error(`Invalid change filename format: ${path} (expected: <kind>.<slug>.md)`);
   }
-  const content = await fs.read_file(path);
-  if (content === null) {
+  const file_content = await fs.read_file(path);
+  if (file_content === null) {
     return new Error(`Change file is missing: ${path}`);
   }
-  const lines = content.split("\n");
-  const non_empty_lines = lines.filter((line) => line.trim() !== "");
-
-  if (non_empty_lines.length === 0) {
+  if (!file_content.trim()) {
     return new Error("Change file is empty");
   }
 
-  const first_line = non_empty_lines[0].trim();
-
-  // If only one line, use it as-is
-  if (non_empty_lines.length === 1) {
-    return new ChangeFile<kind>({
-      slug: match.groups.slug,
-      kind: match.groups.kind as kind,
-      summary: first_line,
-    });
-  }
-
-  // If multiple lines, first line is summary, rest should be list items
-  const remaining_lines = non_empty_lines.slice(1);
-  const invalid_lines: number[] = [];
-
-  remaining_lines.forEach((line, index) => {
-    const trimmed = line.trim();
-    // Check if line starts with a list marker (-, *, +)
-    if (!trimmed.match(/^[-*+]\s/)) {
-      invalid_lines.push(index + 2); // +2 because we start from line 2 (1-indexed)
-    }
-  });
-
-  if (invalid_lines.length > 0) {
-    return new Error(
-      `Change file ${path} has invalid format: lines ${invalid_lines.join(", ")} should be list items (starting with -, *, or +)`,
-    );
-  }
-
-  // Combine first line with list items
-  const summary = [first_line, ...remaining_lines].join("\n");
+  const [title, ...rest] = file_content.split("\n");
+  const text = `- ${title}\n${rest.map((line) => `  ${line}`).join("\n")}`;
 
   return new ChangeFile<kind>({
     slug: match.groups.slug,
     kind: match.groups.kind as kind,
-    summary: summary,
+    summary: text,
   });
 }
 
@@ -113,6 +85,7 @@ export async function find_change_files<kind extends string>(
     const file_path = join(folder, filename);
     const change_file_or_error = await parse_change_file<kind>(file_path);
     if (change_file_or_error instanceof Error) {
+      warnings.push(`Change file ${file_path} is invalid: ${change_file_or_error.message}`);
       continue;
     }
     const change_file = change_file_or_error;

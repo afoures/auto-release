@@ -1,15 +1,12 @@
-import { join, relative } from "node:path";
+import { join } from "node:path";
 import { create_logger } from "../utils/logger.ts";
 import { create_command } from "../cli.ts";
 import { find_nearest_config } from "../config.ts";
-import { fromMarkdown } from "mdast-util-from-markdown";
-import { gfmFromMarkdown } from "mdast-util-gfm";
-import { gfm } from "micromark-extension-gfm";
 import * as git from "../utils/git.ts";
 import * as fs from "../utils/fs.ts";
 import { compute_current_version } from "../utils/version.ts";
 import { ChangeFile, find_change_files } from "../change-file.ts";
-import { check_branch_protection } from "../utils/branch-protection.ts";
+import * as mdast from "../utils/mdast.ts";
 
 export const generate_release_pr = create_command({
   name: "generate-release-pr",
@@ -39,15 +36,6 @@ export const generate_release_pr = create_command({
   run: async ({ args: { filter, "dry-run": dry_run = false }, context: { config, root } }) => {
     const logger = create_logger();
 
-    // Check branch protection
-    // const branch_check = await check_branch_protection(root, config.git.target_branch);
-    // if (!branch_check.ok) {
-    //   return {
-    //     status: "error" as const,
-    //     error: branch_check.error,
-    //   };
-    // }
-
     const filtered_applications = filter
       ? config.managed_applications.filter((app) => filter.includes(app.name))
       : config.managed_applications;
@@ -60,7 +48,8 @@ export const generate_release_pr = create_command({
     }
 
     for (const app of filtered_applications) {
-      const changes = await find_change_files(join(config.changes_dir, app.name), {
+      const changes_dir = join(config.changes_dir, app.name);
+      const changes = await find_change_files(changes_dir, {
         allowed_kinds: app.versioning.allowed_changes,
       });
 
@@ -108,10 +97,7 @@ export const generate_release_pr = create_command({
       }
 
       // delete change files
-      for (const change of changes.list) {
-        const change_file_path = join(config.changes_dir, app.name, change.filename);
-        await fs.delete_file(change_file_path);
-      }
+      await fs.delete_all_files_from_folder(changes_dir);
 
       // run all component updates
       for (const component of app.components) {
@@ -129,12 +115,12 @@ export const generate_release_pr = create_command({
       const formatter = app.versioning.formatter;
 
       // update changelog
-      const initial_changelog_content = (await fs.read_file(app.changelog)) ?? "";
-      const changelog_as_mdast = fromMarkdown(initial_changelog_content, {
-        extensions: [gfm()],
-        mdastExtensions: [gfmFromMarkdown()],
-      });
-      const changelog = formatter.transform_markdown(changelog_as_mdast);
+      const initial_changelog_content = await fs.read_file(app.changelog);
+      const changelog_as_mdast = mdast.parse_markdown(initial_changelog_content ?? "");
+      const changelog = formatter.transform_markdown(
+        changelog_as_mdast,
+        initial_changelog_content ?? "",
+      );
       const updated_changelog_content = formatter.format_changelog(
         {
           ...changelog,
@@ -168,7 +154,7 @@ export const generate_release_pr = create_command({
       await platform.create_or_update_pull_request({
         head_branch_name: release_branch_name,
         base_branch_name: config.git.target_branch,
-        title: `chore: prepare release ${app.name}@${next_version}`,
+        title: `release: ${app.name}@${next_version}`,
         body: formatter.generate_pr_body({
           app: { name: app.name },
           current_version,
