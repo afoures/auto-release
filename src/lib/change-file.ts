@@ -55,16 +55,18 @@ export async function parse_change_file<kind extends string>(
   if (!match) {
     return new Error(`Invalid change filename format: ${path} (expected: <kind>.<slug>.md)`);
   }
-  const file_content = await fs.read_file(path);
+  let file_content = await fs.read_file(path);
+  file_content = file_content?.trim() ?? null;
   if (file_content === null) {
     return new Error(`Change file is missing: ${path}`);
   }
-  if (!file_content.trim()) {
+  if (!file_content) {
     return new Error("Change file is empty");
   }
 
   const [title, ...rest] = file_content.split("\n");
-  const text = `- ${title}\n${rest.map((line) => `  ${line}`).join("\n")}`;
+
+  const text = [`- ${title}`, ...rest.map((line) => `  ${line}`)].join("\n");
 
   return new ChangeFile<kind>({
     slug: match.groups.slug,

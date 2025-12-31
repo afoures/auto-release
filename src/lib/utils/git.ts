@@ -276,7 +276,7 @@ export async function get_staged_diff(cwd?: string): Promise<string> {
   const options = cwd ? { cwd } : undefined;
   try {
     const { stdout } = await exec("git diff --cached --stat", options);
-    return stdout.trim();
+    return stdout;
   } catch {
     return "";
   }

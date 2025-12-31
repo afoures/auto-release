@@ -114,8 +114,8 @@ export function default_formatter<change_kinds extends string>({
           for (const item of (node as List).children) {
             const start = item.position?.start.offset ?? 0; // 1271
             const end = item.position?.end.offset ?? 0; // 1426
-            const summary = original_text.slice(start, end);
-            if (!summary.trim()) {
+            const summary = original_text.slice(start, end).trim();
+            if (!summary) {
               continue;
             }
             current_release.changes.push(
@@ -210,8 +210,8 @@ export function default_formatter<change_kinds extends string>({
         lines.push("");
         lines.push(`## ${heading}`);
         for (const change of items) {
-          const [title, ...description] = change.summary.split("\n");
-          lines.push(`- ${title}`, ...description.map((line) => `  ${line}`));
+          lines.push(change.summary);
+          lines.push("");
         }
       }
 

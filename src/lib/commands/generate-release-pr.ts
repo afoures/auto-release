@@ -86,7 +86,7 @@ export const generate_release_pr = create_command({
         const label = display_map[kind]?.plural ?? display_map[kind]?.singular ?? kind;
         message_lines.push(`\n${label}:`);
         for (const change of kind_changes) {
-          message_lines.push(`  • ${change.summary}`);
+          message_lines.push(`  ${change.summary}`);
         }
       }
 
