@@ -199,7 +199,7 @@ export const manual_release = create_command({
 
     // Show what will be done
     const changes_summary = changes.list
-      .map((change) => `  • ${change.summary.split("\n").join("\n    ")}`)
+      .map((change) => `  ${change.summary.split("\n").join("\n  ")}`)
       .join("\n");
 
     note(
@@ -209,7 +209,7 @@ export const manual_release = create_command({
 - Next version: ${next_version}
 - Tag: ${tag}
 - Change files:
-${changes_summary}`,
+${changes_summary || "  No changes in this release."}`,
       "Release details",
     );
 
@@ -308,7 +308,7 @@ ${changes_summary}`,
 
     const confirm_commit = await confirm({
       message: "Review the changes above. Proceed with commit?",
-      initialValue: true,
+      initialValue: false,
     });
 
     if (isCancel(confirm_commit) || !confirm_commit) {
