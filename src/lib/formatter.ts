@@ -149,7 +149,6 @@ export function default_formatter<change_kinds extends string>({
         lines.push(`# \`${context.app.name}\` changelog`);
       }
       if (changelog.root.description.length > 0) {
-        console.log(changelog.root.description);
         lines.push(changelog.root.description.join("\n"));
       } else {
         lines.push(`This is the changelog for \`${context.app.name}\`.`);
