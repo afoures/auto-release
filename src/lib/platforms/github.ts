@@ -139,28 +139,36 @@ export function github(options: GitHubOptions): GitPlatformClient {
         }),
       });
 
-      // Create or update branch reference
+      // Check if branch exists
+      let branch_exists = false;
       try {
+        await api_request(`/git/ref/heads/${branch_name}`);
+        branch_exists = true;
+      } catch (error: any) {
+        if (!error.message.includes("404")) {
+          throw error;
+        }
+      }
+
+      // Create or force-update branch reference to reset it to base branch
+      if (branch_exists) {
+        // Force push to reset branch to the new commit based on base branch
         await api_request(`/git/refs/heads/${branch_name}`, {
           method: "PATCH",
           body: JSON.stringify({
             sha: commit.sha,
-            force: false,
+            force: true, // Force update to reset branch
           }),
         });
-      } catch (error: any) {
-        // Branch doesn't exist, create it
-        if (error.message.includes("404")) {
-          await api_request("/git/refs", {
-            method: "POST",
-            body: JSON.stringify({
-              ref: `refs/heads/${branch_name}`,
-              sha: commit.sha,
-            }),
-          });
-        } else {
-          throw error;
-        }
+      } else {
+        // Create new branch
+        await api_request("/git/refs", {
+          method: "POST",
+          body: JSON.stringify({
+            ref: `refs/heads/${branch_name}`,
+            sha: commit.sha,
+          }),
+        });
       }
 
       return commit.sha;

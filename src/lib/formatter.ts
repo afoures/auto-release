@@ -1,7 +1,8 @@
-import type { Content, Heading, List, ListItem, Root } from "mdast";
+import type { Heading, List, Root } from "mdast";
 import type { Formatter } from "./versioning/types.ts";
 import type { ChangeKindDisplayMap } from "./versioning/types.ts";
 import { ChangeFile } from "./change-file.ts";
+import * as mdast from "./utils/mdast.ts";
 
 type DefaultParsedChangelog<change_kinds extends string> = {
   root: { title: string; description: string[] };
@@ -10,16 +11,6 @@ type DefaultParsedChangelog<change_kinds extends string> = {
     changes: Array<ChangeFile<change_kinds>>;
   }>;
 };
-
-function to_plain_text(node: Content | Root): string {
-  if ("children" in node && Array.isArray(node.children)) {
-    return node.children.map((child) => to_plain_text(child as Content)).join("");
-  }
-  if ("value" in node && typeof (node as { value?: unknown }).value === "string") {
-    return (node as { value: string }).value;
-  }
-  return "";
-}
 
 function normalize_label(label: string): string {
   return label.trim().toLowerCase();
@@ -52,19 +43,6 @@ function resolve_change_kind<change_kinds extends string>({
   return null;
 }
 
-function extract_list_item_text(item: ListItem): {
-  title: string;
-  description: string[];
-} {
-  const text = to_plain_text(item).trim();
-  const lines = text
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
-  const [title, ...description] = lines;
-  return { title: title ?? "", description };
-}
-
 function create_empty_changelog<
   change_kinds extends string,
 >(): DefaultParsedChangelog<change_kinds> {
@@ -93,7 +71,7 @@ export function default_formatter<change_kinds extends string>({
     );
 
   return {
-    transform_markdown(tree: Root) {
+    transform_markdown(tree: Root, original_text: string) {
       const changelog = create_empty_changelog<change_kinds>();
 
       let current_release: DefaultParsedChangelog<change_kinds>["releases"][number] | null = null;
@@ -107,7 +85,7 @@ export function default_formatter<change_kinds extends string>({
 
       for (const node of tree.children) {
         if (node.type === "heading" && (node as Heading).depth === 1) {
-          changelog.root.title = to_plain_text(node).trim();
+          changelog.root.title = mdast.as_text(node);
           continue;
         }
 
@@ -115,14 +93,14 @@ export function default_formatter<change_kinds extends string>({
           push_current_release();
           current_kind = null;
 
-          const heading_text = to_plain_text(node).trim();
+          const heading_text = mdast.to_plain_text(node).trim();
           const version = heading_text.split(/\s+/)[0] ?? "";
           current_release = { version, changes: [] };
           continue;
         }
 
         if (node.type === "heading" && (node as Heading).depth === 3) {
-          const heading_text = to_plain_text(node).trim();
+          const heading_text = mdast.to_plain_text(node).trim();
           current_kind = resolve_change_kind({
             heading_text,
             allowed_changes,
@@ -134,14 +112,16 @@ export function default_formatter<change_kinds extends string>({
         if (node.type === "list" && current_release) {
           const kind_for_items = current_kind ?? allowed_changes[0] ?? ("default" as change_kinds);
           for (const item of (node as List).children) {
-            const { title } = extract_list_item_text(item);
-            if (!title) {
+            const start = item.position?.start.offset ?? 0; // 1271
+            const end = item.position?.end.offset ?? 0; // 1426
+            const summary = original_text.slice(start, end);
+            if (!summary.trim()) {
               continue;
             }
             current_release.changes.push(
               new ChangeFile({
                 kind: kind_for_items,
-                summary: title,
+                summary: summary,
               }),
             );
           }
@@ -149,7 +129,7 @@ export function default_formatter<change_kinds extends string>({
         }
 
         if (!current_release && node.type === "paragraph") {
-          const text = to_plain_text(node).trim();
+          const text = mdast.as_text(node);
           if (text) {
             changelog.root.description.push(text);
           }
@@ -164,18 +144,19 @@ export function default_formatter<change_kinds extends string>({
       const lines: string[] = [];
 
       if (changelog.root.title) {
-        lines.push(`# ${changelog.root.title}`);
+        lines.push(changelog.root.title);
       } else {
-        lines.push(`# \`${context.app.name}\` Changelog`);
+        lines.push(`# \`${context.app.name}\` changelog`);
       }
       if (changelog.root.description.length > 0) {
+        console.log(changelog.root.description);
         lines.push(changelog.root.description.join("\n"));
       } else {
         lines.push(`This is the changelog for \`${context.app.name}\`.`);
       }
 
       for (const release of changelog.releases) {
-        const release_lines: string[] = [`## ${release.version}`, ""];
+        const release_lines = [`## ${release.version}`, ""];
 
         for (const change_kind of allowed_changes) {
           const kind_changes = release.changes.filter((change) => change.kind === change_kind);
@@ -188,8 +169,12 @@ export function default_formatter<change_kinds extends string>({
           release_lines.push(`### ${heading}`, "");
 
           for (const change of kind_changes) {
-            release_lines.push(`- ${change.summary.split("\n").join("\n  ")}`, "");
+            release_lines.push(change.summary, "");
           }
+        }
+
+        if (release.changes.length === 0) {
+          release_lines.push("No changes in this release.", "");
         }
 
         lines.push(release_lines.join("\n"));
@@ -225,7 +210,8 @@ export function default_formatter<change_kinds extends string>({
         lines.push("");
         lines.push(`## ${heading}`);
         for (const change of items) {
-          lines.push(`- ${change.summary}`);
+          const [title, ...description] = change.summary.split("\n");
+          lines.push(`- ${title}`, ...description.map((line) => `  ${line}`));
         }
       }
 

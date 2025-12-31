@@ -103,7 +103,7 @@ const CONFIG_CANDIDATES = [
   "auto-release.config.ts",
   "auto-release.config.mts",
   "auto-release.config.cts",
-  "auto-release.config.ts",
+  "auto-release.config.js",
   "auto-release.config.mjs",
   "auto-release.config.cjs",
 ] as const;

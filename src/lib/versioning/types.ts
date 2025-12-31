@@ -19,7 +19,7 @@ export type Formatter<
    * Transform the mdast tree into a custom changelog data structure.
    * @param tree - The markdown tree to transform
    */
-  transform_markdown(tree: Root): parsed_changelog;
+  transform_markdown(tree: Root, original_text: string): parsed_changelog;
   /**
    * Format the changelog data into markdown.
    * The changelog releases will be sorted by version in ascending order automatically.

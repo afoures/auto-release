@@ -5,7 +5,6 @@ import type { ManagedApplication } from "../types.ts";
 import * as git from "../utils/git.ts";
 import { compute_current_version } from "../utils/version.ts";
 import { relative } from "node:path";
-import { check_branch_protection } from "../utils/branch-protection.ts";
 
 /**
  * Get the version of an app at a specific git revision
@@ -63,15 +62,6 @@ export const tag_release_commit = create_command({
   },
   run: async ({ args: { "dry-run": dry_run = false }, context: { config, root } }) => {
     const logger = create_logger();
-
-    // Check branch protection
-    // const branch_check = await check_branch_protection(root, config.git.target_branch);
-    // if (!branch_check.ok) {
-    //   return {
-    //     status: "error" as const,
-    //     error: branch_check.error,
-    //   };
-    // }
 
     // Get HEAD and parent commit SHAs
     const { head_sha, parent_sha: base_sha } = await git.get_head_and_parent_shas(root);

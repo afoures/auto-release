@@ -27,7 +27,13 @@ export function gitlab(options: GitLabOptions): GitPlatformClient {
 
     if (!response.ok) {
       const error_text = await response.text();
-      throw new Error(`GitLab API error: ${response.status} ${response.statusText}\n${error_text}`);
+      throw new Error(
+        `GitLab API error:
+${options.method} "${url}"
+${options.body ? `\n${options.body}` : ""}
+${response.status} ${response.statusText}
+${error_text}`,
+      );
     }
 
     if (response.status === 204) {
@@ -93,15 +99,16 @@ export function gitlab(options: GitLabOptions): GitPlatformClient {
         }
       }
 
-      // Create commit
+      // Create commit on a new branch or force-reset existing branch to base branch
+      // Using start_sha always ensures the branch is reset to base branch state
       const commit = await api_request("/repository/commits", {
         method: "POST",
         body: JSON.stringify({
           branch: branch_name,
           commit_message: commit_message,
           actions,
-          start_branch: branch_exists ? branch_name : undefined,
-          start_sha: branch_exists ? undefined : base_sha,
+          start_sha: base_sha,
+          force: branch_exists, // Force push if branch exists to reset it
         }),
       });
 
@@ -115,7 +122,15 @@ export function gitlab(options: GitLabOptions): GitPlatformClient {
       body: string;
       draft?: boolean;
     }): Promise<any> {
-      const { head_branch_name, base_branch_name, title, body, draft = false } = args;
+      const {
+        head_branch_name,
+        base_branch_name,
+        title: initial_title,
+        body,
+        draft = false,
+      } = args;
+
+      const title = draft ? `Draft: ${initial_title}` : initial_title;
 
       // GitLab calls them "merge requests"
       // Check if MR already exists
@@ -131,7 +146,6 @@ export function gitlab(options: GitLabOptions): GitPlatformClient {
           body: JSON.stringify({
             title,
             description: body,
-            work_in_progress: draft,
           }),
         });
         return {
@@ -149,7 +163,6 @@ export function gitlab(options: GitLabOptions): GitPlatformClient {
             target_branch: base_branch_name,
             title,
             description: body,
-            work_in_progress: draft,
           }),
         });
         return {

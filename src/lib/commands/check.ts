@@ -101,7 +101,7 @@ export const check = create_command({
     if (valid) {
       logger.success("All validations passed!");
     } else {
-      logger.error("Validation failed:");
+      logger.error("Detected errors:");
       errors.forEach((err) => logger.error(`  ${err}`));
     }
 
@@ -110,7 +110,7 @@ export const check = create_command({
     } else {
       return {
         status: "error" as const,
-        error: errors.join("; "),
+        error: "Validation failed",
       };
     }
   },

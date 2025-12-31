@@ -35,6 +35,17 @@ export async function delete_file(path: string): Promise<void> {
   }
 }
 
+export async function delete_all_files_from_folder(folder: string) {
+  const files = await list_files(folder);
+  const deleted_files: string[] = [];
+  for (const file of files) {
+    const file_path = join(folder, file);
+    await delete_file(file_path);
+    deleted_files.push(file_path);
+  }
+  return deleted_files;
+}
+
 export type ListFilesSortOption = "creation" | "name" | "modified";
 
 export async function list_files(

@@ -41,7 +41,7 @@ export async function diff(cwd?: string): Promise<Array<GitFileOperation>> {
   }
 
   const operations: Array<GitFileOperation> = [];
-  const lines = status_output.trim().split("\n");
+  const lines = status_output.split("\n");
 
   for (const line of lines) {
     if (!line.trim()) continue;

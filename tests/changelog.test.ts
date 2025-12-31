@@ -22,7 +22,9 @@ describe("default formatter", () => {
       ],
     };
 
-    const output = formatter.format_changelog(changelog);
+    const output = formatter.format_changelog(changelog, {
+      app: { name: "test-app" },
+    });
 
     expect(output).toContain("## 2.0.0");
     expect(output).toContain("### Breaking Changes");
@@ -52,5 +54,24 @@ describe("default formatter", () => {
     });
 
     expect(notes).toBe("[View Changelog](CHANGELOG.md)");
+  });
+
+  it("adds no changes message when release has no changes", () => {
+    const changelog = {
+      root: { title: "test-app", description: [] as string[] },
+      releases: [
+        {
+          version: "1.0.0",
+          changes: [],
+        },
+      ],
+    };
+
+    const output = formatter.format_changelog(changelog, {
+      app: { name: "test-app" },
+    });
+
+    expect(output).toContain("## 1.0.0");
+    expect(output).toContain("No changes in this release.");
   });
 });
