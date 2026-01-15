@@ -188,8 +188,14 @@ export function default_formatter<change_kinds extends string>({
     },
     generate_pr_body({ app, current_version, next_version, changes }) {
       const lines: string[] = [];
-      lines.push(`# Release ${app.name} ${next_version}`);
-      lines.push(`Version: ${current_version} → ${next_version}`);
+      lines.push(
+        "This PR is managed by `[auto-release](https://github.com/afoures/auto-release)`. Do not edit it manually.",
+      );
+      lines.push(`## Automated release for \`${app.name}\``);
+      lines.push(`Version: \`${current_version}\` → \`${next_version}\``);
+
+      lines.push("");
+      lines.push("## Changelog");
 
       const grouped = new Map<change_kinds, Array<ChangeFile<change_kinds>>>();
       for (const change of changes) {
@@ -207,7 +213,7 @@ export function default_formatter<change_kinds extends string>({
         const labels = resolved_display_map[kind];
         const heading = labels?.plural ?? labels?.singular ?? kind;
         lines.push("");
-        lines.push(`## ${heading}`);
+        lines.push(`### ${heading}`);
         for (const change of items) {
           lines.push(change.summary);
           lines.push("");
