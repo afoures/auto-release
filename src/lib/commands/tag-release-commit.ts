@@ -122,7 +122,7 @@ export const tag_release_commit = create_command({
     if (dry_run) {
       logger.info("\nDry run - would create tags and releases:");
       for (const { app, head_version } of changed_apps) {
-        const tag = `${app.name}@${head_version}`;
+        const tag = config.git.tag_generator({ app_name: app.name, version: head_version });
         logger.info(`  - Tag: ${tag}`);
         logger.info(`  - Release: ${tag}`);
       }
@@ -137,7 +137,7 @@ export const tag_release_commit = create_command({
     const errors: string[] = [];
 
     for (const { app, head_version } of changed_apps) {
-      const tag = `${app.name}@${head_version}`;
+      const tag = config.git.tag_generator({ app_name: app.name, version: head_version });
 
       try {
         // Check if tag already exists via platform API (more reliable than local git)

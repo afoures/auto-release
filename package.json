@@ -6,13 +6,23 @@
   "bugs": {
     "url": "https://github.com/afoures/auto-release/issues"
   },
+  "author": "Antoine Fourès <contact@afoures.com>",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/afoures/auto-release.git"
   },
-  "author": "Antoine Fourès <contact@afoures.com>",
+  "bin": {
+    "auto-release": "./dist/bin.mjs"
+  },
+  "files": [
+    "dist",
+    "package.json",
+    "README.md"
+  ],
   "type": "module",
   "main": "./dist/index.mjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
   "exports": {
     ".": {
       "types": "./dist/index.d.mts",
@@ -32,16 +42,6 @@
       "import": "./dist/versioning.mjs"
     }
   },
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.mts",
-  "bin": {
-    "auto-release": "./dist/bin.mjs"
-  },
-  "files": [
-    "dist",
-    "package.json",
-    "README.md"
-  ],
   "scripts": {
     "build": "tsdown",
     "dev": "tsdown --watch",
@@ -70,8 +70,8 @@
     "typescript": "^5.9.3",
     "vitest": "^4.0.16"
   },
-  "packageManager": "pnpm@8.15.9+sha512.499434c9d8fdd1a2794ebf4552b3b25c0a633abcee5bb15e7b5de90f32f47b513aca98cd5cfd001c31f0db454bc3804edccd578501e4ca293a6816166bbd9f81",
   "engines": {
     "node": ">=22.0.0"
-  }
+  },
+  "packageManager": "pnpm@8.15.9+sha512.499434c9d8fdd1a2794ebf4552b3b25c0a633abcee5bb15e7b5de90f32f47b513aca98cd5cfd001c31f0db454bc3804edccd578501e4ca293a6816166bbd9f81"
 }

@@ -46,11 +46,14 @@ export class InternalConfig {
     platform: GitPlatformClient;
     target_branch: string;
     default_release_branch_prefix: string;
+    tag_generator: (args: { app_name: string; version: string }) => string;
   } {
     return {
       platform: this.#config.git.platform,
       target_branch: this.#config.git.target_branch || "main",
       default_release_branch_prefix: this.#config.git.default_release_branch_prefix || "release",
+      tag_generator:
+        this.#config.git.tag_generator || (({ app_name, version }) => `${app_name}@${version}`),
     };
   }
 

@@ -88,6 +88,7 @@ auto-release generate-release-pr
 ```
 
 This creates/updates a release branch with:
+
 - Updated versions in component files
 - Generated changelog entries
 - Change files removed
@@ -95,6 +96,7 @@ This creates/updates a release branch with:
 ### 3. Test on Release Branch
 
 CI on release branch runs:
+
 - Tests and quality checks
 - Build and deploy to test/staging environment
 
@@ -292,6 +294,7 @@ Change files are stored in `.changes/<app-name>/` with format:
 ```
 
 Examples:
+
 - `.changes/my-app/major.add-authentication.md`
 - `.changes/my-app/patch.fix-login-bug.md`
 
