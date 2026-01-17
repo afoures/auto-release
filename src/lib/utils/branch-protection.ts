@@ -1,6 +1,3 @@
-import { confirm, isCancel, cancel, log } from "@clack/prompts";
-import * as git from "./git.ts";
-
 /**
  * Detect if we're running in a CI environment
  *
@@ -49,57 +46,4 @@ export function is_ci(): boolean {
     // Vercel
     process.env.VERCEL === "true"
   );
-}
-
-/**
- * Check if the current branch matches the target branch
- *
- * If in CI and branches don't match, returns an error.
- * If not in CI and branches don't match, prompts for confirmation.
- *
- * @returns true if execution should continue, false if it should be cancelled
- */
-export async function check_branch_protection(
-  root: string,
-  target_branch: string,
-): Promise<{ ok: true } | { ok: false; error: string }> {
-  const current_branch = await git.get_current_branch(root);
-
-  if (current_branch === null) {
-    return {
-      ok: false,
-      error: "Could not determine current git branch. Are you in a git repository?",
-    };
-  }
-
-  if (current_branch === target_branch) {
-    return { ok: true };
-  }
-
-  const in_ci = is_ci();
-
-  if (in_ci) {
-    return {
-      ok: false,
-      error: `This command can only be run on the '${target_branch}' branch. Current branch: '${current_branch}'`,
-    };
-  }
-
-  // Not in CI - ask for confirmation
-  const should_continue = await confirm({
-    message: `You are on branch '${current_branch}', but this command should be run on '${target_branch}'. Continue anyway?`,
-    initialValue: false,
-  });
-
-  if (isCancel(should_continue)) {
-    cancel("Command cancelled");
-    return { ok: false, error: "Command cancelled by user" };
-  }
-
-  if (!should_continue) {
-    log.info(`Command cancelled. Please switch to '${target_branch}' branch to continue.`);
-    return { ok: false, error: "Command cancelled by user" };
-  }
-
-  return { ok: true };
 }

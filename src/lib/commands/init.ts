@@ -27,7 +27,7 @@ interface PackageJson {
   packageManager?: string;
 }
 
-export interface AppTemplate {
+export interface ProjectTemplate {
   name: string;
   components: Array<{ type: "node" | "bun" | "expo" | "php"; path: string }>;
   changelog_path: string;
@@ -49,7 +49,7 @@ type GitPlatformClientAnswers =
     };
 
 export interface GenerateConfigOptions {
-  apps: AppTemplate[];
+  projects: ProjectTemplate[];
   changes_dir: string;
   target_branch: string;
   default_release_branch_prefix: string;
@@ -57,14 +57,14 @@ export interface GenerateConfigOptions {
 }
 
 export function generate_config_source(options: GenerateConfigOptions): string {
-  const { apps, changes_dir, target_branch, default_release_branch_prefix, git } = options;
+  const { projects, changes_dir, target_branch, default_release_branch_prefix, git } = options;
 
   const imports: string[] = ['import { define_config } from "@afoures/auto-release";'];
 
   // Collect needed component imports
   const component_types = new Set<string>();
-  for (const app of apps) {
-    for (const component of app.components) {
+  for (const project of projects) {
+    for (const component of project.components) {
       component_types.add(component.type);
     }
   }
@@ -75,8 +75,8 @@ export function generate_config_source(options: GenerateConfigOptions): string {
 
   // Collect needed versioning imports
   const versioning_types = new Set<string>();
-  for (const app of apps) {
-    versioning_types.add(app.versioning);
+  for (const project of projects) {
+    versioning_types.add(project.versioning);
   }
   if (versioning_types.size > 0) {
     const versioning = Array.from(versioning_types).sort();
@@ -96,17 +96,17 @@ export function generate_config_source(options: GenerateConfigOptions): string {
     lines.push(`  changes_dir: ${JSON.stringify(changes_dir)},`);
   }
 
-  lines.push("  apps: {");
-  apps.forEach((app, index) => {
-    lines.push(`    ${JSON.stringify(app.name)}: {`);
+  lines.push("  projects: {");
+  projects.forEach((project, index) => {
+    lines.push(`    ${JSON.stringify(project.name)}: {`);
     lines.push("      components: [");
-    app.components.forEach((component) => {
+    project.components.forEach((component) => {
       lines.push(`        ${component.type}(${JSON.stringify(component.path)}),`);
     });
     lines.push("      ],");
-    lines.push(`      versioning: ${app.versioning}(),`);
-    lines.push(`      changelog: ${JSON.stringify(app.changelog_path)},`);
-    lines.push(index === apps.length - 1 ? "    }," : "    },");
+    lines.push(`      versioning: ${project.versioning}(),`);
+    lines.push(`      changelog: ${JSON.stringify(project.changelog_path)},`);
+    lines.push(index === projects.length - 1 ? "    }," : "    },");
   });
   lines.push("  },");
 
@@ -153,14 +153,14 @@ const PACKAGE_MANAGER_LOCKS: Record<PackageManager, string[]> = {
   bun: ["bun.lockb", "bun.lock"],
 };
 
-function normalize_app_name(input: string): string {
+function normalize_project_name(input: string): string {
   const trimmed = input.trim();
   const slug = trimmed
     .toLowerCase()
     .replace(/[^a-z0-9-]/g, "-")
     .replace(/-{2,}/g, "-")
     .replace(/^-|-$/g, "");
-  return slug || "app";
+  return slug || "project";
 }
 
 async function path_exists(target: string): Promise<boolean> {
@@ -228,21 +228,21 @@ async function ensure_package_json(path: string): Promise<PackageJson> {
 async function create_changes_directories(
   cwd: string,
   changes_dir: string,
-  apps: AppTemplate[],
+  projects: ProjectTemplate[],
 ): Promise<void> {
   const root_dir = join(cwd, changes_dir);
   await mkdir(root_dir, { recursive: true });
 
-  for (const app of apps) {
-    await mkdir(join(root_dir, app.name), { recursive: true });
+  for (const project of projects) {
+    await mkdir(join(root_dir, project.name), { recursive: true });
   }
 }
 
-async function ensure_changelog(app: AppTemplate, cwd: string): Promise<void> {
-  const absolute_path = join(cwd, app.changelog_path);
+async function ensure_changelog(project: ProjectTemplate, cwd: string): Promise<void> {
+  const absolute_path = join(cwd, project.changelog_path);
   await mkdir(dirname(absolute_path), { recursive: true });
   if (!(await path_exists(absolute_path))) {
-    const content = `# ${app.name} changelog\n\nAll notable changes to this project will be documented in this file.\n`;
+    const content = `# ${project.name} changelog\n\nAll notable changes to this project will be documented in this file.\n`;
     await writeFile(absolute_path, content, "utf-8");
   }
 }
@@ -346,40 +346,40 @@ export const init = create_command({
       }
       const target_branch = (target_branch_input as string).trim();
 
-      const app_count_input = await text({
-        message: "How many apps should auto-release manage?",
+      const project_count_input = await text({
+        message: "How many projects should auto-release manage?",
         initialValue: "1",
         validate: (value = "") => {
           const parsed = Number.parseInt(value, 10);
           return Number.isNaN(parsed) || parsed <= 0 ? "Enter a positive number" : undefined;
         },
       });
-      if (isCancel(app_count_input)) {
+      if (isCancel(project_count_input)) {
         cancel("Initialization cancelled");
         return { status: "success" as const };
       }
-      const app_count = Number.parseInt(app_count_input as string, 10);
+      const project_count = Number.parseInt(project_count_input as string, 10);
 
-      const apps: AppTemplate[] = [];
-      for (let index = 0; index < app_count; index++) {
+      const projects: ProjectTemplate[] = [];
+      for (let index = 0; index < project_count; index++) {
         const default_name =
           index === 0 && package_json.name
-            ? normalize_app_name(package_json.name)
-            : `app-${index + 1}`;
-        const app_name_input = await text({
-          message: `App #${index + 1} name (lowercase, no spaces)`,
+            ? normalize_project_name(package_json.name)
+            : `project-${index + 1}`;
+        const project_name_input = await text({
+          message: `Project #${index + 1} name (lowercase, no spaces)`,
           initialValue: default_name,
           validate: (value = "") =>
-            value.trim().length === 0 ? "App name is required" : undefined,
+            value.trim().length === 0 ? "Project name is required" : undefined,
         });
-        if (isCancel(app_name_input)) {
+        if (isCancel(project_name_input)) {
           cancel("Initialization cancelled");
           return { status: "success" as const };
         }
-        const app_name = normalize_app_name(app_name_input as string);
+        const project_name = normalize_project_name(project_name_input as string);
 
         const component_count_input = await text({
-          message: `How many components for ${app_name}?`,
+          message: `How many components for ${project_name}?`,
           initialValue: "1",
           validate: (value = "") => {
             const parsed = Number.parseInt(value, 10);
@@ -395,7 +395,7 @@ export const init = create_command({
         const components: Array<{ type: "node" | "bun" | "expo" | "php"; path: string }> = [];
         for (let comp_index = 0; comp_index < component_count; comp_index++) {
           const component_type_choice = await select({
-            message: `Component #${comp_index + 1} type for ${app_name}`,
+            message: `Component #${comp_index + 1} type for ${project_name}`,
             options: [
               { value: "node", label: "Node (package.json)" },
               { value: "bun", label: "Bun (package.json)" },
@@ -409,9 +409,9 @@ export const init = create_command({
           }
           const component_type = component_type_choice as "node" | "bun" | "expo" | "php";
 
-          const default_path = app_count === 1 && component_count === 1 ? "." : `apps/${app_name}`;
+          const default_path = ".";
           const component_path_input = await text({
-            message: `Component #${comp_index + 1} path for ${app_name}`,
+            message: `Component #${comp_index + 1} path for ${project_name}`,
             initialValue: default_path,
             validate: (value = "") =>
               value.trim().length === 0 ? "Component path is required" : undefined,
@@ -429,8 +429,8 @@ export const init = create_command({
         }
 
         const changelog_input = await text({
-          message: `Changelog path for ${app_name}`,
-          initialValue: app_count === 1 ? "CHANGELOG.md" : `apps/${app_name}/CHANGELOG.md`,
+          message: `Changelog path for ${project_name}`,
+          initialValue: project_count === 1 ? "CHANGELOG.md" : `${project_name}/CHANGELOG.md`,
           validate: (value = "") =>
             value.trim().length === 0 ? "Changelog path is required" : undefined,
         });
@@ -441,7 +441,7 @@ export const init = create_command({
         const changelog_path = (changelog_input as string).trim();
 
         const version_choice = await select({
-          message: `Versioning strategy for ${app_name}`,
+          message: `Versioning strategy for ${project_name}`,
           initialValue: "semver",
           options: [
             { value: "semver", label: "Semver (1.2.3) - major, minor, patch" },
@@ -454,11 +454,11 @@ export const init = create_command({
           return { status: "success" as const };
         }
 
-        apps.push({
-          name: app_name,
+        projects.push({
+          name: project_name,
           components,
           changelog_path,
-          versioning: version_choice as AppTemplate["versioning"],
+          versioning: version_choice as ProjectTemplate["versioning"],
         });
       }
 
@@ -491,7 +491,7 @@ export const init = create_command({
           message: "GitHub repository name",
           initialValue: package_json.name
             ? package_json.name.replace(/^@[^/]+\//, "")
-            : apps[0]?.name || "",
+            : projects[0]?.name || "",
           validate: (value = "") =>
             value.trim().length === 0 ? "Repository is required" : undefined,
         });
@@ -571,7 +571,7 @@ export const init = create_command({
       }
 
       const config_source = generate_config_source({
-        apps,
+        projects: projects,
         changes_dir,
         target_branch,
         default_release_branch_prefix,
@@ -579,15 +579,15 @@ export const init = create_command({
       });
       await writeFile(config_path, config_source, "utf-8");
 
-      await create_changes_directories(context.cwd, changes_dir, apps);
-      for (const app of apps) {
-        await ensure_changelog(app, context.cwd);
+      await create_changes_directories(context.cwd, changes_dir, projects);
+      for (const project of projects) {
+        await ensure_changelog(project, context.cwd);
       }
 
       log.success("Generated auto-release.config.ts");
       log.success(`Change files directory: ${changes_dir}`);
-      apps.forEach((app) => {
-        log.success(`App ${app.name} ready with ${app.components.length} component(s)`);
+      projects.forEach((project) => {
+        log.success(`Project ${project.name} ready with ${project.components.length} component(s)`);
       });
 
       outro("auto-release init complete!");

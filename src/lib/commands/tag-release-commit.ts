@@ -1,33 +1,33 @@
 import { create_logger } from "../utils/logger.ts";
 import { create_command } from "../cli.ts";
 import { find_nearest_config } from "../config.ts";
-import type { ManagedApplication } from "../types.ts";
+import type { ManagedProject } from "../types.ts";
 import * as git from "../utils/git.ts";
 import { compute_current_version } from "../utils/version.ts";
 import { relative } from "node:path";
 
 /**
- * Get the version of an app at a specific git revision
+ * Get the version of a project at a specific git revision
  */
-async function get_app_version_at_revision(
-  app: ManagedApplication,
+async function get_project_version_at_revision(
+  project: ManagedProject,
   root: string,
   revision: string,
 ): Promise<{ ok: true; version: string } | { ok: false; error: string }> {
   try {
     const version =
-      (await compute_current_version(app, {
+      (await compute_current_version(project, {
         get_file_content: (file_path: string) => {
           const relative_path = relative(root, file_path);
           return git.read_file_at_revision(root, revision, relative_path);
         },
-      })) ?? app.versioning.initial_version;
+      })) ?? project.versioning.initial_version;
 
     // Validate version format
-    if (!app.versioning.validate({ version })) {
+    if (!project.versioning.validate({ version })) {
       return {
         ok: false,
-        error: `Invalid version format for ${app.name} at revision ${revision}: ${version}`,
+        error: `Invalid version format for ${project.name} at revision ${revision}: ${version}`,
       };
     }
 
@@ -35,7 +35,7 @@ async function get_app_version_at_revision(
   } catch (error: any) {
     return {
       ok: false,
-      error: `Failed to get version for ${app.name} at revision ${revision}: ${error.message}`,
+      error: `Failed to get version for ${project.name} at revision ${revision}: ${error.message}`,
     };
   }
 }
@@ -73,40 +73,40 @@ export const tag_release_commit = create_command({
       };
     }
 
-    const changed_apps: Array<{
-      app: ManagedApplication;
+    const changed_projects: Array<{
+      project: ManagedProject;
       head_version: string;
       base_version: string;
     }> = [];
 
-    // Detect apps with version changes
-    for (const app of config.managed_applications) {
-      const head_result = await get_app_version_at_revision(app, root, head_sha);
+    // Detect projects with version changes
+    for (const project of config.managed_projects) {
+      const head_result = await get_project_version_at_revision(project, root, head_sha);
       if (!head_result.ok) {
         return {
           status: "error" as const,
-          error: `Failed to get HEAD version for ${app.name}: ${head_result.error}`,
+          error: `Failed to get HEAD version for ${project.name}: ${head_result.error}`,
         };
       }
 
-      const base_result = await get_app_version_at_revision(app, root, base_sha);
+      const base_result = await get_project_version_at_revision(project, root, base_sha);
       if (!base_result.ok) {
         return {
           status: "error" as const,
-          error: `Failed to get base version for ${app.name}: ${base_result.error}`,
+          error: `Failed to get base version for ${project.name}: ${base_result.error}`,
         };
       }
 
       if (head_result.version !== base_result.version) {
-        changed_apps.push({
-          app,
+        changed_projects.push({
+          project,
           head_version: head_result.version,
           base_version: base_result.version,
         });
       }
     }
 
-    if (changed_apps.length === 0) {
+    if (changed_projects.length === 0) {
       return {
         status: "success" as const,
         message: "No version changes detected",
@@ -114,15 +114,18 @@ export const tag_release_commit = create_command({
     }
 
     // Log detected changes
-    logger.info(`Detected version changes in ${changed_apps.length} app(s):`);
-    for (const { app, head_version, base_version } of changed_apps) {
-      logger.info(`  ${app.name}: ${base_version} → ${head_version}`);
+    logger.info(`Detected version changes in ${changed_projects.length} project(s):`);
+    for (const { project, head_version, base_version } of changed_projects) {
+      logger.info(`  ${project.name}: ${base_version} → ${head_version}`);
     }
 
     if (dry_run) {
       logger.info("\nDry run - would create tags and releases:");
-      for (const { app, head_version } of changed_apps) {
-        const tag = config.git.tag_generator({ app_name: app.name, version: head_version });
+      for (const { project, head_version } of changed_projects) {
+        const tag = config.git.tag_generator({
+          project: { name: project.name },
+          version: head_version,
+        });
         logger.info(`  - Tag: ${tag}`);
         logger.info(`  - Release: ${tag}`);
       }
@@ -133,11 +136,14 @@ export const tag_release_commit = create_command({
     }
 
     // Create tags and releases
-    const tagged_apps: string[] = [];
+    const tagged_projects: string[] = [];
     const errors: string[] = [];
 
-    for (const { app, head_version } of changed_apps) {
-      const tag = config.git.tag_generator({ app_name: app.name, version: head_version });
+    for (const { project, head_version } of changed_projects) {
+      const tag = config.git.tag_generator({
+        project: { name: project.name },
+        version: head_version,
+      });
 
       try {
         // Check if tag already exists via platform API (more reliable than local git)
@@ -145,7 +151,7 @@ export const tag_release_commit = create_command({
         if (existing_tag !== null) {
           if (existing_tag.commit_sha === head_sha) {
             logger.info(`Tag ${tag} already exists on commit ${head_sha} - skipping`);
-            tagged_apps.push(tag);
+            tagged_projects.push(tag);
             continue;
           } else {
             errors.push(
@@ -167,17 +173,17 @@ export const tag_release_commit = create_command({
           tag,
           release: {
             name: tag,
-            body: app.versioning.formatter.generate_release_notes({
-              app: {
-                name: app.name,
-                changelog: app.changelog,
+            body: project.versioning.formatter.generate_release_notes({
+              project: {
+                name: project.name,
+                changelog: project.changelog,
               },
               version: head_version,
             }),
           },
         });
 
-        tagged_apps.push(tag);
+        tagged_projects.push(tag);
         logger.success(`Tagged and released ${tag}`);
       } catch (error: any) {
         errors.push(`Failed to tag/release ${tag}: ${error.message}`);
@@ -192,9 +198,9 @@ export const tag_release_commit = create_command({
     }
 
     const summary =
-      tagged_apps.length === 1
-        ? `Tagged 1 app: ${tagged_apps[0]}`
-        : `Tagged ${tagged_apps.length} apps: ${tagged_apps.join(", ")}`;
+      tagged_projects.length === 1
+        ? `Tagged 1 project: ${tagged_projects[0]}`
+        : `Tagged ${tagged_projects.length} projects: ${tagged_projects.join(", ")}`;
 
     return {
       status: "success" as const,

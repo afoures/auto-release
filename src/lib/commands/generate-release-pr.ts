@@ -18,7 +18,7 @@ export const generate_release_pr = create_command({
     },
     filter: {
       type: "string",
-      description: "Only generate release PRs for the specified apps",
+      description: "Only generate release PRs for the specified projects",
       multiple: true,
     },
     "dry-run": {
@@ -36,21 +36,21 @@ export const generate_release_pr = create_command({
   run: async ({ args: { filter, "dry-run": dry_run = false }, context: { config, root } }) => {
     const logger = create_logger();
 
-    const filtered_applications = filter
-      ? config.managed_applications.filter((app) => filter.includes(app.name))
-      : config.managed_applications;
+    const filtered_projects = filter
+      ? config.managed_projects.filter((project) => filter.includes(project.name))
+      : config.managed_projects;
 
-    if (filtered_applications.length === 0) {
+    if (filtered_projects.length === 0) {
       return {
         status: "success" as const,
-        message: "No apps to release",
+        message: "No projects to release",
       };
     }
 
-    for (const app of filtered_applications) {
-      const changes_dir = join(config.changes_dir, app.name);
+    for (const project of filtered_projects) {
+      const changes_dir = join(config.changes_dir, project.name);
       const changes = await find_change_files(changes_dir, {
-        allowed_kinds: app.versioning.allowed_changes,
+        allowed_kinds: project.versioning.allowed_changes,
       });
 
       if (changes.warnings.length > 0) {
@@ -60,11 +60,11 @@ export const generate_release_pr = create_command({
       }
 
       const current_version =
-        (await compute_current_version(app, {
+        (await compute_current_version(project, {
           get_file_content: (file_path: string) => fs.read_file(file_path),
-        })) ?? app.versioning.initial_version;
+        })) ?? project.versioning.initial_version;
 
-      const next_version = app.versioning.bump({
+      const next_version = project.versioning.bump({
         version: current_version,
         changes: changes.list,
         date: new Date(),
@@ -80,7 +80,7 @@ export const generate_release_pr = create_command({
 
       // Build formatted message
       const message_lines: string[] = [];
-      const display_map = app.versioning.display_map;
+      const display_map = project.versioning.display_map;
 
       for (const [kind, kind_changes] of changes_by_kind.entries()) {
         const label = display_map[kind]?.plural ?? display_map[kind]?.singular ?? kind;
@@ -90,7 +90,7 @@ export const generate_release_pr = create_command({
         }
       }
 
-      logger.note(`Release ${app.name} ${next_version}`, message_lines.join("\n"));
+      logger.note(`Release ${project.name} ${next_version}`, message_lines.join("\n"));
 
       if (dry_run) {
         continue;
@@ -100,7 +100,7 @@ export const generate_release_pr = create_command({
       await fs.delete_all_files_from_folder(changes_dir);
 
       // run all component updates
-      for (const component of app.components) {
+      for (const component of project.components) {
         for (const part of component.parts) {
           const initial_content = await fs.read_file(part.file);
           if (initial_content === null) {
@@ -112,10 +112,10 @@ export const generate_release_pr = create_command({
         // TODO: implement component "after" hook
       }
 
-      const formatter = app.versioning.formatter;
+      const formatter = project.versioning.formatter;
 
       // update changelog
-      const initial_changelog_content = await fs.read_file(app.changelog);
+      const initial_changelog_content = await fs.read_file(project.changelog);
       const changelog_as_mdast = mdast.parse_markdown(initial_changelog_content ?? "");
       const changelog = formatter.transform_markdown(
         changelog_as_mdast,
@@ -127,36 +127,36 @@ export const generate_release_pr = create_command({
           releases: [
             { version: next_version, changes: changes.list },
             ...changelog.releases.filter((release) => release.version !== next_version),
-          ].sort((a, b) => app.versioning.compare(b.version, a.version)),
+          ].sort((a, b) => project.versioning.compare(b.version, a.version)),
         },
         {
-          app: { name: app.name },
+          project: { name: project.name },
         },
       );
-      await fs.write_file(app.changelog, updated_changelog_content);
+      await fs.write_file(project.changelog, updated_changelog_content);
 
       // git diff then reset
       const file_operations = await git.diff(root);
       await git.reset(root);
 
       const platform = config.git.platform;
-      const release_branch_name = `${config.git.default_release_branch_prefix}/${app.name}`;
+      const release_branch_name = `${config.git.default_release_branch_prefix}/${project.name}`;
 
       // create or update branch
       await platform.create_or_update_branch({
         branch_name: release_branch_name,
         base_branch_name: config.git.target_branch,
         file_operations,
-        commit_message: `chore: prepare release ${app.name}@${next_version}`,
+        commit_message: `chore: prepare release ${project.name}@${next_version}`,
       });
 
       // create or update PR
       await platform.create_or_update_pull_request({
         head_branch_name: release_branch_name,
         base_branch_name: config.git.target_branch,
-        title: `release: ${app.name}@${next_version}`,
+        title: `release: ${project.name}@${next_version}`,
         body: formatter.generate_pr_body({
-          app: { name: app.name },
+          project: { name: project.name },
           current_version,
           next_version,
           changes: changes.list,

@@ -54,7 +54,7 @@ No changes in this release.
 
 - Add a `check` command to ensure that the state of `auto-release` managed files is clean.
 
-- Add a `list` command that list all applications managed by auto-release.
+- Add a `list` command that list all projects managed by auto-release.
 
 - Add `generate-release-pr` and `tag-release-commit` commands:
   - Those commands should be run in CI.

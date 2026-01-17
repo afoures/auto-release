@@ -1,11 +1,19 @@
 import { describe, it, expect } from "vitest";
-import { semver } from "../src/lib/versioning/semantic.ts";
 import { fromMarkdown } from "mdast-util-from-markdown";
 import { gfmFromMarkdown } from "mdast-util-gfm";
 import { gfm } from "micromark-extension-gfm";
+import { default_formatter } from "../src/lib/formatter.ts";
+import { ChangeFile } from "../src/lib/change-file.ts";
 
 describe("default formatter", () => {
-  const formatter = semver().formatter;
+  const formatter = default_formatter({
+    allowed_changes: ["major", "minor", "patch"],
+    display_map: {
+      major: { singular: "Breaking Change", plural: "Breaking Changes" },
+      minor: { singular: "Feature", plural: "Features" },
+      patch: { singular: "Bug Fix", plural: "Bug Fixes" },
+    },
+  });
 
   it("formats grouped changelog sections without dates", () => {
     const changelog = {
@@ -14,16 +22,16 @@ describe("default formatter", () => {
         {
           version: "2.0.0",
           changes: [
-            { kind: "major", title: "Breaking API change", description: [] },
-            { kind: "minor", title: "Add new feature", description: [] },
-            { kind: "patch", title: "Fix bug", description: [] },
+            new ChangeFile({ kind: "major", summary: "Breaking API change" }),
+            new ChangeFile({ kind: "minor", summary: "Add new feature" }),
+            new ChangeFile({ kind: "patch", summary: "Fix bug" }),
           ],
         },
       ],
     };
 
     const output = formatter.format_changelog(changelog, {
-      app: { name: "test-app" },
+      project: { name: "test-app" },
     });
 
     expect(output).toContain("## 2.0.0");
@@ -40,20 +48,21 @@ describe("default formatter", () => {
         extensions: [gfm()],
         mdastExtensions: [gfmFromMarkdown()],
       }),
+      markdown,
     );
 
-    expect(parsed.root.title).toBe("test-app");
+    expect(parsed.root.title).toBe("# test-app");
     expect(parsed.releases[0]?.version).toBe("1.0.0");
-    expect(parsed.releases[0]?.changes[0]?.title).toContain("Initial release");
+    expect(parsed.releases[0]?.changes[0]?.summary).toContain("- Initial release");
   });
 
   it("creates release notes with link to changelog", () => {
     const notes = formatter.generate_release_notes({
-      app: { name: "test-app", changelog: "CHANGELOG.md" },
+      project: { name: "test-app", changelog: "CHANGELOG.md" },
       version: "1.1.0",
     });
 
-    expect(notes).toBe("[View Changelog](CHANGELOG.md)");
+    expect(notes).toBe("[See the changelog for test-app@1.1.0 release notes](CHANGELOG.md#110)");
   });
 
   it("adds no changes message when release has no changes", () => {
@@ -68,7 +77,7 @@ describe("default formatter", () => {
     };
 
     const output = formatter.format_changelog(changelog, {
-      app: { name: "test-app" },
+      project: { name: "test-app" },
     });
 
     expect(output).toContain("## 1.0.0");
