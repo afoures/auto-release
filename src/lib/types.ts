@@ -37,6 +37,7 @@ export interface AutoReleaseConfig {
     platform: GitPlatformClient;
     target_branch?: string;
     default_release_branch_prefix?: string;
+    tag_generator?: (args: { app_name: string; version: string }) => string;
   };
   apps: Record<string, AppDefinition>;
 }

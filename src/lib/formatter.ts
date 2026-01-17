@@ -144,14 +144,14 @@ export function default_formatter<change_kinds extends string>({
       const lines: string[] = [];
 
       if (changelog.root.title) {
-        lines.push(changelog.root.title);
+        lines.push(changelog.root.title, "");
       } else {
-        lines.push(`# \`${context.app.name}\` changelog`);
+        lines.push(`# \`${context.app.name}\` changelog`, "");
       }
       if (changelog.root.description.length > 0) {
-        lines.push(changelog.root.description.join("\n"));
+        lines.push(changelog.root.description.join("\n"), "");
       } else {
-        lines.push(`This is the changelog for \`${context.app.name}\`.`);
+        lines.push(`This is the changelog for \`${context.app.name}\`.`, "");
       }
 
       for (const release of changelog.releases) {
@@ -179,7 +179,7 @@ export function default_formatter<change_kinds extends string>({
         lines.push(release_lines.join("\n"));
       }
 
-      return lines.join("\n\n");
+      return lines.join("\n");
     },
     generate_release_notes({ app, version }) {
       const hash = version.replaceAll(".", "");

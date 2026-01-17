@@ -8,18 +8,15 @@ This is the changelog for `auto-release`.
 
 - Update cli message formatting.
 
-
 ## 0.2.11
 
 ### Bug Fixes
 
 - Fixed a lot of small issues after first test.
 
-
 ## 0.2.3
 
 No changes in this release.
-
 
 ## 0.2.2
 
@@ -27,11 +24,9 @@ No changes in this release.
 
 - Make sure that all path are not relative when deleting them in `generate-release-pr` command.
 
-
 ## 0.2.1
 
 No changes in this release.
-
 
 ## 0.2.0
 
@@ -39,20 +34,17 @@ No changes in this release.
 
 - Improve `init` command automatic config generation.
 
-
 ## 0.1.2
 
 ### Bug Fixes
 
 - Update `init` command with new package name.
 
-
 ## 0.1.1
 
 ### Bug Fixes
 
 - Fix issues with changelog parsing in the default formatter.
-
 
 ## 0.1.0
 
@@ -69,15 +61,14 @@ No changes in this release.
   - This is the recommended usage of `auto-release`.
 
 - Add a `manual-release` command that can be used locally to bump the version and generate a changelog:
-
   - This consumes all change-files availables.
   - This is not the default way to use `auto-release`.
 
   this is text
-
   - This command is usefull when releasing a hotfix.
 
 - Add built-in versioning strategies with semantic, calendar and marketing versioning.
+
   > this is a test
   > does this work?
 

@@ -106,7 +106,9 @@ describe("generate_config_source", () => {
       },
     });
 
-    expect(source).toContain('import { bun, expo, node, php } from "@afoures/auto-release/components";');
+    expect(source).toContain(
+      'import { bun, expo, node, php } from "@afoures/auto-release/components";',
+    );
     expect(source).toContain('import { markver } from "@afoures/auto-release/versioning";');
     expect(source).toContain('node("apps/frontend")');
     expect(source).toContain('bun("apps/bff")');
@@ -150,4 +152,3 @@ describe("generate_config_source", () => {
     expect(source).not.toContain("apps: [");
   });
 });
-
