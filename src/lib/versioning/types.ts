@@ -29,7 +29,7 @@ export type Formatter<
   format_changelog(
     changelog: NoInfer<parsed_changelog>,
     context: {
-      app: { name: string };
+      project: { name: string };
     },
   ): string;
   /**
@@ -38,18 +38,18 @@ export type Formatter<
    * @returns Markdown string for PR body
    */
   generate_pr_body(options: {
-    app: { name: string };
+    project: { name: string };
     current_version: string;
     next_version: string;
     changes: ChangeFile<change_kinds>[];
   }): string;
   /**
-   * Generate release notes for a given app to use in GitHub/GitLab release bodies.
+   * Generate release notes for a given project to use in GitHub/GitLab release bodies.
    * @param options - The options for generating release notes
    * @returns Markdown string for release body
    */
   generate_release_notes(options: {
-    app: { name: string; changelog: string };
+    project: { name: string; changelog: string };
     version: string;
   }): string;
 };

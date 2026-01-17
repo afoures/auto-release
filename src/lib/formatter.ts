@@ -146,12 +146,12 @@ export function default_formatter<change_kinds extends string>({
       if (changelog.root.title) {
         lines.push(changelog.root.title, "");
       } else {
-        lines.push(`# \`${context.app.name}\` changelog`, "");
+        lines.push(`# \`${context.project.name}\` changelog`, "");
       }
       if (changelog.root.description.length > 0) {
         lines.push(changelog.root.description.join("\n"), "");
       } else {
-        lines.push(`This is the changelog for \`${context.app.name}\`.`, "");
+        lines.push(`This is the changelog for \`${context.project.name}\`.`, "");
       }
 
       for (const release of changelog.releases) {
@@ -181,17 +181,17 @@ export function default_formatter<change_kinds extends string>({
 
       return lines.join("\n");
     },
-    generate_release_notes({ app, version }) {
+    generate_release_notes({ project, version }) {
       const hash = version.replaceAll(".", "");
-      const file = `${app.changelog}#${hash}`;
-      return `[See the changelog for ${app.name}@${version} release notes](${file})`;
+      const file = `${project.changelog}#${hash}`;
+      return `[See the changelog for ${project.name}@${version} release notes](${file})`;
     },
-    generate_pr_body({ app, current_version, next_version, changes }) {
+    generate_pr_body({ project, current_version, next_version, changes }) {
       const lines: string[] = [];
       lines.push(
         "This PR is managed by `[auto-release](https://github.com/afoures/auto-release)`. Do not edit it manually.",
       );
-      lines.push(`## Automated release for \`${app.name}\``);
+      lines.push(`## Automated release for \`${project.name}\``);
       lines.push(`Version: \`${current_version}\` → \`${next_version}\``);
 
       lines.push("");

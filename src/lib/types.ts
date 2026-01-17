@@ -37,21 +37,21 @@ export interface AutoReleaseConfig {
     platform: GitPlatformClient;
     target_branch?: string;
     default_release_branch_prefix?: string;
-    tag_generator?: (args: { app_name: string; version: string }) => string;
+    tag_generator?: (args: { project: { name: string }; version: string }) => string;
   };
-  apps: Record<string, AppDefinition>;
+  projects: Record<string, ProjectDefinition>;
 }
 
 /**
- * App definition
+ * Project definition
  */
-export interface AppDefinition {
+export interface ProjectDefinition {
   components: Array<Component>;
   versioning: VersionManager;
   changelog: string;
 }
 
-export type ManagedApplication = {
+export type ManagedProject = {
   name: string;
   components: Array<ResolvedComponent>;
   versioning: VersionManager;

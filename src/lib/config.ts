@@ -1,6 +1,6 @@
 import { pathToFileURL } from "node:url";
 import { dirname, isAbsolute, resolve } from "node:path";
-import type { AutoReleaseConfig, GitPlatformClient, ManagedApplication } from "./types.ts";
+import type { AutoReleaseConfig, GitPlatformClient, ManagedProject } from "./types.ts";
 import * as fs from "./utils/fs.ts";
 
 export function define_config<const config extends AutoReleaseConfig>(
@@ -46,19 +46,19 @@ export class InternalConfig {
     platform: GitPlatformClient;
     target_branch: string;
     default_release_branch_prefix: string;
-    tag_generator: (args: { app_name: string; version: string }) => string;
+    tag_generator: (args: { project: { name: string }; version: string }) => string;
   } {
     return {
       platform: this.#config.git.platform,
       target_branch: this.#config.git.target_branch || "main",
       default_release_branch_prefix: this.#config.git.default_release_branch_prefix || "release",
       tag_generator:
-        this.#config.git.tag_generator || (({ app_name, version }) => `${app_name}@${version}`),
+        this.#config.git.tag_generator || (({ project, version }) => `${project.name}@${version}`),
     };
   }
 
-  get managed_applications(): Array<ManagedApplication> {
-    return Object.entries(this.#config.apps).map(([name, definition]) => {
+  get managed_projects(): Array<ManagedProject> {
+    return Object.entries(this.#config.projects).map(([name, definition]) => {
       const components = definition.components.map((component) => component(this.folder));
 
       return {
@@ -201,40 +201,42 @@ function validate_config(config: AutoReleaseConfig): void {
     );
   }
 
-  if (!config.apps || typeof config.apps !== "object" || Array.isArray(config.apps)) {
-    throw new Error('Auto-release config must have an "apps" record (object keyed by app name)');
+  if (!config.projects || typeof config.projects !== "object" || Array.isArray(config.projects)) {
+    throw new Error(
+      'Auto-release config must have a "projects" record (object keyed by project name)',
+    );
   }
 
-  const app_entries = Object.entries(config.apps);
-  if (app_entries.length === 0) {
-    throw new Error("Auto-release config must have at least one app");
+  const project_entries = Object.entries(config.projects);
+  if (project_entries.length === 0) {
+    throw new Error("Auto-release config must have at least one project");
   }
 
-  for (const [name, app] of app_entries) {
-    if (!app.components || !Array.isArray(app.components)) {
-      throw new Error(`App "${name}" must have a "components" array`);
+  for (const [name, project] of project_entries) {
+    if (!project.components || !Array.isArray(project.components)) {
+      throw new Error(`Project "${name}" must have a "components" array`);
     }
 
-    if (app.components.length === 0) {
-      throw new Error(`App "${name}" must have at least one component`);
+    if (project.components.length === 0) {
+      throw new Error(`Project "${name}" must have at least one component`);
     }
 
-    if (!app.versioning) {
-      throw new Error(`App "${name}" must have a "versioning" config`);
+    if (!project.versioning) {
+      throw new Error(`Project "${name}" must have a "versioning" config`);
     }
 
-    if (typeof app.versioning.bump !== "function") {
+    if (typeof project.versioning.bump !== "function") {
       throw new Error(
-        `App "${name}" versioning must have a "bump" function. Did you forget to call the strategy function?`,
+        `Project "${name}" versioning must have a "bump" function. Did you forget to call the strategy function?`,
       );
     }
 
-    if (!app.versioning.allowed_changes || !Array.isArray(app.versioning.allowed_changes)) {
-      throw new Error(`App "${name}" versioning must have an "allowed_changes" array`);
+    if (!project.versioning.allowed_changes || !Array.isArray(project.versioning.allowed_changes)) {
+      throw new Error(`Project "${name}" versioning must have an "allowed_changes" array`);
     }
 
-    if (!app.changelog || typeof app.changelog !== "string") {
-      throw new Error(`App "${name}" must have a changelog path (string)`);
+    if (!project.changelog || typeof project.changelog !== "string") {
+      throw new Error(`Project "${name}" must have a changelog path (string)`);
     }
   }
 }

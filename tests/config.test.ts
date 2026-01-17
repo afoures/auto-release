@@ -1,15 +1,15 @@
-import { isAbsolute, resolve } from "node:path";
+import { isAbsolute, join, resolve } from "node:path";
 import { describe, it, expect } from "vitest";
 import { define_config } from "../src/lib/config.ts";
 import { semver } from "../src/lib/versioning/semantic.ts";
-import { github } from "../src/lib/providers/github.ts";
+import { github } from "../src/lib/platforms/github.ts";
 import { node } from "../src/lib/components/node.ts";
 import type { Formatter, VersionManager } from "../src/lib/types.ts";
 
 describe("define_config", () => {
   it("should return config as-is", () => {
     const config = define_config({
-      apps: {
+      projects: {
         "my-app": {
           components: [node("packages/app")],
           versioning: semver(),
@@ -21,18 +21,19 @@ describe("define_config", () => {
         target_branch: "main",
       },
     });
+    config.path = join(process.cwd(), "config.ts");
 
-    const managed_apps = config.managed_applications;
+    const managed_projects = config.managed_projects;
 
-    expect(managed_apps).toHaveLength(1);
-    const managed_app = managed_apps.find((item) => item.name === "my-app");
+    expect(managed_projects).toHaveLength(1);
+    const managed_app = managed_projects.find((item) => item.name === "my-app");
     expect(managed_app).toBeDefined();
   });
 
   it("resolves relative paths to absolute locations", () => {
     const config = define_config({
       changes_dir: ".changes",
-      apps: {
+      projects: {
         "my-app": {
           components: [node(".")],
           versioning: semver(),
@@ -44,15 +45,16 @@ describe("define_config", () => {
         target_branch: "main",
       },
     });
+    config.path = join(process.cwd(), "config.ts");
 
-    const managed_app = config.managed_applications.find((item) => item.name === "my-app");
+    const managed_project = config.managed_projects.find((item) => item.name === "my-app");
 
-    expect(managed_app).toBeDefined();
-    const resolved_app = managed_app!;
+    expect(managed_project).toBeDefined();
+    const resolved_project = managed_project!;
 
     expect(config.changes_dir).toBe(resolve(process.cwd(), ".changes"));
 
-    const component_result = resolved_app.components[0];
+    const component_result = resolved_project.components[0];
     expect(isAbsolute(component_result.root)).toBe(true);
     expect(component_result.parts.every((part) => isAbsolute(part.file))).toBe(true);
   });
@@ -72,6 +74,7 @@ describe("define_config", () => {
       compare: () => 0,
       validate: () => true,
       bump: () => "1.0.0",
+      initial_version: "1.0.0",
       formatter,
       display_map: {
         breaking: { singular: "breaking change", plural: "breaking changes" },
@@ -81,7 +84,7 @@ describe("define_config", () => {
     };
 
     const config = define_config({
-      apps: {
+      projects: {
         "my-app": {
           components: [node("packages/app")],
           versioning: custom_strategy,
@@ -93,8 +96,9 @@ describe("define_config", () => {
         target_branch: "main",
       },
     });
+    config.path = join(process.cwd(), "config.ts");
 
-    const managed_app = config.managed_applications.find((item) => item.name === "my-app");
+    const managed_app = config.managed_projects.find((item) => item.name === "my-app");
 
     expect(managed_app?.versioning.allowed_changes).toEqual(["breaking", "feature", "fix"]);
   });

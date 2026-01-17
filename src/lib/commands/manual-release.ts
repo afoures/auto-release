@@ -82,37 +82,37 @@ export const manual_release = create_command({
     }
     log.info(`Current branch: ${current_branch}`);
 
-    // Select app
-    const app_names = config.managed_applications.map((app) => app.name);
-    let app_name: string;
-    if (app_names.length === 1) {
-      app_name = app_names[0];
-      log.success(`Defaulting to app: ${app_name}`);
+    // Select project
+    const project_names = config.managed_projects.map((project) => project.name);
+    let project_name: string;
+    if (project_names.length === 1) {
+      project_name = project_names[0];
+      log.success(`Defaulting to project: ${project_name}`);
     } else {
       const selected = await select({
-        message: "Select app to release:",
-        options: app_names.map((name) => ({ value: name, label: name })),
+        message: "Select a project to release",
+        options: project_names.map((name) => ({ value: name, label: name })),
       });
+
       if (isCancel(selected)) {
         cancel("Manual release cancelled");
-        return {
-          status: "success" as const,
-        };
+        return { status: "success" as const };
       }
-      app_name = selected as string;
+
+      project_name = selected as string;
     }
 
-    const app = config.managed_applications.find((item) => item.name === app_name);
-    if (!app) {
+    const project = config.managed_projects.find((item) => item.name === project_name);
+    if (!project) {
       return {
         status: "error" as const,
-        error: `App "${app_name}" not found in config`,
+        error: `Project "${project_name}" not found in config`,
       };
     }
 
     // Read change files from disk
-    const changes = await find_change_files(join(config.changes_dir, app_name), {
-      allowed_kinds: app.versioning.allowed_changes,
+    const changes = await find_change_files(join(config.changes_dir, project_name), {
+      allowed_kinds: project.versioning.allowed_changes,
     });
 
     if (changes.warnings.length > 0) {
@@ -125,14 +125,14 @@ export const manual_release = create_command({
 
     // Get current version
     const current_version =
-      (await compute_current_version(app, {
+      (await compute_current_version(project, {
         get_file_content: (file_path: string) => fs.read_file(file_path),
-      })) ?? app.versioning.initial_version;
+      })) ?? project.versioning.initial_version;
 
     log.info(`Current version: ${current_version}`);
 
     // Calculate next version
-    const next_version = app.versioning.bump({
+    const next_version = project.versioning.bump({
       version: current_version,
       changes: changes.list,
       date: new Date(),
@@ -140,11 +140,16 @@ export const manual_release = create_command({
 
     log.info(`Next version will be: ${next_version}`);
 
+    const proposed_tag = config.git.tag_generator({
+      project: { name: project.name },
+      version: next_version,
+    });
+
     // Ask for tag
     const tag_input = await text({
       message: "Enter tag name:",
-      placeholder: `${app_name}@${next_version}`,
-      initialValue: `${app_name}@${next_version}`,
+      placeholder: proposed_tag,
+      initialValue: proposed_tag,
       validate: (value = "") => {
         const trimmed = value.trim();
         if (trimmed.length === 0) {
@@ -204,7 +209,7 @@ export const manual_release = create_command({
 
     note(
       `Manual release plan:
-- App: ${app_name}
+- Project: ${project_name}
 - Current version: ${current_version}
 - Next version: ${next_version}
 - Tag: ${tag}
@@ -230,13 +235,13 @@ ${changes_summary || "  No changes in this release."}`,
     const files_to_stage: string[] = [];
 
     // Delete change files
-    const changes_dir = join(config.changes_dir, app_name);
+    const changes_dir = join(config.changes_dir, project_name);
     const deleted_change_files = await fs.delete_all_files_from_folder(changes_dir);
     files_to_stage.push(...deleted_change_files);
     log.success(`Deleted ${deleted_change_files.length} change file(s)`);
 
     // Update components
-    for (const component of app.components) {
+    for (const component of project.components) {
       for (const part of component.parts) {
         const initial_content = await fs.read_file(part.file);
         if (initial_content === null) {
@@ -250,8 +255,8 @@ ${changes_summary || "  No changes in this release."}`,
     log.success("Updated component versions");
 
     // Update changelog
-    const formatter = app.versioning.formatter;
-    const initial_changelog_content = await fs.read_file(app.changelog);
+    const formatter = project.versioning.formatter;
+    const initial_changelog_content = await fs.read_file(project.changelog);
     const changelog_as_mdast = mdast.parse_markdown(initial_changelog_content ?? "");
     const changelog = formatter.transform_markdown(
       changelog_as_mdast,
@@ -263,21 +268,19 @@ ${changes_summary || "  No changes in this release."}`,
         releases: [
           { version: next_version, changes: changes.list },
           ...changelog.releases.filter((release) => release.version !== next_version),
-        ].sort((a, b) => app.versioning.compare(b.version, a.version)),
+        ].sort((a, b) => project.versioning.compare(b.version, a.version)),
       },
-      {
-        app: { name: app_name },
-      },
+      { project: { name: project_name } },
     );
-    await fs.write_file(app.changelog, updated_changelog_content);
-    files_to_stage.push(app.changelog);
+    await fs.write_file(project.changelog, updated_changelog_content);
+    files_to_stage.push(project.changelog);
     log.success("Updated changelog");
 
     // Ask for commit message
     const commit_message_input = await text({
       message: "Enter commit message:",
-      placeholder: `release: ${app_name}@${next_version}`,
-      initialValue: `release: ${app_name}@${next_version}`,
+      placeholder: `release: ${project_name}@${next_version}`,
+      initialValue: `release: ${project_name}@${next_version}`,
       validate: (value = "") => {
         const trimmed = value.trim();
         if (trimmed.length === 0) {

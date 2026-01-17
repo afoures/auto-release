@@ -5,7 +5,7 @@ import { node } from "@afoures/auto-release/components";
 
 export default define_config({
   changes_dir: ".changes",
-  apps: {
+  projects: {
     "auto-release": {
       components: [node(".")],
       changelog: "CHANGELOG.md",

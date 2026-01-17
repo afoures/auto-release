@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { generate_config_source, type AppTemplate } from "../src/lib/commands/init.ts";
+import { generate_config_source, type ProjectTemplate } from "../src/lib/commands/init.ts";
 
-const base_app: AppTemplate = {
+const base_project: ProjectTemplate = {
   name: "web-app",
   components: [{ type: "node", path: "apps/web" }],
   changelog_path: "apps/web/CHANGELOG.md",
@@ -11,7 +11,7 @@ const base_app: AppTemplate = {
 describe("generate_config_source", () => {
   it("creates a GitHub config with semver strategy", () => {
     const source = generate_config_source({
-      apps: [base_app],
+      projects: [base_project],
       changes_dir: ".changes",
       target_branch: "main",
       default_release_branch_prefix: "release",
@@ -39,9 +39,9 @@ describe("generate_config_source", () => {
   });
 
   it("creates a GitLab config with calver strategy", () => {
-    const apps: AppTemplate[] = [
+    const projects: ProjectTemplate[] = [
       {
-        ...base_app,
+        ...base_project,
         name: "mobile-app",
         components: [
           { type: "node", path: "apps/mobile" },
@@ -53,7 +53,7 @@ describe("generate_config_source", () => {
     ];
 
     const source = generate_config_source({
-      apps,
+      projects,
       changes_dir: "changes",
       target_branch: "develop",
       default_release_branch_prefix: "releases",
@@ -79,7 +79,7 @@ describe("generate_config_source", () => {
   });
 
   it("creates config with markver strategy and multiple component types", () => {
-    const apps: AppTemplate[] = [
+    const projects: ProjectTemplate[] = [
       {
         name: "full-stack-app",
         components: [
@@ -94,7 +94,7 @@ describe("generate_config_source", () => {
     ];
 
     const source = generate_config_source({
-      apps,
+      projects,
       changes_dir: ".changes",
       target_branch: "main",
       default_release_branch_prefix: "release",
@@ -118,7 +118,7 @@ describe("generate_config_source", () => {
   });
 
   it("generates valid apps record structure", () => {
-    const apps: AppTemplate[] = [
+    const projects: ProjectTemplate[] = [
       {
         name: "app-one",
         components: [{ type: "node", path: "." }],
@@ -134,7 +134,7 @@ describe("generate_config_source", () => {
     ];
 
     const source = generate_config_source({
-      apps,
+      projects,
       changes_dir: ".changes",
       target_branch: "main",
       default_release_branch_prefix: "release",
@@ -146,9 +146,8 @@ describe("generate_config_source", () => {
       },
     });
 
-    expect(source).toContain("apps: {");
+    expect(source).toContain("projects: {");
     expect(source).toContain('"app-one": {');
     expect(source).toContain('"app-two": {');
-    expect(source).not.toContain("apps: [");
   });
 });

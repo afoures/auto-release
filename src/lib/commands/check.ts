@@ -1,17 +1,17 @@
 import { create_logger } from "../utils/logger.ts";
 import { create_command } from "../cli.ts";
 import { find_nearest_config } from "../config.ts";
-import type { ManagedApplication } from "../types.ts";
+import type { ManagedProject } from "../types.ts";
 import { join } from "node:path";
 import * as fs from "../utils/fs.ts";
 import { find_change_files } from "../change-file.ts";
 
 async function verify_component_version_consistency(
-  app: ManagedApplication,
+  project: ManagedProject,
 ): Promise<{ ok: true } | { ok: false; errors: string[] }> {
   const versions = new Set<string>();
   const errors: string[] = [];
-  for (const component of app.components) {
+  for (const component of project.components) {
     for (const part of component.parts) {
       const file_content = await fs.read_file(part.file);
       if (file_content === null) {
@@ -23,12 +23,12 @@ async function verify_component_version_consistency(
     }
   }
   if (versions.size === 0) {
-    errors.push(`application ${app.name} has no versions`);
+    errors.push(`project ${project.name} has no versions`);
     return { ok: false, errors };
   }
   if (versions.size > 1) {
     errors.push(
-      `application ${app.name} has multiple versions: ${Array.from(versions).join(", ")}`,
+      `project ${project.name} has multiple versions: ${Array.from(versions).join(", ")}`,
     );
     return { ok: false, errors };
   }
@@ -37,11 +37,11 @@ async function verify_component_version_consistency(
 
 async function validate_changes_files_content(
   changes_dir: string,
-  app: ManagedApplication,
+  project: ManagedProject,
 ): Promise<{ ok: true } | { ok: false; errors: string[] }> {
   const errors: string[] = [];
-  const change_files = await find_change_files(join(changes_dir, app.name), {
-    allowed_kinds: app.versioning.allowed_changes,
+  const change_files = await find_change_files(join(changes_dir, project.name), {
+    allowed_kinds: project.versioning.allowed_changes,
   });
 
   if (change_files.warnings.length > 0) {
@@ -85,12 +85,12 @@ export const check = create_command({
 
     const config = context.config;
 
-    for (const app of config.managed_applications) {
-      const component_validation = await verify_component_version_consistency(app);
+    for (const project of config.managed_projects) {
+      const component_validation = await verify_component_version_consistency(project);
       if (!component_validation.ok) {
         errors.push(...component_validation.errors);
       }
-      const changes_validation = await validate_changes_files_content(config.changes_dir, app);
+      const changes_validation = await validate_changes_files_content(config.changes_dir, project);
       if (!changes_validation.ok) {
         errors.push(...changes_validation.errors);
       }

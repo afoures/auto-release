@@ -1,6 +1,6 @@
 # auto-release
 
-A release management tool inspired by Changesets and Release Please, designed for monorepos with app-centric versioning.
+A release management tool inspired by Changesets and Release Please, designed for monorepos with project-centric versioning.
 
 ## Why auto-release?
 
@@ -8,7 +8,7 @@ Release management should be simple. `auto-release` lets you focus on building f
 
 **Language agnostic**: Works with any project type. Built-in components for Node, Bun, Expo, and PHP projects, but you can add custom components for anything.
 
-**Built for monorepos**: Each app can have its own versioning strategy (semver, calver, marketing) and release independently.
+**Built for monorepos**: Each project can have its own versioning strategy (semver, calver, marketing) and release independently.
 
 **Developer-friendly**: Record changes with markdown files as you work. No complex conventions or strict commit messages required.
 
@@ -51,7 +51,7 @@ export default define_config({
     }),
     target_branch: 'main',
   },
-  apps: {
+  project: {
     'my-app': {
       components: [node('packages/my-app')],
       versioning: semver(),
@@ -124,7 +124,7 @@ Set up auto-release in your repository:
 auto-release init
 ```
 
-Interactively configures apps, versioning strategies, and git platform.
+Interactively configures projects, versioning strategies, and git platform.
 
 ### `check`
 
@@ -145,12 +145,12 @@ Create a new change file:
 auto-release record-change
 
 # Non-interactive
-auto-release record-change --app my-app --type minor
+auto-release record-change --project my-app --type minor
 ```
 
 ### `list`
 
-List all apps managed by `auto-release` with their current versions:
+List all projects managed by `auto-release` with their current versions:
 
 ```bash
 auto-release list
@@ -167,8 +167,8 @@ auto-release generate-release-pr --dry-run
 # Create/update PRs
 auto-release generate-release-pr
 
-# Specific apps only
-auto-release generate-release-pr --app my-app --app another-app
+# Specific projects only
+auto-release generate-release-pr --filter my-app --filter another-app
 ```
 
 ### `tag-release-commit`
@@ -183,7 +183,7 @@ auto-release tag-release-commit --dry-run
 auto-release tag-release-commit
 ```
 
-Compares HEAD with HEAD^1 to detect version changes. Creates tags in format `app-name@version`.
+Compares HEAD with HEAD^1 to detect version changes. Creates tags in format `project-name@version`.
 
 ### `manual-release`
 
@@ -197,12 +197,12 @@ Useful for local testing or emergency releases.
 
 ## Configuration
 
-### Apps
+### Projects
 
-The `apps` object defines each releasable unit:
+The `projects` object defines each releasable unit:
 
 ```typescript
-apps: {
+projects: {
   'my-app': {
     // Components: where versions are read/written
     components: [
@@ -287,7 +287,7 @@ components: [
 
 ## Change Files
 
-Change files are stored in `.changes/<app-name>/` with format:
+Change files are stored in `.changes/<project-name>/` with format:
 
 ```
 <type>.<slug>.md
@@ -319,10 +319,10 @@ This adds a comprehensive user profile page with:
 
 ## Philosophy
 
-Inspired by Changesets and Release Please, designed for app-centric monorepos where:
+Inspired by Changesets and Release Please, designed for project-centric monorepos where:
 
-- Multiple apps release independently with different versioning strategies
-- Change files are organized by app for clarity
+- Multiple projects release independently with different versioning strategies
+- Change files are organized by project for clarity
 - Release branches allow testing before production
 - Deployment is integrated with the release process
 

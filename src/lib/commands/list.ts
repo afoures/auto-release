@@ -7,7 +7,7 @@ import { relative } from "node:path";
 
 export const list = create_command({
   name: "list",
-  description: "List all registered apps with their current version and registered components",
+  description: "List all registered projects with their current version and registered components",
   schema: {
     config: {
       type: "string",
@@ -25,27 +25,27 @@ export const list = create_command({
   run: async ({ context: { config, root } }) => {
     const logger = create_logger();
 
-    if (config.managed_applications.length === 0) {
-      logger.info("no applications registered.");
+    if (config.managed_projects.length === 0) {
+      logger.info("no projects registered.");
       return { status: "success" as const };
     }
 
-    const count = config.managed_applications.length;
+    const count = config.managed_projects.length;
     const warnings: string[] = [];
 
-    logger.info(`found ${count} application${count > 1 ? "s" : ""}:`);
+    logger.info(`found ${count} project${count > 1 ? "s" : ""}:`);
     logger.info("");
 
-    for (const app of config.managed_applications) {
-      const version = await compute_current_version(app, {
+    for (const project of config.managed_projects) {
+      const version = await compute_current_version(project, {
         get_file_content: (file_path: string) => fs.read_file(file_path),
       });
       if (version === null) {
-        warnings.push(`${app.name} has no version`);
+        warnings.push(`${project.name} has no version`);
         continue;
       }
 
-      const parts = app.components.flatMap((component) =>
+      const parts = project.components.flatMap((component) =>
         component.parts.map((part) => ({
           relative_path: relative(root, part.file),
           missing: part.exists === false,
@@ -53,7 +53,7 @@ export const list = create_command({
       );
 
       logger.note(
-        `${app.name} (${version})`,
+        `${project.name} (${version})`,
         parts
           .map((part) => `./${part.relative_path} ${part.missing ? "⚠️ missing" : ""}`)
           .join("\n"),

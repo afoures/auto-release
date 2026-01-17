@@ -94,9 +94,9 @@ export const record_change = create_command({
   name: "record-change",
   description: "Record a new change",
   schema: {
-    app: {
+    project: {
       type: "string",
-      description: "App name",
+      description: "Project name",
     },
     type: {
       type: "string",
@@ -119,38 +119,38 @@ export const record_change = create_command({
 
     const config = context.config;
 
-    // Determine app
-    let app_name = args.app;
-    if (!app_name) {
-      const app_names = config.managed_applications.map((app) => app.name);
-      if (app_names.length === 1) {
-        app_name = app_names[0];
-        log.success(`Defaulting to app: ${app_name}`);
+    // Determine project
+    let project_name = args.project;
+    if (!project_name) {
+      const project_names = config.managed_projects.map((project) => project.name);
+      if (project_names.length === 1) {
+        project_name = project_names[0];
+        log.success(`Defaulting to project: ${project_name}`);
       } else {
         const selected = await select({
-          message: "Select app:",
-          options: app_names.map((name) => ({ value: name, label: name })),
+          message: "Select project:",
+          options: project_names.map((name) => ({ value: name, label: name })),
         });
         if (isCancel(selected)) {
-          cancel("App selection cancelled");
+          cancel("Project selection cancelled");
           return {
             status: "success" as const,
           };
         }
-        app_name = selected as string;
+        project_name = selected as string;
       }
     }
 
-    const app = config.managed_applications.find((item) => item.name === app_name);
-    if (!app) {
+    const project = config.managed_projects.find((item) => item.name === project_name);
+    if (!project) {
       return {
         status: "error" as const,
-        error: `App "${app_name}" not found in config`,
+        error: `Project "${project_name}" not found in config`,
       };
     }
 
     // Get valid change types from the versioning strategy
-    const valid_types = Array.from(app.versioning.allowed_changes);
+    const valid_types = Array.from(project.versioning.allowed_changes);
 
     // Determine change type
     let change_type = args.type;
@@ -159,7 +159,7 @@ export const record_change = create_command({
         message: "Select change type:",
         options: valid_types.map((t) => ({
           value: t,
-          label: app.versioning.display_map[t]?.singular ?? t,
+          label: project.versioning.display_map[t]?.singular ?? t,
         })),
       });
       if (isCancel(selected)) {
@@ -174,7 +174,7 @@ export const record_change = create_command({
     if (!valid_types.includes(change_type)) {
       return {
         status: "error" as const,
-        error: `Invalid change type "${change_type}". Valid types for ${app_name}: ${valid_types.join(
+        error: `Invalid change type "${change_type}". Valid types for ${project_name}: ${valid_types.join(
           ", ",
         )}`,
       };
@@ -206,7 +206,7 @@ export const record_change = create_command({
 
     // Save file
     try {
-      const file_path = await save_change_file(change_file, join(config.changes_dir, app_name));
+      const file_path = await save_change_file(change_file, join(config.changes_dir, project_name));
 
       // Open file with editor
       const editor = await get_editor(config.changes_dir);

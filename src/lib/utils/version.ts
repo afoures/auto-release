@@ -1,12 +1,12 @@
-import type { ManagedApplication } from "../types.ts";
+import type { ManagedProject } from "../types.ts";
 
 export async function compute_current_version(
-  app: ManagedApplication,
+  project: ManagedProject,
   { get_file_content }: { get_file_content: (file_path: string) => Promise<string | null> },
 ): Promise<string | null> {
   const versions = new Set<string>();
 
-  for (const component of app.components) {
+  for (const component of project.components) {
     for (const part of component.parts) {
       const file_content = await get_file_content(part.file);
       if (file_content === null) continue;
@@ -20,6 +20,6 @@ export async function compute_current_version(
     return null;
   }
 
-  const sorted_versions = Array.from(versions).sort((a, b) => app.versioning.compare(a, b));
+  const sorted_versions = Array.from(versions).sort((a, b) => project.versioning.compare(a, b));
   return sorted_versions.at(-1) ?? null;
 }
