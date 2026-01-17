@@ -248,6 +248,7 @@ git: {
     repo: 'your-repo',
   }),
   target_branch: 'main',
+  tag_generator: ({ project, version }) => `${project.name}-${version}`,
 }
 ```
 
@@ -263,6 +264,32 @@ git: {
   }),
   target_branch: 'main',
 }
+```
+
+### Tag Generator
+
+Customize the format of git tags created during release:
+
+```typescript
+git: {
+  // ... other options
+  tag_generator: ({ project, version }) => `${project.name}-${version}`,
+}
+```
+
+**Default**: `project-name@version` (e.g., `my-app@1.2.3`)
+
+**Custom examples**:
+
+```typescript
+// Version only: 1.2.3
+tag_generator: ({ version }) => `${version}`
+
+// Prefixed: v1.2.3
+tag_generator: ({ version }) => `v${version}`
+
+// With prefix: release/my-app-1.2.3
+tag_generator: ({ project, version }) => `release/${project.name}-${version}`
 ```
 
 ### Components

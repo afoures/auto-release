@@ -64,7 +64,7 @@ async function validate_changes_files_content(
 
 export const check = create_command({
   name: "check",
-  description: "Validate configuration, packages, and change files",
+  description: "Validate configuration, versions, and change files",
   schema: {
     config: {
       type: "string",
