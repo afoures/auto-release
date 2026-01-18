@@ -51,7 +51,7 @@ export default define_config({
     }),
     target_branch: 'main',
   },
-  project: {
+  projects: {
     'my-app': {
       components: [node('packages/my-app')],
       versioning: semver(),

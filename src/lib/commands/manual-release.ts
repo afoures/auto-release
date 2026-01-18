@@ -132,13 +132,40 @@ export const manual_release = create_command({
     log.info(`Current version: ${current_version}`);
 
     // Calculate next version
-    const next_version = project.versioning.bump({
+    const next_version_candidate = project.versioning.bump({
       version: current_version,
       changes: changes.list,
       date: new Date(),
     });
 
-    log.info(`Next version will be: ${next_version}`);
+    log.info(`Next version will be: ${next_version_candidate}`);
+
+    // Prompt user to optionally override the version
+    const version_input = await text({
+      message: `Enter version [or press Enter to use ${next_version_candidate}]:`,
+      placeholder: next_version_candidate,
+      validate: (value = "") => {
+        const trimmed = value.trim();
+        if (trimmed.length === 0) {
+          return undefined;
+        }
+        if (!project.versioning.validate({ version: trimmed })) {
+          return `Invalid version format. Expected format compatible with ${project.versioning.allowed_changes.join(", ")}`;
+        }
+        return undefined;
+      },
+    });
+
+    if (isCancel(version_input)) {
+      cancel("Manual release cancelled");
+      return {
+        status: "success" as const,
+      };
+    }
+
+    const next_version = (version_input as string).trim() || next_version_candidate;
+
+    log.info(`Using version: ${next_version}`);
 
     const proposed_tag = config.git.tag_generator({
       project: { name: project.name },
@@ -209,11 +236,11 @@ export const manual_release = create_command({
 
     note(
       `Manual release plan:
-- Project: ${project_name}
-- Current version: ${current_version}
-- Next version: ${next_version}
-- Tag: ${tag}
-- Change files:
+ - Project: ${project_name}
+ - Current version: ${current_version}
+ - Next version: ${next_version}
+ - Tag: ${tag}
+ - Change files:
 ${changes_summary || "  No changes in this release."}`,
       "Release details",
     );
