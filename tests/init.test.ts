@@ -19,7 +19,6 @@ describe("generate_config_source", () => {
         platform: "github",
         owner: "acme",
         repo: "web",
-        token_env: "GITHUB_TOKEN",
       },
     });
 
@@ -61,7 +60,6 @@ describe("generate_config_source", () => {
         platform: "gitlab",
         project_id: "acme/mobile",
         host: "gitlab.example.com",
-        token_env: "GITLAB_TOKEN",
       },
     });
 
@@ -102,7 +100,6 @@ describe("generate_config_source", () => {
         platform: "github",
         owner: "acme",
         repo: "full-stack",
-        token_env: "GITHUB_TOKEN",
       },
     });
 
@@ -142,12 +139,31 @@ describe("generate_config_source", () => {
         platform: "github",
         owner: "acme",
         repo: "monorepo",
-        token_env: "GITHUB_TOKEN",
       },
     });
 
     expect(source).toContain("projects: {");
     expect(source).toContain('"app-one": {');
     expect(source).toContain('"app-two": {');
+  });
+
+  it("creates minimal config with empty projects (no component/versioning imports)", () => {
+    const source = generate_config_source({
+      projects: [],
+      changes_dir: ".changes",
+      target_branch: "main",
+      git: {
+        platform: "github",
+        owner: "acme",
+        repo: "repo",
+      },
+    });
+
+    expect(source).toContain('import { define_config } from "@afoures/auto-release";');
+    expect(source).toContain('import { github } from "@afoures/auto-release/platforms";');
+    expect(source).not.toContain("@afoures/auto-release/components");
+    expect(source).not.toContain("@afoures/auto-release/versioning");
+    expect(source).toContain("projects: {");
+    expect(source).toContain("});");
   });
 });

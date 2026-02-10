@@ -208,9 +208,6 @@ function validate_config(config: AutoReleaseConfig): void {
   }
 
   const project_entries = Object.entries(config.projects);
-  if (project_entries.length === 0) {
-    throw new Error("Auto-release config must have at least one project");
-  }
 
   for (const [name, project] of project_entries) {
     if (!project.components || !Array.isArray(project.components)) {

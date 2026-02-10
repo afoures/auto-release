@@ -17,11 +17,13 @@ Release management should be simple. `auto-release` lets you focus on building f
 ## Quick Start
 
 ```bash
-npx --package=@afoures/auto-release@latest auto-release init
+npx @afoures/auto-release@latest init
 # or
-pnpx --package=@afoures/auto-release@latest auto-release init
+pnpx @afoures/auto-release@latest init
 # or
-bunx --package=@afoures/auto-release@latest auto-release init
+yarn dlx @afoures/auto-release@latest init
+# or
+bunx @afoures/auto-release@latest init
 ```
 
 This creates `auto-release.config.ts` and sets up the `.changes` directory.
@@ -29,9 +31,13 @@ This creates `auto-release.config.ts` and sets up the `.changes` directory.
 ### Manual Installation
 
 ```bash
-npm install auto-release
+npm install @afoures/auto-release
 # or
-pnpm add auto-release
+pnpm add @afoures/auto-release
+# or
+yarn add @afoures/auto-release
+# or
+bunx add @afoures/auto-release
 ```
 
 Create `auto-release.config.ts`:
@@ -43,6 +49,13 @@ import { github } from 'auto-release/providers'
 import { node } from 'auto-release/components'
 
 export default define_config({
+  projects: {
+    'my-app': {
+      components: [node('packages/my-app')],
+      versioning: semver(),
+      changelog: 'CHANGELOG.md',
+    },
+  },
   git: {
     platform: github({
       token: process.env.GITHUB_TOKEN!,
@@ -50,13 +63,6 @@ export default define_config({
       repo: 'your-repo',
     }),
     target_branch: 'main',
-  },
-  projects: {
-    'my-app': {
-      components: [node('packages/my-app')],
-      versioning: semver(),
-      changelog: 'CHANGELOG.md',
-    },
   },
 })
 ```
