@@ -2,6 +2,14 @@
 
 This is the changelog for `auto-release`.
 
+## 0.3.0
+
+### Features
+
+- Add a way to provide a `tag_generator` function per project.
+
+- Add a way to override the next version when using the `manual-release` command.
+
 ## 0.2.12
 
 ### Bug Fixes
