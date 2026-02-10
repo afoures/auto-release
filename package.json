@@ -11,11 +11,13 @@
     "type": "git",
     "url": "git+https://github.com/afoures/auto-release.git"
   },
+  "license": "MIT",
   "bin": {
     "auto-release": "./dist/bin.mjs"
   },
   "files": [
     "dist",
+    "docs",
     "package.json",
     "README.md"
   ],
@@ -63,7 +65,6 @@
   "devDependencies": {
     "@types/mdast": "^4.0.4",
     "@types/node": "^24.10.4",
-    "bumpp": "^10.3.2",
     "oxfmt": "^0.20.0",
     "oxlint": "^1.35.0",
     "tsdown": "^0.18.3",
