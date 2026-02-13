@@ -22,6 +22,85 @@ projects: {
 }
 ```
 
+## Grouping Projects
+
+Projects can be grouped to release together in a single pull/merge request using the `release_group` option.
+
+### Default Behavior
+
+By default, each project is its own group (releases individually). The group name defaults to the project name.
+
+### Custom Groups
+
+```typescript
+export default define_config({
+  projects: {
+    "web-app": {
+      release_group: "frontend",  // Groups with other "frontend" projects
+      components: [...],
+      versioning: semver(),
+      changelog: "./CHANGELOG.md",
+    },
+    "mobile-app": {
+      release_group: "frontend",  // Same group - released together
+      components: [...],
+      versioning: semver(),
+      changelog: "./CHANGELOG.md",
+    },
+    "api": {
+      // No release_group - defaults to "api" (individual release)
+      components: [...],
+      versioning: semver(),
+      changelog: "./CHANGELOG.md",
+    },
+  },
+});
+```
+
+**Resulting behavior:**
+
+- Changes to `web-app` or `mobile-app` create a single PR with both projects
+- Changes to `api` create an individual PR
+- Branch name: `release/frontend` for grouped, `release/api` for individual
+- PR title: `release: web-app@1.2.0, mobile-app@2.0.0` for grouped
+
+### Default Project Config
+
+Set default options for all projects:
+
+```typescript
+export default define_config({
+  default_project_config: {
+    release_group: "shared",  // All projects default to this group
+    options: {
+      skip_release_if_no_change_file: true,
+    },
+  },
+  projects: { ... },
+});
+```
+
+### Options
+
+#### `skip_release_if_no_change_file`
+
+When `true`, skip creating a release PR for projects without change files.
+
+```typescript
+projects: {
+  "my-app": {
+    components: [...],
+    versioning: semver(),
+    changelog: "CHANGELOG.md",
+    options: {
+      skip_release_if_no_change_file: true,
+    },
+  },
+}
+```
+
+Useful for grouped projects where some projects may not have changes in every release cycle.
+
 ## Versioning Strategies
 
 ```typescript

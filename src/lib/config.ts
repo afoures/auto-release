@@ -65,6 +65,14 @@ export class InternalConfig {
         name,
         ...definition,
         components,
+        release_group:
+          definition.release_group || this.#config.default_project_config?.release_group || name,
+        options: {
+          skip_release_if_no_change_file:
+            definition.options?.skip_release_if_no_change_file ||
+            this.#config.default_project_config?.options?.skip_release_if_no_change_file ||
+            false,
+        },
       };
     });
   }

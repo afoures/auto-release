@@ -12,11 +12,19 @@ Interactively configures projects, versioning strategies, and git platform.
 
 ## `check`
 
-Validate configuration and change files:
+Validate configuration, change files, and release groups:
 
 ```bash
 auto-release check
 ```
+
+**Validations:**
+
+- Component version consistency
+- Change file content
+- Group name conflicts (group names cannot match project names)
+- Similar group names (case-insensitive)
+- Group name special characters
 
 Use in CI to ensure everything is valid before merging.
 
@@ -34,15 +42,31 @@ auto-release record-change --project my-app --type minor
 
 ## `list`
 
-List all projects managed by `auto-release` with their current versions:
+List all projects managed by `auto-release` with their current versions, grouped by `release_group`:
 
 ```bash
 auto-release list
 ```
 
+**Output example:**
+
+```
+found 5 projects in 3 groups:
+
+Group: frontend (2 projects)
+  web-app (1.2.3)
+    ./apps/web/package.json
+  mobile-app (2.0.1)
+    ./apps/mobile/package.json
+
+Group: api-service (1 project)
+  api-service (0.5.0)
+    ./services/api/Cargo.toml
+```
+
 ## `generate-release-pr`
 
-Create or update release PRs:
+Create or update release PRs based on change files:
 
 ```bash
 # Preview changes
@@ -50,10 +74,15 @@ auto-release generate-release-pr --dry-run
 
 # Create/update PRs
 auto-release generate-release-pr
-
-# Specific projects only
-auto-release generate-release-pr --filter my-app --filter another-app
 ```
+
+Projects are grouped by `release_group` in the configuration. Projects in the same group are released together in a single PR.
+
+**PR Structure:**
+
+- **Branch**: `release/<group-name>` (e.g., `release/frontend`)
+- **Title**: `release: project-a@1.0.0, project-b@2.0.0` (lists all projects with versions)
+- **Body**: Contains sections for each project's changelog
 
 ## `tag-release-commit`
 

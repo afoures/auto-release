@@ -102,4 +102,160 @@ describe("define_config", () => {
 
     expect(managed_app?.versioning.allowed_changes).toEqual(["breaking", "feature", "fix"]);
   });
+
+  it("defaults release_group to project name", () => {
+    const config = define_config({
+      projects: {
+        "my-app": {
+          components: [node("packages/app")],
+          versioning: semver(),
+          changelog: "CHANGELOG.md",
+        },
+      },
+      git: {
+        platform: github({ token: "test", owner: "test", repo: "test" }),
+        target_branch: "main",
+      },
+    });
+    config.path = join(process.cwd(), "config.ts");
+
+    const managed_app = config.managed_projects.find((item) => item.name === "my-app");
+    expect(managed_app?.release_group).toBe("my-app");
+  });
+
+  it("uses project-level release_group when specified", () => {
+    const config = define_config({
+      projects: {
+        "my-app": {
+          components: [node("packages/app")],
+          versioning: semver(),
+          changelog: "CHANGELOG.md",
+          release_group: "frontend",
+        },
+      },
+      git: {
+        platform: github({ token: "test", owner: "test", repo: "test" }),
+        target_branch: "main",
+      },
+    });
+    config.path = join(process.cwd(), "config.ts");
+
+    const managed_app = config.managed_projects.find((item) => item.name === "my-app");
+    expect(managed_app?.release_group).toBe("frontend");
+  });
+
+  it("uses default_project_config release_group when project has no release_group", () => {
+    const config = define_config({
+      default_project_config: {
+        release_group: "shared",
+      },
+      projects: {
+        "my-app": {
+          components: [node("packages/app")],
+          versioning: semver(),
+          changelog: "CHANGELOG.md",
+        },
+      },
+      git: {
+        platform: github({ token: "test", owner: "test", repo: "test" }),
+        target_branch: "main",
+      },
+    });
+    config.path = join(process.cwd(), "config.ts");
+
+    const managed_app = config.managed_projects.find((item) => item.name === "my-app");
+    expect(managed_app?.release_group).toBe("shared");
+  });
+
+  it("project-level release_group takes precedence over default_project_config", () => {
+    const config = define_config({
+      default_project_config: {
+        release_group: "shared",
+      },
+      projects: {
+        "my-app": {
+          components: [node("packages/app")],
+          versioning: semver(),
+          changelog: "CHANGELOG.md",
+          release_group: "frontend",
+        },
+      },
+      git: {
+        platform: github({ token: "test", owner: "test", repo: "test" }),
+        target_branch: "main",
+      },
+    });
+    config.path = join(process.cwd(), "config.ts");
+
+    const managed_app = config.managed_projects.find((item) => item.name === "my-app");
+    expect(managed_app?.release_group).toBe("frontend");
+  });
+
+  it("defaults skip_release_if_no_change_file to false", () => {
+    const config = define_config({
+      projects: {
+        "my-app": {
+          components: [node("packages/app")],
+          versioning: semver(),
+          changelog: "CHANGELOG.md",
+        },
+      },
+      git: {
+        platform: github({ token: "test", owner: "test", repo: "test" }),
+        target_branch: "main",
+      },
+    });
+    config.path = join(process.cwd(), "config.ts");
+
+    const managed_app = config.managed_projects.find((item) => item.name === "my-app");
+    expect(managed_app?.options.skip_release_if_no_change_file).toBe(false);
+  });
+
+  it("uses project-level skip_release_if_no_change_file option", () => {
+    const config = define_config({
+      projects: {
+        "my-app": {
+          components: [node("packages/app")],
+          versioning: semver(),
+          changelog: "CHANGELOG.md",
+          options: {
+            skip_release_if_no_change_file: true,
+          },
+        },
+      },
+      git: {
+        platform: github({ token: "test", owner: "test", repo: "test" }),
+        target_branch: "main",
+      },
+    });
+    config.path = join(process.cwd(), "config.ts");
+
+    const managed_app = config.managed_projects.find((item) => item.name === "my-app");
+    expect(managed_app?.options.skip_release_if_no_change_file).toBe(true);
+  });
+
+  it("uses default_project_config options when project has no options", () => {
+    const config = define_config({
+      default_project_config: {
+        options: {
+          skip_release_if_no_change_file: true,
+        },
+      },
+      projects: {
+        "my-app": {
+          components: [node("packages/app")],
+          versioning: semver(),
+          changelog: "CHANGELOG.md",
+        },
+      },
+      git: {
+        platform: github({ token: "test", owner: "test", repo: "test" }),
+        target_branch: "main",
+      },
+    });
+    config.path = join(process.cwd(), "config.ts");
+
+    const managed_app = config.managed_projects.find((item) => item.name === "my-app");
+    expect(managed_app?.options.skip_release_if_no_change_file).toBe(true);
+  });
 });

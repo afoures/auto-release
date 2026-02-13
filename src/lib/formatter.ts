@@ -188,10 +188,8 @@ export function default_formatter<change_kinds extends string>({
     },
     generate_pr_body({ project, current_version, next_version, changes }) {
       const lines: string[] = [];
-      lines.push(
-        "This PR is managed by `[auto-release](https://github.com/afoures/auto-release)`. Do not edit it manually.",
-      );
-      lines.push(`## Automated release for \`${project.name}\``);
+      // Note: Header is added by the command, not here
+      lines.push(`# Automated release for \`${project.name}\``);
       lines.push(`Version: \`${current_version}\` → \`${next_version}\``);
 
       lines.push("");

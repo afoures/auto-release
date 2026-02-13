@@ -6,12 +6,12 @@
   "bugs": {
     "url": "https://github.com/afoures/auto-release/issues"
   },
+  "license": "MIT",
   "author": "Antoine Fourès <contact@afoures.com>",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/afoures/auto-release.git"
   },
-  "license": "MIT",
   "bin": {
     "auto-release": "./dist/bin.mjs"
   },

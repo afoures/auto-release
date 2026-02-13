@@ -39,6 +39,12 @@ export interface AutoReleaseConfig {
     default_release_branch_prefix?: string;
     tag_generator?: (args: { project: { name: string }; version: string }) => string;
   };
+  default_project_config?: {
+    release_group?: string;
+    options?: {
+      skip_release_if_no_change_file?: boolean;
+    };
+  };
   projects: Record<string, ProjectDefinition>;
 }
 
@@ -49,6 +55,10 @@ export interface ProjectDefinition {
   components: Array<Component>;
   versioning: VersionManager;
   changelog: string;
+  release_group?: string;
+  options?: {
+    skip_release_if_no_change_file?: boolean;
+  };
 }
 
 export type ManagedProject = {
@@ -56,4 +66,8 @@ export type ManagedProject = {
   components: Array<ResolvedComponent>;
   versioning: VersionManager;
   changelog: string;
+  release_group: string;
+  options: {
+    skip_release_if_no_change_file: boolean;
+  };
 };
