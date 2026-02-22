@@ -14,9 +14,9 @@ export default define_config({
   },
   git: {
     platform: github({
-      token: process.env.GITHUB_TOKEN!,
       owner: "afoures",
       repo: "auto-release",
+      token: process.env.GITHUB_API_TOKEN!,
     }),
     target_branch: "main",
     default_release_branch_prefix: "release",

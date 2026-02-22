@@ -273,7 +273,7 @@ async function collect_project_file_operations(
 
 function generate_pr_body(project_releases: ProjectReleaseInfo[]): string {
   const header =
-    "This PR is managed by `[auto-release](https://github.com/afoures/auto-release)`. Do not edit it manually.";
+    "This PR is managed by [auto-release](https://github.com/afoures/auto-release). Do not edit it manually.";
 
   const project_bodies = project_releases.map((release) => {
     const formatter = release.project.versioning.formatter;

@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   prepare-release:
@@ -20,11 +20,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
-          package-manager: pnpm@8
+          node-version: "24"
           cache: "pnpm"
 
       - name: Install dependencies
@@ -34,11 +36,11 @@ jobs:
         run: pnpm build
 
       - name: Check configuration
-        run: pnpm auto-release check
+        run: pnpm run auto-release.local check
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_API_TOKEN: ${{ secrets.GH_PAT }}
 
       - name: Generate release PR
-        run: pnpm auto-release generate-release-pr
+        run: pnpm run auto-release.local generate-release-pr
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_API_TOKEN: ${{ secrets.GH_PAT }}

@@ -21,6 +21,7 @@
     "package.json",
     "README.md"
   ],
+  "keywords": [],
   "type": "module",
   "main": "./dist/index.mjs",
   "module": "./dist/index.mjs",
@@ -51,7 +52,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "oxlint",
     "format": "oxfmt",
-    "prepublishOnly": "pnpm run build"
+    "prepublishOnly": "pnpm run build",
+    "auto-release.local": "node ./dist/bin.mjs"
   },
   "dependencies": {
     "@clack/prompts": "1.0.0-alpha.9",
