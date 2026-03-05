@@ -2,6 +2,16 @@
 
 This is the changelog for `auto-release`.
 
+## 0.4.0
+
+### Features
+
+- Add a new global `default_project_config` property that helps define sensible defaults for all projects.
+
+- Add a new `release_group` property on projects to ensure that they are released together in one PR.
+
+- Add a project option `skip_release_if_no_change_file` that prevent `auto-release` to create a release PR when no change file was added.
+
 ## 0.3.0
 
 ### Features
