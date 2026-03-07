@@ -2,6 +2,12 @@
 
 This is the changelog for `auto-release`.
 
+## 0.4.1
+
+### Bug Fixes
+
+- Fix the file removal in github commit creation.
+
 ## 0.4.0
 
 ### Features
