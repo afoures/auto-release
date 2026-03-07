@@ -19,7 +19,7 @@ Release management should be simple. `auto-release` lets you focus on building f
 ```bash
 npx @afoures/auto-release@latest init
 # or
-pnpx @afoures/auto-release@latest init
+pnpm dlx @afoures/auto-release@latest init
 # or
 yarn dlx @afoures/auto-release@latest init
 # or

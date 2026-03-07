@@ -88,20 +88,26 @@ export function github(options: GitHubOptions): GitPlatformClient {
 
       // Include existing files (except deleted ones)
       for (const entry of base_tree.tree || []) {
-        if (entry.type === "blob" && !files_to_delete.has(entry.path)) {
-          // Only include if not being modified (modified files will be added below)
-          if (!files_to_modify.has(entry.path)) {
-            tree_entries.push({
-              path: entry.path,
-              mode: "100644",
-              type: "blob",
-              sha: entry.sha,
-            });
-          }
+        if (entry.type !== "blob") {
+          continue;
+        }
+        if (files_to_delete.has(entry.path)) {
+          tree_entries.push({
+            path: entry.path,
+            mode: "100644",
+            type: "blob",
+            sha: null,
+          });
+        } else if (!files_to_modify.has(entry.path)) {
+          tree_entries.push({
+            path: entry.path,
+            mode: "100644",
+            type: "blob",
+            sha: entry.sha,
+          });
         }
       }
 
-      // Add/modify files
       for (const [path, content] of files_to_modify) {
         // Create blob
         const blob = await api_request("/git/blobs", {
@@ -111,7 +117,6 @@ export function github(options: GitHubOptions): GitPlatformClient {
             encoding: "utf-8",
           }),
         });
-
         tree_entries.push({
           path,
           mode: "100644",

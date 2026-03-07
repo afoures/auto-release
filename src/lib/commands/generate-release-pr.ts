@@ -182,7 +182,10 @@ async function release_group(
     (release) => release.file_operations,
   );
 
-  // 4. Create branch with all file operations
+  // 4. Generate PR title with all projects and versions
+  const pr_title = generate_pr_title(project_releases);
+
+  // 5. Create branch with all file operations
   const platform = config.git.platform;
   const release_branch_name = `${config.git.default_release_branch_prefix}/${group.name}`;
 
@@ -190,14 +193,11 @@ async function release_group(
     branch_name: release_branch_name,
     base_branch_name: config.git.target_branch,
     file_operations: all_file_operations,
-    commit_message: `chore: prepare releases for ${group.name}`,
+    commit_message: pr_title,
   });
 
-  // 5. Generate PR body with header + all project sections
+  // 6. Generate PR body with header + all project sections
   const pr_body = generate_pr_body(project_releases);
-
-  // 6. Generate PR title with all projects and versions
-  const pr_title = generate_pr_title(project_releases);
 
   // 7. Create or update PR
   await platform.create_or_update_pull_request({
