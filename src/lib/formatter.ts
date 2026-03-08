@@ -184,7 +184,7 @@ export function default_formatter<change_kinds extends string>({
     generate_release_notes({ project, version }) {
       const hash = version.replaceAll(".", "");
       const file = `${project.changelog}#${hash}`;
-      return `[See the changelog for ${project.name}@${version} release notes](${file})`;
+      return `See the changelog for release notes: [${project.name}@${version}](${file})`;
     },
     generate_pr_body({ project, current_version, next_version, changes }) {
       const lines: string[] = [];
