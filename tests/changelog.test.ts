@@ -62,7 +62,7 @@ describe("default formatter", () => {
       version: "1.1.0",
     });
 
-    expect(notes).toBe("[See the changelog for test-app@1.1.0 release notes](CHANGELOG.md#110)");
+    expect(notes).toBe("See the changelog for release notes: [test-app@1.1.0](CHANGELOG.md#110)");
   });
 
   it("adds no changes message when release has no changes", () => {

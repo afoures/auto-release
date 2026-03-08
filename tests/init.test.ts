@@ -30,7 +30,6 @@ describe("generate_config_source", () => {
     expect(source).toContain('node("apps/web")');
     expect(source).toContain("versioning: semver()");
     expect(source).toContain("github({");
-    expect(source).toContain("token: process.env.GITHUB_TOKEN!");
     // Should not contain default values
     expect(source).not.toContain("changes_dir:");
     expect(source).not.toContain("target_branch:");

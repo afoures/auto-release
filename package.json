@@ -2,6 +2,7 @@
   "name": "@afoures/auto-release",
   "version": "0.4.1",
   "description": "A file based release management tool for monorepos",
+  "keywords": [],
   "homepage": "https://github.com/afoures/auto-release#readme",
   "bugs": {
     "url": "https://github.com/afoures/auto-release/issues"
@@ -21,7 +22,6 @@
     "package.json",
     "README.md"
   ],
-  "keywords": [],
   "type": "module",
   "main": "./dist/index.mjs",
   "module": "./dist/index.mjs",
