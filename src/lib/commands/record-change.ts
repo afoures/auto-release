@@ -2,7 +2,7 @@ import { join, relative } from "node:path";
 import { select, isCancel, intro, log, cancel, text } from "@clack/prompts";
 import { create_command } from "../cli.ts";
 import { find_nearest_config } from "../config.ts";
-import { ChangeFile, save_change_file } from "../change-file.ts";
+import { ChangeFile, find_change_files, save_change_file } from "../change-file.ts";
 import { exec } from "../utils/exec.ts";
 import { exists, read_file } from "../utils/fs.ts";
 import { spawn } from "node:child_process";
@@ -180,6 +180,13 @@ export const record_change = create_command({
       };
     }
 
+    const project_change_dir = join(config.changes_dir, project_name);
+    const existing_change_files = await find_change_files(project_change_dir, {
+      allowed_kinds: valid_types as readonly string[],
+    });
+    const same_type_change_files = existing_change_files.list.filter((f) => f.kind === change_type);
+    const next_index = same_type_change_files.length + 1;
+
     const initial_slug = human_id({ separator: "-", capitalize: false });
 
     // Ask user for a description to generate slug
@@ -200,13 +207,14 @@ export const record_change = create_command({
     // Create change file with empty content (user will edit it)
     const change_file = new ChangeFile({
       kind: change_type,
+      index: next_index,
       slug: slug,
       summary: "",
     });
 
     // Save file
     try {
-      const file_path = await save_change_file(change_file, join(config.changes_dir, project_name));
+      const file_path = await save_change_file(change_file, project_change_dir);
 
       // Open file with editor
       const editor = await get_editor(config.changes_dir);

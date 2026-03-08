@@ -3,13 +3,13 @@
 Change files are stored in `.changes/<project-name>/` with format:
 
 ```
-<type>.<slug>.md
+<type>.<index>-<slug>.md
 ```
 
 Examples:
 
-- `.changes/my-app/major.add-authentication.md`
-- `.changes/my-app/patch.fix-login-bug.md`
+- `.changes/my-app/major.1-add-authentication.md`
+- `.changes/my-app/patch.1-fix-login-bug.md`
 
 The change files folder can be customized.
 

@@ -95,3 +95,12 @@ export async function list_files(
     return [];
   }
 }
+
+export async function get_file_stats(path: string) {
+  try {
+    const stats = await stat(path);
+    return stats;
+  } catch {
+    return null;
+  }
+}
