@@ -6,18 +6,18 @@ The `projects` object defines each releasable unit:
 
 ```typescript
 projects: {
-  'my-app': {
+  "my-app": {
     // Components: where versions are read/written
     components: [
-      node('packages/my-app'),
-      node('packages/shared'),
+      node("packages/my-app"),
+      node("packages/shared"),
     ],
 
     // Versioning strategy
     versioning: semver(),
 
     // Changelog file path
-    changelog: 'apps/my-app/CHANGELOG.md',
+    changelog: "apps/my-app/CHANGELOG.md",
   },
 }
 ```
@@ -104,7 +104,7 @@ Useful for grouped projects where some projects may not have changes in every re
 ## Versioning Strategies
 
 ```typescript
-import { semver, calver, markver } from 'auto-release/versioning'
+import { semver, calver, markver } from "@afoures/auto-release/versioning"
 
 // Semantic versioning: 1.2.3
 versioning: semver()  // Change types: major, minor, patch
@@ -121,15 +121,15 @@ versioning: markver()  // Change types: marketing, feature, fix
 ### GitHub
 
 ```typescript
-import { github } from 'auto-release/providers'
+import { github } from "@afoures/auto-release/providers"
 
 git: {
   platform: github({
     token: process.env.GITHUB_TOKEN!,
-    owner: 'your-org',
-    repo: 'your-repo',
+    owner: "your-org",
+    repo: "your-repo",
   }),
-  target_branch: 'main',
+  target_branch: "main",
   tag_generator: ({ project, version }) => `${project.name}-${version}`,
 }
 ```
@@ -137,14 +137,14 @@ git: {
 ### GitLab
 
 ```typescript
-import { gitlab } from 'auto-release/providers'
+import { gitlab } from "@afoures/auto-release/providers"
 
 git: {
   platform: gitlab({
     token: process.env.GITLAB_TOKEN!,
-    project_id: 'your-project-id',
+    project_id: "your-project-id",
   }),
-  target_branch: 'main',
+  target_branch: "main",
 }
 ```
 
@@ -184,12 +184,12 @@ Components define version sources:
 - **`php(path)`**: any PHP project with composer.json
 
 ```typescript
-import { node, expo, php } from 'auto-release/components'
+import { node, expo, php } from "@afoures/auto-release/components"
 
 components: [
-  node('packages/web'),
-  bun('packages/bff'),
-  expo('apps/mobile'),
-  php('packages/api'),
+  node("packages/web"),
+  bun("packages/bff"),
+  expo("apps/mobile"),
+  php("packages/api"),
 ]
 ```

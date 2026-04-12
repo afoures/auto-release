@@ -43,26 +43,26 @@ bunx add @afoures/auto-release
 Create `auto-release.config.ts`:
 
 ```typescript
-import { define_config } from 'auto-release'
-import { semver } from 'auto-release/versioning'
-import { github } from 'auto-release/providers'
-import { node } from 'auto-release/components'
+import { define_config } from "@afoures/auto-release";
+import { semver } from "@afoures/auto-release/versioning";
+import { github } from "@afoures/auto-release/providers";
+import { node } from "@afoures/auto-release/components";
 
 export default define_config({
   projects: {
-    'my-app': {
-      components: [node('packages/my-app')],
+    "my-app": {
+      components: [node("packages/my-app")],
       versioning: semver(),
-      changelog: 'CHANGELOG.md',
+      changelog: "CHANGELOG.md",
     },
   },
   git: {
     platform: github({
       token: process.env.GITHUB_TOKEN!,
-      owner: 'your-org',
-      repo: 'your-repo',
+      owner: "your-org",
+      repo: "your-repo",
     }),
-    target_branch: 'main',
+    target_branch: "main",
   },
 })
 ```
