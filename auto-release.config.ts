@@ -9,7 +9,7 @@ export default define_config({
     "auto-release": {
       components: [node(".")],
       changelog: "CHANGELOG.md",
-      versioning: semver(),
+      versioning: semver({ unstable: true }),
     },
   },
   git: {

@@ -5,6 +5,7 @@ import { find_nearest_config } from "../config.ts";
 import { ChangeFile, find_change_files, save_change_file } from "../change-file.ts";
 import { exec } from "../utils/exec.ts";
 import { exists, read_file } from "../utils/fs.ts";
+import { is_ci } from "../utils/branch-protection.ts";
 import { spawn } from "node:child_process";
 import { humanId as human_id } from "human-id";
 
@@ -61,6 +62,33 @@ function generate_slug(description: string): string {
     .replace(/^-+|-+$/g, ""); // Remove leading/trailing hyphens
 }
 
+/**
+ * Convert raw user-supplied content into the internal summary format expected by
+ * `save_change_file` (which strips the first 2 chars of every line). The title line
+ * gets a "- " prefix and body lines get a "  " indent, mirroring the read transform
+ * in `parse_change_file` so the round-trip is lossless.
+ */
+export function to_internal_summary(content: string): string {
+  const [title, ...rest] = content.trim().split("\n");
+  return [`- ${title}`, ...rest.map((line) => `  ${line}`)].join("\n");
+}
+
+/**
+ * Derive a filename slug from the first line of the content, normalized via
+ * `generate_slug` and capped to a sane length at a hyphen boundary.
+ */
+export function derive_slug(content: string): string {
+  const first_line = content.trim().split("\n")[0] ?? "";
+  const slug = generate_slug(first_line);
+  if (slug.length <= 60) {
+    return slug;
+  }
+  return slug
+    .slice(0, 60)
+    .replace(/-[^-]*$/, "")
+    .replace(/-+$/, "");
+}
+
 async function open_file_with_editor(file_path: string, editor: string): Promise<void> {
   return new Promise((resolve, reject) => {
     // Handle VS Code specially (needs -w flag to wait)
@@ -102,6 +130,15 @@ export const record_change = create_command({
       type: "string",
       description: "Change type",
     },
+    content: {
+      type: "string",
+      description:
+        "Change content (title on the first line, optional body after). When provided, the editor is skipped.",
+    },
+    slug: {
+      type: "string",
+      description: "Explicit slug for the change file name (defaults to a slug derived from the content title).",
+    },
     config: {
       type: "string",
       description: "Path to config file",
@@ -118,6 +155,7 @@ export const record_change = create_command({
     intro(`record a new change`);
 
     const config = context.config;
+    const interactive = Boolean(process.stdin.isTTY) && !is_ci();
 
     // Determine project
     let project_name = args.project;
@@ -126,7 +164,7 @@ export const record_change = create_command({
       if (project_names.length === 1) {
         project_name = project_names[0];
         log.success(`Defaulting to project: ${project_name}`);
-      } else {
+      } else if (interactive) {
         const selected = await select({
           message: "Select project:",
           options: project_names.map((name) => ({ value: name, label: name })),
@@ -138,6 +176,13 @@ export const record_change = create_command({
           };
         }
         project_name = selected as string;
+      } else {
+        return {
+          status: "error" as const,
+          error: `--project is required in non-interactive mode. Available projects: ${project_names.join(
+            ", ",
+          )}`,
+        };
       }
     }
 
@@ -155,20 +200,29 @@ export const record_change = create_command({
     // Determine change type
     let change_type = args.type;
     if (!change_type) {
-      const selected = await select({
-        message: "Select change type:",
-        options: valid_types.map((t) => ({
-          value: t,
-          label: project.versioning.display_map[t]?.singular ?? t,
-        })),
-      });
-      if (isCancel(selected)) {
-        cancel("Change type selection cancelled");
+      if (interactive) {
+        const selected = await select({
+          message: "Select change type:",
+          options: valid_types.map((t) => ({
+            value: t,
+            label: project.versioning.display_map[t]?.singular ?? t,
+          })),
+        });
+        if (isCancel(selected)) {
+          cancel("Change type selection cancelled");
+          return {
+            status: "success" as const,
+          };
+        }
+        change_type = selected as string;
+      } else {
         return {
-          status: "success" as const,
+          status: "error" as const,
+          error: `--type is required in non-interactive mode. Valid types for ${project_name}: ${valid_types.join(
+            ", ",
+          )}`,
         };
       }
-      change_type = selected as string;
     }
 
     if (!valid_types.includes(change_type)) {
@@ -189,6 +243,47 @@ export const record_change = create_command({
 
     const initial_slug = human_id({ separator: "-", capitalize: false });
 
+    // Non-interactive / agent path: content supplied directly, write it and skip the editor.
+    if (args.content !== undefined) {
+      const content = args.content.trim();
+      if (!content) {
+        return {
+          status: "error" as const,
+          error: "--content must not be empty",
+        };
+      }
+
+      const slug = (args.slug ? generate_slug(args.slug) : derive_slug(content)) || initial_slug;
+
+      const change_file = new ChangeFile({
+        kind: change_type,
+        index: next_index,
+        slug: slug,
+        summary: to_internal_summary(content),
+      });
+
+      try {
+        const file_path = await save_change_file(change_file, project_change_dir);
+        return {
+          status: "success" as const,
+          message: `Created new change file: ${relative(context.root, file_path)}`,
+        };
+      } catch (error: any) {
+        return {
+          status: "error" as const,
+          error: `Failed to create change file: ${error.message}`,
+        };
+      }
+    }
+
+    // No content provided: interactive mode prompts + editor; otherwise it's an error.
+    if (!interactive) {
+      return {
+        status: "error" as const,
+        error: "--content is required in non-interactive mode (stdin is not a TTY).",
+      };
+    }
+
     // Ask user for a description to generate slug
     const description_input = await text({
       message: `Enter a short description for this change: (default: "${initial_slug}")`,
@@ -202,7 +297,9 @@ export const record_change = create_command({
     }
 
     // Generate slug from description
-    const slug = generate_slug(description_input as string) || initial_slug;
+    const slug = args.slug
+      ? generate_slug(args.slug) || initial_slug
+      : generate_slug(description_input as string) || initial_slug;
 
     // Create change file with empty content (user will edit it)
     const change_file = new ChangeFile({

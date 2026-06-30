@@ -33,12 +33,32 @@ Use in CI to ensure everything is valid before merging.
 Create a new change file:
 
 ```bash
-# Interactive
+# Interactive (prompts for type/description, then opens your editor)
 auto-release record-change
 
-# Non-interactive
+# Partially non-interactive (skips the project/type prompts, still opens the editor)
 auto-release record-change --project my-app --type minor
+
+# Fully non-interactive — one shot, no editor (for scripts and agents)
+auto-release record-change --project my-app --type minor --slug dark-theme-toggle \
+  --content $'Add dark mode\n\nUsers can now toggle a dark theme from settings.'
 ```
+
+**Options:**
+
+- `--project <name>`: Project name (optional if only one project is managed).
+- `--type <type>`: Change type (e.g. `minor`, `patch`). Must be valid for the project.
+- `--content <text>`: Change content — the first line is the title, anything after is
+  the body. When provided, the content is written directly and **the editor is skipped**,
+  so the command runs to completion without any interaction.
+- `--slug <slug>`: Explicit slug for the change filename. Defaults to a slug derived from
+  the content title (or the description you type in interactive mode).
+
+**Non-interactive behavior:** when stdin is not a TTY (or the command runs in CI), the
+interactive prompts are disabled. If a required value is missing the command exits with a
+clear error rather than hanging — for example, omitting `--type` prints
+`--type is required in non-interactive mode. Valid types for my-app: major, minor, patch`,
+and omitting `--content` prints `--content is required in non-interactive mode`.
 
 ## `list`
 

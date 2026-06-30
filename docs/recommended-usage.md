@@ -38,6 +38,18 @@ This command:
 - Opens your default editor for a detailed description
 - Generates a unique filename with timestamp
 
+For automation and AI agents, pass `--content` to write the change in a single
+non-interactive command (no editor, no prompts):
+
+```bash
+auto-release record-change --project myapp --type feature --slug sso-authentication \
+  --content $'Add SSO login\n\nUsers can now sign in with their company identity provider.'
+```
+
+The first line of `--content` is the title and the rest is the body. Agents should pass an
+explicit `--slug` so the filename is deterministic rather than derived from the title. See
+[`record-change`](./commands.md#record-change) for all options.
+
 After recording, commit the change file alongside your code changes:
 
 ```bash
