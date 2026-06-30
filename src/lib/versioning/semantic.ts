@@ -44,14 +44,17 @@ export function semver<
 >({
   formatter: custom_formatter,
   display_map: custom_display_map,
+  unstable = false,
 }:
   | {
       formatter: Formatter<SemanticChangeKind, parsed_changelog>;
       display_map?: ChangeKindDisplayMap<SemanticChangeKind>;
+      unstable?: boolean;
     }
   | {
       formatter?: never;
       display_map?: ChangeKindDisplayMap<SemanticChangeKind>;
+      unstable?: boolean;
     } = {}): VersionManager<SemanticChangeKind, any> {
   const allowed_changes = ["major", "minor", "patch"] as const;
   const display_map =
@@ -99,6 +102,14 @@ export function semver<
         if (precedence[change.kind] > precedence[highest_type]) {
           highest_type = change.kind;
         }
+      }
+
+      // While unstable and still on a 0.x version, breaking changes are
+      // non-promoting: a "major" change bumps the minor instead of graduating to
+      // 1.0.0. Features and fixes are unchanged. To graduate, drop `unstable` and
+      // ship a breaking change (standard semver then takes 0.x -> 1.0.0).
+      if (unstable && parsed.major === 0n && highest_type === "major") {
+        highest_type = "minor";
       }
 
       if (highest_type === "major") {

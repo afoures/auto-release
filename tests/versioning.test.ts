@@ -93,6 +93,23 @@ describe("semver", () => {
     expect(result).toBe("2.0.0");
   });
 
+  it("should graduate 0.x to 1.0.0 on a breaking change by default", () => {
+    const strategy = semver();
+    const changes: ChangeFile<"major" | "minor" | "patch">[] = [
+      new ChangeFile<"major" | "minor" | "patch">({
+        kind: "major",
+        slug: "breaking-change",
+        summary: "Breaking change",
+      }),
+    ];
+    const result = strategy.bump({
+      version: "0.5.2",
+      changes,
+      date: new Date(),
+    });
+    expect(result).toBe("1.0.0");
+  });
+
   it("should throw on invalid semver", () => {
     const strategy = semver();
     expect(() =>
@@ -108,6 +125,71 @@ describe("semver", () => {
         date: new Date(),
       }),
     ).toThrow("Invalid semantic version");
+  });
+});
+
+describe("semver unstable", () => {
+  const make = (kind: "major" | "minor" | "patch", slug: string) =>
+    new ChangeFile<"major" | "minor" | "patch">({ kind, slug, summary: kind });
+
+  it("should bump minor instead of major on a breaking change in 0.x", () => {
+    const strategy = semver({ unstable: true });
+    const result = strategy.bump({
+      version: "0.5.2",
+      changes: [make("major", "breaking-change")],
+      date: new Date(),
+    });
+    expect(result).toBe("0.6.0");
+  });
+
+  it("should still bump minor on a feature in 0.x", () => {
+    const strategy = semver({ unstable: true });
+    const result = strategy.bump({
+      version: "0.5.2",
+      changes: [make("minor", "new-feature")],
+      date: new Date(),
+    });
+    expect(result).toBe("0.6.0");
+  });
+
+  it("should still bump patch on a fix in 0.x", () => {
+    const strategy = semver({ unstable: true });
+    const result = strategy.bump({
+      version: "0.5.2",
+      changes: [make("patch", "bug-fix")],
+      date: new Date(),
+    });
+    expect(result).toBe("0.5.3");
+  });
+
+  it("should bump minor from 0.0.0 on a breaking change", () => {
+    const strategy = semver({ unstable: true });
+    const result = strategy.bump({
+      version: "0.0.0",
+      changes: [make("major", "breaking-change")],
+      date: new Date(),
+    });
+    expect(result).toBe("0.1.0");
+  });
+
+  it("should still respect highest precedence (major + patch -> minor in 0.x)", () => {
+    const strategy = semver({ unstable: true });
+    const result = strategy.bump({
+      version: "0.5.2",
+      changes: [make("major", "breaking-change"), make("patch", "bug-fix")],
+      date: new Date(),
+    });
+    expect(result).toBe("0.6.0");
+  });
+
+  it("should not affect versions >= 1.0.0 (major still bumps major)", () => {
+    const strategy = semver({ unstable: true });
+    const result = strategy.bump({
+      version: "1.2.3",
+      changes: [make("major", "breaking-change")],
+      date: new Date(),
+    });
+    expect(result).toBe("2.0.0");
   });
 });
 

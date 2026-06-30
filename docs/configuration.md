@@ -116,6 +116,33 @@ versioning: calver()  // Change types: feature, fix
 versioning: markver()  // Change types: marketing, feature, fix
 ```
 
+### Pre-1.0 (`unstable`)
+
+While a project is still in `0.x`, breaking changes are expected, so promoting to `1.0.0`
+on the first one is usually premature. Set `unstable: true` to follow the classic `0.x`
+convention where breaking changes are non-promoting:
+
+```typescript
+versioning: semver({ unstable: true })
+```
+
+While on a `0.x` version, a breaking change (`major`) bumps the **minor** instead of
+graduating to `1.0.0`. Features (`minor`) and fixes (`patch`) are unchanged. For example,
+from `0.5.2`:
+
+| change | `semver({ unstable: true })` | `semver()` (default) |
+| --- | --- | --- |
+| breaking (`major`) | `0.6.0` | `1.0.0` |
+| feature (`minor`) | `0.6.0` | `0.6.0` |
+| fix (`patch`) | `0.5.3` | `0.5.3` |
+
+**Graduating to `1.0.0`:** when you're ready to commit to a stable API, remove
+`unstable: true`. This reverts to standard semantic versioning, so the next release that
+contains a breaking change takes `0.x` to `1.0.0`. The breaking change is what triggers
+the graduation — feature/fix-only releases after removing the flag stay in `0.x`.
+
+`unstable` has no effect once the version is already `>= 1.0.0`.
+
 ## Git Platforms
 
 ### GitHub
