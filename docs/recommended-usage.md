@@ -43,11 +43,12 @@ non-interactive command (no editor, no prompts):
 
 ```bash
 auto-release record-change --project myapp --type feature --slug sso-authentication \
-  --content $'Add SSO login\n\nUsers can now sign in with their company identity provider.'
+  --content $'- Add SSO login\n\n  Users can now sign in with their company identity provider.'
 ```
 
-The first line of `--content` is the title and the rest is the body. Agents should pass an
-explicit `--slug` so the filename is deterministic rather than derived from the title. See
+`--content` is written verbatim and copied into the changelog as-is, so include a leading
+`- ` if you want a bullet. Agents should pass an explicit `--slug` so the filename is
+deterministic rather than derived from the first line. See
 [`record-change`](./commands.md#record-change) for all options.
 
 After recording, commit the change file alongside your code changes:

@@ -15,17 +15,27 @@ The change files folder can be customized.
 
 ## Format
 
-**Simple** (title only):
+A change file's content is copied into the changelog **verbatim** — exactly as you write
+it, with no markup added or removed. If you want the entry to render as a bullet point,
+start it with `- ` yourself; if you want a nested paragraph under that bullet, indent it
+with two spaces. Whatever markdown you write is what ends up in the changelog.
+
+**Simple** (a single bullet):
 
 ```markdown
-Fix authentication bug in login flow
+- Fix authentication bug in login flow
 ```
 
-**Detailed** (with description):
+**Detailed** (bullet with a description):
 
 ```markdown
-This adds a comprehensive user profile page with:
-- Avatar upload
-- Bio and social links
-- Privacy settings
+- Add a user profile page
+
+  Includes avatar upload, bio and social links, and privacy settings.
+```
+
+**Plain prose** (no bullet — rendered as-is):
+
+```markdown
+Reworked the entire onboarding flow. See the migration guide for details.
 ```

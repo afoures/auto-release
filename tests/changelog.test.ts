@@ -53,7 +53,44 @@ describe("default formatter", () => {
 
     expect(parsed.root.title).toBe("# test-app");
     expect(parsed.releases[0]?.version).toBe("1.0.0");
-    expect(parsed.releases[0]?.changes[0]?.summary).toContain("- Initial release");
+    expect(parsed.releases[0]?.raw_body).toBe("- Initial release");
+  });
+
+  it("round-trips an existing release verbatim, including non-bulleted prose", () => {
+    const markdown = [
+      "# test-app",
+      "",
+      "This is the changelog for `test-app`.",
+      "",
+      "## 1.1.0",
+      "",
+      "### Features",
+      "",
+      "A plain paragraph with no bullet.",
+      "",
+      "- A bulleted entry",
+      "",
+      "## 1.0.0",
+      "",
+      "- Initial release",
+    ].join("\n");
+
+    const parsed = formatter.transform_markdown(
+      fromMarkdown(markdown, {
+        extensions: [gfm()],
+        mdastExtensions: [gfmFromMarkdown()],
+      }),
+      markdown,
+    );
+
+    const output = formatter.format_changelog(parsed, {
+      project: { name: "test-app" },
+    });
+
+    expect(output).toContain("A plain paragraph with no bullet.");
+    expect(output).toContain("### Features");
+    expect(output).toContain("- A bulleted entry");
+    expect(output).toContain("- Initial release");
   });
 
   it("creates release notes with link to changelog", () => {

@@ -63,17 +63,6 @@ function generate_slug(description: string): string {
 }
 
 /**
- * Convert raw user-supplied content into the internal summary format expected by
- * `save_change_file` (which strips the first 2 chars of every line). The title line
- * gets a "- " prefix and body lines get a "  " indent, mirroring the read transform
- * in `parse_change_file` so the round-trip is lossless.
- */
-export function to_internal_summary(content: string): string {
-  const [title, ...rest] = content.trim().split("\n");
-  return [`- ${title}`, ...rest.map((line) => `  ${line}`)].join("\n");
-}
-
-/**
  * Derive a filename slug from the first line of the content, normalized via
  * `generate_slug` and capped to a sane length at a hyphen boundary.
  */
@@ -259,7 +248,7 @@ export const record_change = create_command({
         kind: change_type,
         index: next_index,
         slug: slug,
-        summary: to_internal_summary(content),
+        summary: content,
       });
 
       try {

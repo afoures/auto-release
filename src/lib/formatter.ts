@@ -1,4 +1,4 @@
-import type { Heading, List, Root } from "mdast";
+import type { Heading, Root } from "mdast";
 import type { Formatter } from "./versioning/types.ts";
 import type { ChangeKindDisplayMap } from "./versioning/types.ts";
 import { ChangeFile } from "./change-file.ts";
@@ -9,39 +9,11 @@ type DefaultParsedChangelog<change_kinds extends string> = {
   releases: Array<{
     version: string;
     changes: Array<ChangeFile<change_kinds>>;
+    // Present only for releases parsed from an existing changelog: the raw markdown
+    // body of the release, re-emitted verbatim so past releases survive round-trips.
+    raw_body?: string;
   }>;
 };
-
-function normalize_label(label: string): string {
-  return label.trim().toLowerCase();
-}
-
-function resolve_change_kind<change_kinds extends string>({
-  heading_text,
-  allowed_changes,
-  display_map,
-}: {
-  heading_text: string;
-  allowed_changes: readonly change_kinds[];
-  display_map: ChangeKindDisplayMap<change_kinds>;
-}): change_kinds | null {
-  const normalized = normalize_label(heading_text);
-
-  for (const kind of allowed_changes) {
-    if (normalize_label(kind) === normalized) {
-      return kind;
-    }
-
-    const labels = display_map[kind];
-    const singular = labels?.singular ?? kind;
-    const plural = labels?.plural ?? singular;
-    if (normalize_label(singular) === normalized || normalize_label(plural) === normalized) {
-      return kind;
-    }
-  }
-
-  return null;
-}
 
 function create_empty_changelog<
   change_kinds extends string,
@@ -75,10 +47,14 @@ export function default_formatter<change_kinds extends string>({
       const changelog = create_empty_changelog<change_kinds>();
 
       let current_release: DefaultParsedChangelog<change_kinds>["releases"][number] | null = null;
-      let current_kind: change_kinds | null = null;
+      let release_body_start = 0;
 
-      const push_current_release = () => {
+      // Capture the raw markdown body of the current release (everything between the end of
+      // its `## version` heading and the start of the next release / end of file) verbatim,
+      // so past releases survive the parse → re-serialize round-trip untouched.
+      const finalize_release = (body_end: number) => {
         if (current_release) {
+          current_release.raw_body = original_text.slice(release_body_start, body_end).trim();
           changelog.releases.push(current_release);
         }
       };
@@ -90,41 +66,12 @@ export function default_formatter<change_kinds extends string>({
         }
 
         if (node.type === "heading" && (node as Heading).depth === 2) {
-          push_current_release();
-          current_kind = null;
+          finalize_release(node.position?.start.offset ?? original_text.length);
 
           const heading_text = mdast.to_plain_text(node).trim();
           const version = heading_text.split(/\s+/)[0] ?? "";
           current_release = { version, changes: [] };
-          continue;
-        }
-
-        if (node.type === "heading" && (node as Heading).depth === 3) {
-          const heading_text = mdast.to_plain_text(node).trim();
-          current_kind = resolve_change_kind({
-            heading_text,
-            allowed_changes,
-            display_map: resolved_display_map,
-          });
-          continue;
-        }
-
-        if (node.type === "list" && current_release) {
-          const kind_for_items = current_kind ?? allowed_changes[0] ?? ("default" as change_kinds);
-          for (const item of (node as List).children) {
-            const start = item.position?.start.offset ?? 0; // 1271
-            const end = item.position?.end.offset ?? 0; // 1426
-            const summary = original_text.slice(start, end).trim();
-            if (!summary) {
-              continue;
-            }
-            current_release.changes.push(
-              new ChangeFile({
-                kind: kind_for_items,
-                summary: summary,
-              }),
-            );
-          }
+          release_body_start = node.position?.end.offset ?? 0;
           continue;
         }
 
@@ -136,7 +83,7 @@ export function default_formatter<change_kinds extends string>({
         }
       }
 
-      push_current_release();
+      finalize_release(original_text.length);
 
       return changelog;
     },
@@ -155,6 +102,14 @@ export function default_formatter<change_kinds extends string>({
       }
 
       for (const release of changelog.releases) {
+        // Releases parsed from an existing changelog are re-emitted verbatim. The trailing
+        // "" mirrors the grouped branch below so consecutive releases stay separated by a
+        // blank line once the blocks are joined.
+        if (typeof release.raw_body === "string") {
+          lines.push([`## ${release.version}`, "", release.raw_body, ""].join("\n"));
+          continue;
+        }
+
         const release_lines = [`## ${release.version}`, ""];
 
         for (const change_kind of allowed_changes) {

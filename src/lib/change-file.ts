@@ -59,11 +59,7 @@ export async function save_change_file<kind extends string>(
   to: string,
 ): Promise<string> {
   const file_path = join(to, change_file.filename);
-  const text = change_file.summary
-    .split("\n")
-    .map((line) => line.slice(2))
-    .join("\n");
-  await fs.write_file(file_path, text);
+  await fs.write_file(file_path, change_file.summary);
   return file_path;
 }
 
@@ -88,10 +84,6 @@ export async function parse_change_file<kind extends string>(
     return new Error("Change file is empty");
   }
 
-  const [title, ...rest] = file_content.split("\n");
-
-  const text = [`- ${title}`, ...rest.map((line) => `  ${line}`)].join("\n");
-
   const index = match.groups.index ? parseInt(match.groups.index, 10) : 1;
 
   const birthtime = (await fs.get_file_stats(path))?.birthtime ?? new Date(0);
@@ -100,7 +92,7 @@ export async function parse_change_file<kind extends string>(
     index,
     slug: match.groups.slug,
     kind: match.groups.kind as kind,
-    summary: text,
+    summary: file_content,
     birthtime,
   });
 }

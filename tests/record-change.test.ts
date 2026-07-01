@@ -2,25 +2,8 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { derive_slug, to_internal_summary } from "../src/lib/commands/record-change.ts";
+import { derive_slug } from "../src/lib/commands/record-change.ts";
 import { ChangeFile, parse_change_file, save_change_file } from "../src/lib/change-file.ts";
-
-describe("to_internal_summary", () => {
-  it("prefixes a single-line title with '- '", () => {
-    expect(to_internal_summary("Add a feature")).toBe("- Add a feature");
-  });
-
-  it("indents body lines so save/parse strips them back to the original", () => {
-    const content = "Add a feature\n\nMore details here\nand a second line";
-    expect(to_internal_summary(content)).toBe(
-      "- Add a feature\n  \n  More details here\n  and a second line",
-    );
-  });
-
-  it("trims surrounding whitespace before formatting", () => {
-    expect(to_internal_summary("  \nAdd a feature\n  ")).toBe("- Add a feature");
-  });
-});
 
 describe("derive_slug", () => {
   it("kebab-cases the first line only", () => {
@@ -51,13 +34,13 @@ describe("content round-trip through save/parse", () => {
     await rm(dir, { recursive: true, force: true });
   });
 
-  it("writes content that parses back to the same summary", async () => {
+  it("writes content verbatim and parses back to the same summary", async () => {
     const content = "Add a feature\n\nMore details here";
     const change_file = new ChangeFile({
       kind: "minor",
       index: 1,
       slug: derive_slug(content),
-      summary: to_internal_summary(content),
+      summary: content,
     });
 
     const file_path = await save_change_file(change_file, dir);
@@ -66,6 +49,23 @@ describe("content round-trip through save/parse", () => {
     expect(parsed).not.toBeInstanceOf(Error);
     if (parsed instanceof Error) return;
     expect(parsed.kind).toBe("minor");
-    expect(parsed.summary).toBe(to_internal_summary(content));
+    expect(parsed.summary).toBe(content);
+  });
+
+  it("preserves a user-supplied leading '- ' unchanged", async () => {
+    const content = "- Add a feature\n\n  More details here";
+    const change_file = new ChangeFile({
+      kind: "minor",
+      index: 2,
+      slug: "add-a-feature",
+      summary: content,
+    });
+
+    const file_path = await save_change_file(change_file, dir);
+    const parsed = await parse_change_file(file_path);
+
+    expect(parsed).not.toBeInstanceOf(Error);
+    if (parsed instanceof Error) return;
+    expect(parsed.summary).toBe(content);
   });
 });
