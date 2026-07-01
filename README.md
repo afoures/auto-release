@@ -14,7 +14,7 @@ Release management should be simple. `auto-release` lets you focus on building f
 
 **CI-native**: Release branches let you test before production. Tags trigger deployments automatically.
 
-**Pre-release builds**: Publish `preview`/`rc`/`alpha`/`beta` builds from anywhere with `auto-release apply-prerelease --channel <channel> --id <id>`, without disturbing the stable release flow. See [Recommended usage](./docs/recommended-usage.md#pre-release-builds-preview--rc--alpha--beta).
+**Pre-release builds**: Publish `preview`/`rc`/`alpha`/`beta` builds from anywhere without disturbing the stable release flow.
 
 ## Quick Start
 
