@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { semver } from "../src/lib/versioning/semantic.ts";
 import { calver } from "../src/lib/versioning/calendar.ts";
+import { markver } from "../src/lib/versioning/marketing.ts";
 import { ChangeFile } from "../src/lib/change-file.ts";
 
 describe("semver", () => {
@@ -261,4 +262,37 @@ describe("calver", () => {
       }),
     ).toThrow("Invalid calendar version");
   });
+});
+
+describe("pre-release suffix tolerance", () => {
+  const strategies = {
+    semver: { strategy: semver(), base: "1.2.3", other: "1.3.0" },
+    calver: { strategy: calver(), base: "2025.1.2", other: "2025.2.0" },
+    markver: { strategy: markver(), base: "1.2.3", other: "1.3.0" },
+  };
+
+  for (const [name, { strategy, base, other }] of Object.entries(strategies)) {
+    describe(name, () => {
+      it("validates suffixed versions", () => {
+        expect(strategy.validate({ version: base })).toBe(true);
+        expect(strategy.validate({ version: `${base}-rc.3` })).toBe(true);
+        expect(strategy.validate({ version: `${base}-preview.a1b2c3d` })).toBe(true);
+        expect(strategy.validate({ version: `${base}-RC.1` })).toBe(false);
+        expect(strategy.validate({ version: `${base}-1` })).toBe(false);
+      });
+
+      it("orders a pre-release below its stable base", () => {
+        expect(strategy.compare(`${base}-rc.0`, base)).toBe(-1);
+        expect(strategy.compare(base, `${base}-rc.0`)).toBe(1);
+        expect(strategy.compare(`${base}-alpha.0`, `${base}-beta.0`)).toBe(-1);
+        expect(strategy.compare(`${base}-rc.1`, `${base}-rc.2`)).toBe(-1);
+        expect(strategy.compare(`${base}-rc.3`, `${base}-rc.3`)).toBe(0);
+      });
+
+      it("still orders different bases", () => {
+        expect(strategy.compare(base, other)).toBe(-1);
+        expect(strategy.compare(`${base}-rc.9`, `${other}-rc.0`)).toBe(-1);
+      });
+    });
+  }
 });
