@@ -127,3 +127,37 @@ auto-release manual-release
 ```
 
 Useful for local testing or emergency releases.
+
+## `apply-prerelease`
+
+Apply a **pre-release** version (`<base>-<channel>.<id>`) to component files in place, for a
+build/publish step. This is for publishing throwaway builds (`preview`) and release
+candidates (`rc`/`alpha`/`beta`) — it does **not** touch change files, the changelog, git,
+or open a PR. It only rewrites the version in the working tree so the next build picks it
+up; the stable release flow is unchanged.
+
+```bash
+# Preview build from a feature branch (id = commit sha)
+auto-release apply-prerelease --channel preview --id "$(git rev-parse --short HEAD)"
+
+# Release candidate from the release branch (id = your build number / counter)
+auto-release apply-prerelease --channel rc --id 3
+
+# A single project in a monorepo, or a preview of the change
+auto-release apply-prerelease --channel rc --id 3 --project my-app
+auto-release apply-prerelease --channel rc --id 3 --dry-run
+```
+
+**Both `--channel` and `--id` are required** — the tool never invents the identifier, so you
+compose it from whatever source you like (commit SHA, CI run number, registry lookup, …).
+
+**Version computation** (works with any versioning strategy):
+
+- The base `X.Y.Z` is the next stable version your pending change files would produce
+  (`bump(current, changes)`) when change files are present — e.g. on a feature branch.
+- When there are no pending change files — e.g. on the release branch, where
+  `generate-release-pr` already bumped the version — the base is the current version as-is.
+- The result is `<base>-<channel>.<id>`, e.g. `1.2.3-preview.a1b2c3d` or `1.2.3-rc.3`.
+
+Typically run in a build/publish workflow, then publish under a matching dist-tag
+(e.g. `npm publish --tag rc`). See [Recommended Usage](./recommended-usage.md).

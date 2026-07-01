@@ -2,6 +2,7 @@ import { regex } from "arkregex";
 import type { ChangeFile } from "../change-file.ts";
 import type { ChangeKindDisplayMap, Formatter, VersionManager } from "./types.ts";
 import { default_formatter } from "../formatter.ts";
+import { compare_prerelease, split_prerelease } from "./prerelease.ts";
 
 interface MarketingVersion {
   marketing: bigint;
@@ -9,7 +10,7 @@ interface MarketingVersion {
   patch: bigint;
 }
 
-const MARKVER_REGEX = regex("^(?<marketing>\\d+).(?<minor>\\d+).(?<patch>\\d+)$");
+const MARKVER_REGEX = regex("^(?<marketing>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)$");
 
 function parse(version: string): MarketingVersion {
   const match = MARKVER_REGEX.exec(version);
@@ -69,15 +70,17 @@ export function markver<
     formatter,
     display_map,
     compare(version_a, version_b) {
-      const a = parse(version_a);
-      const b = parse(version_b);
+      const a_split = split_prerelease(version_a);
+      const b_split = split_prerelease(version_b);
+      const a = parse(a_split.base);
+      const b = parse(b_split.base);
       if (a.marketing !== b.marketing) return a.marketing > b.marketing ? 1 : -1;
       if (a.minor !== b.minor) return a.minor > b.minor ? 1 : -1;
       if (a.patch !== b.patch) return a.patch > b.patch ? 1 : -1;
-      return 0;
+      return compare_prerelease(a_split.suffix, b_split.suffix);
     },
     validate({ version }) {
-      return MARKVER_REGEX.test(version);
+      return MARKVER_REGEX.test(split_prerelease(version).base);
     },
     bump({ version, changes }): string {
       const parsed = parse(version);

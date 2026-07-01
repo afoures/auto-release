@@ -8,6 +8,7 @@ import { tag_release_commit } from "./lib/commands/tag-release-commit.ts";
 import { init } from "./lib/commands/init.ts";
 import { list } from "./lib/commands/list.ts";
 import { manual_release } from "./lib/commands/manual-release.ts";
+import { apply_prerelease } from "./lib/commands/apply-prerelease.ts";
 
 const run = create_cli({
   name: "auto-release",
@@ -20,6 +21,7 @@ const run = create_cli({
     "generate-release-pr": generate_release_pr,
     "tag-release-commit": tag_release_commit,
     "manual-release": manual_release,
+    "apply-prerelease": apply_prerelease,
   },
 });
 

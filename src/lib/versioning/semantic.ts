@@ -2,6 +2,7 @@ import { regex } from "arkregex";
 import type { ChangeFile } from "../change-file.ts";
 import type { ChangeKindDisplayMap, Formatter, VersionManager } from "./types.ts";
 import { default_formatter } from "../formatter.ts";
+import { compare_prerelease, split_prerelease } from "./prerelease.ts";
 
 interface SemanticVersion {
   major: bigint;
@@ -9,7 +10,7 @@ interface SemanticVersion {
   patch: bigint;
 }
 
-const SEMVER_REGEX = regex("^(?<major>\\d+).(?<minor>\\d+).(?<patch>\\d+)$");
+const SEMVER_REGEX = regex("^(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)$");
 
 function parse(version: string): SemanticVersion {
   const match = SEMVER_REGEX.exec(version);
@@ -72,8 +73,10 @@ export function semver<
     formatter,
     display_map,
     compare(version_a, version_b) {
-      const a = parse(version_a);
-      const b = parse(version_b);
+      const a_split = split_prerelease(version_a);
+      const b_split = split_prerelease(version_b);
+      const a = parse(a_split.base);
+      const b = parse(b_split.base);
       if (a.major !== b.major) {
         return a.major > b.major ? 1 : -1;
       }
@@ -83,10 +86,10 @@ export function semver<
       if (a.patch !== b.patch) {
         return a.patch > b.patch ? 1 : -1;
       }
-      return 0;
+      return compare_prerelease(a_split.suffix, b_split.suffix);
     },
     validate({ version }) {
-      return SEMVER_REGEX.test(version);
+      return SEMVER_REGEX.test(split_prerelease(version).base);
     },
     bump({ version, changes }): string {
       const parsed = parse(version);

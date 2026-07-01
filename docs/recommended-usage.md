@@ -121,6 +121,50 @@ This command:
 - Creates releases on the platform (GitHub/GitLab)
 - Tags trigger production deployment CI
 
+## Pre-release Builds (preview / rc / alpha / beta)
+
+Pre-releases are **ephemeral builds** of a *pending* release — not a separate versioning
+cycle. The stable workflow above is untouched: the release PR still computes the real
+`X.Y.Z` and changelog, and merging it ships stable. The `apply-prerelease` command just
+rewrites the version in the working tree for a build/publish step.
+
+There are two natural flows:
+
+### Preview from a feature branch
+
+Publish a throwaway build of a PR so it can be installed and tested. The version is the
+next stable version your pending change files would produce, suffixed with the commit SHA:
+
+```bash
+auto-release apply-prerelease --channel preview --id "$(git rev-parse --short HEAD)"
+# package.json → 1.2.3-preview.a1b2c3d
+pnpm build
+pnpm publish --tag preview --no-git-checks
+```
+
+### Release candidate from the release branch
+
+While the release PR is open on `release/<group>`, cut `rc`/`alpha`/`beta` builds of the
+pending version. There are no change files on the release branch (they were consumed by
+`generate-release-pr`), so the base is the already-bumped version:
+
+```bash
+auto-release apply-prerelease --channel rc --id "$BUILD_NUMBER"
+# package.json (1.2.3) → 1.2.3-rc.<n>
+pnpm build
+pnpm publish --tag rc
+```
+
+### Choosing the identifier
+
+`--id` is always required and the tool never invents it — this keeps it composable. Source
+it from wherever fits your pipeline: the commit SHA (`git rev-parse --short HEAD`), a CI run
+number (`${{ github.run_number }}`), a registry lookup, etc. `preview` builds are naturally
+keyed by commit; `rc`/`alpha`/`beta` are usually keyed by a build counter.
+
+Because `apply-prerelease` never commits, tags, or writes the changelog, pre-release builds leave no
+trace in git — only the published artifact under its dist-tag. Run it manually or in CI.
+
 ## Hot Fixes and Manual Releases
 
 The `manual-release` command is available for special scenarios:
