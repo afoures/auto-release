@@ -1,6 +1,6 @@
 {
   "name": "@afoures/auto-release",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "A file based release management tool for monorepos",
   "keywords": [],
   "homepage": "https://github.com/afoures/auto-release#readme",
