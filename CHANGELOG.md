@@ -2,6 +2,28 @@
 
 This is the changelog for `auto-release`.
 
+## 0.6.0
+
+### Breaking Changes
+
+- **Breaking:** change file content is now used verbatim in the changelog
+
+  Previously the tool added `- ` to the title and `  ` to body lines when reading a change file, and stripped them when writing. Now a change file's content is copied into the changelog exactly as written — add your own leading `- ` if you want a bullet point. Existing change files should be updated to include the markup you want rendered.
+
+### Features
+
+- Add `unstable` option to `semver()` for pre-1.0 versioning
+
+  While on a 0.x version, breaking changes now bump the minor instead of graduating to 1.0.0. Features and fixes are unchanged. To graduate to 1.0.0, remove `unstable: true` and ship a breaking change.
+
+- Make `record-change` usable non-interactively
+
+  Add a `--content` flag that writes the change body directly and skips the editor, plus an optional `--slug` flag. When stdin is not a TTY (or in CI), missing required input now errors clearly instead of hanging. This lets scripts and AI agents record changes in a single command.
+
+- Add `apply-prerelease` command for pre-release builds
+
+  New `auto-release apply-prerelease --channel <channel> --id <id>` command rewrites component versions in place as `<base>-<channel>.<id>` (e.g. `1.2.3-rc.3`, `1.2.3-preview.<sha>`) for ephemeral preview/rc/alpha/beta build+publish steps. It does not touch change files, the changelog, git, or PRs, so the stable release flow is unchanged. Works with any versioning strategy. Both `--channel` and `--id` are required.
+
 ## 0.5.0
 
 ### Features
