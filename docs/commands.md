@@ -48,11 +48,11 @@ auto-release record-change --project my-app --type minor --slug dark-theme-toggl
 
 - `--project <name>`: Project name (optional if only one project is managed).
 - `--type <type>`: Change type (e.g. `minor`, `patch`). Must be valid for the project.
-- `--content <text>`: Change content — the first line is the title, anything after is
-  the body. When provided, the content is written directly and **the editor is skipped**,
-  so the command runs to completion without any interaction.
+- `--content <text>`: Change content, written to the change file **verbatim** and copied
+  into the changelog as-is (start a line with `- ` for a bullet). When provided, the
+  editor is skipped, so the command runs to completion without any interaction.
 - `--slug <slug>`: Explicit slug for the change filename. Defaults to a slug derived from
-  the content title (or the description you type in interactive mode).
+  the first line of the content (or the description you type in interactive mode).
 
 **Non-interactive behavior:** when stdin is not a TTY (or the command runs in CI), the
 interactive prompts are disabled. If a required value is missing the command exits with a
