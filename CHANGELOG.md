@@ -2,6 +2,14 @@
 
 This is the changelog for `auto-release`.
 
+## 0.7.0
+
+### Features
+
+- Add a `generate-skill` command
+
+  Generates a project-aware `SKILL.md` into a target folder, teaching agents how to record change files for the repo.
+
 ## 0.6.0
 
 ### Breaking Changes
