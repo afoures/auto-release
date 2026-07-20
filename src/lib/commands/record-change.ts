@@ -126,7 +126,8 @@ export const record_change = create_command({
     },
     slug: {
       type: "string",
-      description: "Explicit slug for the change file name (defaults to a slug derived from the content title).",
+      description:
+        "Explicit slug for the change file name (defaults to a slug derived from the content title).",
     },
     config: {
       type: "string",

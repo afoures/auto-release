@@ -124,7 +124,7 @@ This command:
 
 ## Pre-release Builds (preview / rc / alpha / beta)
 
-Pre-releases are **ephemeral builds** of a *pending* release — not a separate versioning
+Pre-releases are **ephemeral builds** of a _pending_ release - not a separate versioning
 cycle. The stable workflow above is untouched: the release PR still computes the real
 `X.Y.Z` and changelog, and merging it ships stable. The `apply-prerelease` command just
 rewrites the version in the working tree for a build/publish step.
@@ -158,13 +158,13 @@ pnpm publish --tag rc
 
 ### Choosing the identifier
 
-`--id` is always required and the tool never invents it — this keeps it composable. Source
+`--id` is always required and the tool never invents it - this keeps it composable. Source
 it from wherever fits your pipeline: the commit SHA (`git rev-parse --short HEAD`), a CI run
 number (`${{ github.run_number }}`), a registry lookup, etc. `preview` builds are naturally
 keyed by commit; `rc`/`alpha`/`beta` are usually keyed by a build counter.
 
 Because `apply-prerelease` never commits, tags, or writes the changelog, pre-release builds leave no
-trace in git — only the published artifact under its dist-tag. Run it manually or in CI.
+trace in git - only the published artifact under its dist-tag. Run it manually or in CI.
 
 ## Hot Fixes and Manual Releases
 

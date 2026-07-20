@@ -37,7 +37,10 @@ function make_context(projects: ManagedProject[]) {
 }
 
 function write_package(version: string) {
-  writeFileSync(join(root, "package.json"), JSON.stringify({ name: "app", version }, null, 2) + "\n");
+  writeFileSync(
+    join(root, "package.json"),
+    JSON.stringify({ name: "app", version }, null, 2) + "\n",
+  );
 }
 
 function read_version(): string {
@@ -56,6 +59,7 @@ describe("apply-prerelease command", () => {
     write_change("app", "patch.1-foo.md", "Fix a bug");
     const result = await apply_prerelease.run({
       args: { channel: "preview", id: "abc1234" } as any,
+      positionals: [],
       context: make_context([make_project("app", semver())]),
     });
     expect(result.status).toBe("success");
@@ -68,6 +72,7 @@ describe("apply-prerelease command", () => {
     write_package("1.2.3");
     const result = await apply_prerelease.run({
       args: { channel: "rc", id: "3" } as any,
+      positionals: [],
       context: make_context([make_project("app", semver())]),
     });
     expect(result.status).toBe("success");
@@ -78,6 +83,7 @@ describe("apply-prerelease command", () => {
     write_package("2025.1.2");
     const result = await apply_prerelease.run({
       args: { channel: "rc", id: "3" } as any,
+      positionals: [],
       context: make_context([make_project("app", calver())]),
     });
     expect(result.status).toBe("success");
@@ -88,6 +94,7 @@ describe("apply-prerelease command", () => {
     write_package("1.2.3");
     const result = await apply_prerelease.run({
       args: { channel: "rc" } as any,
+      positionals: [],
       context: make_context([make_project("app", semver())]),
     });
     expect(result.status).toBe("error");
@@ -97,6 +104,7 @@ describe("apply-prerelease command", () => {
     write_package("1.2.3");
     const result = await apply_prerelease.run({
       args: { id: "3" } as any,
+      positionals: [],
       context: make_context([make_project("app", semver())]),
     });
     expect(result.status).toBe("error");
@@ -106,6 +114,7 @@ describe("apply-prerelease command", () => {
     write_package("1.2.3");
     const result = await apply_prerelease.run({
       args: { channel: "rc", id: "3", "dry-run": true } as any,
+      positionals: [],
       context: make_context([make_project("app", semver())]),
     });
     expect(result.status).toBe("success");

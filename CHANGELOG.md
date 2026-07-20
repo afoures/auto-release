@@ -8,7 +8,7 @@ This is the changelog for `auto-release`.
 
 - **Breaking:** change file content is now used verbatim in the changelog
 
-  Previously the tool added `- ` to the title and `  ` to body lines when reading a change file, and stripped them when writing. Now a change file's content is copied into the changelog exactly as written — add your own leading `- ` if you want a bullet point. Existing change files should be updated to include the markup you want rendered.
+  Previously the tool added `- ` to the title and `  ` to body lines when reading a change file, and stripped them when writing. Now a change file's content is copied into the changelog exactly as written - add your own leading `- ` if you want a bullet point. Existing change files should be updated to include the markup you want rendered.
 
 ### Features
 
@@ -29,7 +29,7 @@ This is the changelog for `auto-release`.
 ### Features
 
 - Add index prefix to change files for deterministic ordering.
-  
+
   New format: `<type>.<index>-<slug>.md`. Falls back to file creation date for legacy files.
 
 ## 0.4.1

@@ -9,6 +9,7 @@ import { init } from "./lib/commands/init.ts";
 import { list } from "./lib/commands/list.ts";
 import { manual_release } from "./lib/commands/manual-release.ts";
 import { apply_prerelease } from "./lib/commands/apply-prerelease.ts";
+import { generate_skill } from "./lib/commands/generate-skill.ts";
 
 const run = create_cli({
   name: "auto-release",
@@ -22,6 +23,7 @@ const run = create_cli({
     "tag-release-commit": tag_release_commit,
     "manual-release": manual_release,
     "apply-prerelease": apply_prerelease,
+    "generate-skill": generate_skill,
   },
 });
 

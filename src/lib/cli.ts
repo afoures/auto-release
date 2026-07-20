@@ -32,6 +32,7 @@ type ParsedCommandArgs<args extends Record<string, CustomOption<any>>> = Pretty<
 
 type CommandGetContextArgs<args extends Record<string, CustomOption<any>>> = Pretty<{
   args: ParsedCommandArgs<args>;
+  positionals: string[];
   cwd: string;
 }>;
 
@@ -40,6 +41,7 @@ type CommandRunContext<
   context extends Record<string, unknown> = Record<string, unknown>,
 > = Pretty<{
   args: ParsedCommandArgs<args>;
+  positionals: string[];
   context: context;
 }>;
 
@@ -233,7 +235,7 @@ export function create_cli(options: CreateCliOptions) {
     }
 
     // Parse arguments using command's schema
-    const { values } = parseArgs({
+    const { values, positionals } = parseArgs({
       args: args.slice(1),
       options: {
         ...command.schema,
@@ -243,6 +245,7 @@ export function create_cli(options: CreateCliOptions) {
       allowPositionals: true,
     }) as {
       values: ParsedCommandArgs<typeof command.schema> & { help?: boolean };
+      positionals: string[];
     };
 
     if (values.help) {
@@ -253,10 +256,12 @@ export function create_cli(options: CreateCliOptions) {
     try {
       const command_context = await command.get_context({
         args: values,
+        positionals,
         cwd: process.cwd(),
       });
       const run_args: CommandRunContext<any, any> = {
         args: values,
+        positionals,
         context: command_context,
       };
 
