@@ -2,7 +2,7 @@ import { join, relative } from "node:path";
 import { create_command } from "../cli.ts";
 import { find_nearest_config } from "../config.ts";
 import type { InternalConfig } from "../config.ts";
-import { exists, write_file } from "../utils/fs.ts";
+import { read_file, write_file } from "../utils/fs.ts";
 
 /**
  * Name of the generated skill. Doubles as the subfolder name so the skill lives at
@@ -13,11 +13,59 @@ const SKILL_NAME = "auto-release";
 const SKILL_FILENAME = "SKILL.md";
 
 /**
+ * Markers delimiting the one hand-maintained region of the skill. Everything outside them is
+ * regenerated from the config on every run; everything inside is carried over verbatim.
+ */
+const CUSTOM_START = "<!-- auto-release:custom:start -->";
+const CUSTOM_END = "<!-- auto-release:custom:end -->";
+
+/** Default body of the custom region, used when generating a fresh skill. */
+const DEFAULT_CUSTOM_SECTION = [
+  "Change content is copied into the changelog **verbatim** - exactly as written, with no",
+  "markup added or removed. Any of these is acceptable (use whichever your repo prefers):",
+  "",
+  "- a single bullet - `- Fix login redirect loop`",
+  "- a bullet with an indented body paragraph (indent the body two spaces)",
+  "- plain prose with no bullet - rendered as-is",
+  "",
+  "Do **not** assume a leading `- ` is required; only add one if you actually want a bullet.",
+].join("\n");
+
+/**
+ * Pull the hand-maintained region out of an existing `SKILL.md` so a regeneration can keep it.
+ *
+ * Prefers the explicit markers. Files generated before the markers existed are handled by
+ * falling back to the whole `## Change file format` section body (minus the maintainer note,
+ * which the generated shell re-adds).
+ */
+export function extract_custom_section(existing: string): string | null {
+  const start = existing.indexOf(CUSTOM_START);
+  const end = existing.indexOf(CUSTOM_END, start + CUSTOM_START.length);
+  if (start !== -1 && end !== -1) {
+    return existing.slice(start + CUSTOM_START.length, end).trim() || null;
+  }
+
+  const legacy = existing.match(/^## Change file format\s*$([\s\S]*?)(?=^## |\s*$(?![\s\S]))/m);
+  if (!legacy) {
+    return null;
+  }
+  return (
+    legacy[1]
+      // Drop the maintainer instructions comment - the generated shell owns it now.
+      .replace(/<!--[\s\S]*?-->/g, "")
+      .trim() || null
+  );
+}
+
+/**
  * Build a project-aware Claude Code `SKILL.md` from the loaded config. The skill teaches an
  * agent to record change files for *this* repository, embedding the real project names,
  * valid change types, and change-file directory.
  */
-export function generate_skill_source(config: InternalConfig): string {
+export function generate_skill_source(
+  config: InternalConfig,
+  options?: { custom_section?: string | null },
+): string {
   const projects = config.managed_projects;
   const changes_dir = relative(config.folder, config.changes_dir) || config.changes_dir;
 
@@ -69,17 +117,13 @@ export function generate_skill_source(config: InternalConfig): string {
     "",
     "## Change file format",
     "",
-    "<!-- Maintainers: edit this section to describe your repo's preferred change-file style.",
-    "     The agent will follow whatever you write here. -->",
+    "<!-- Maintainers: edit the section between the markers below to describe your repo's",
+    "     preferred change-file style. The agent will follow whatever you write there, and",
+    "     re-running `auto-release generate-skill` keeps it while refreshing the rest. -->",
     "",
-    "Change content is copied into the changelog **verbatim** - exactly as written, with no",
-    "markup added or removed. Any of these is acceptable (use whichever your repo prefers):",
-    "",
-    "- a single bullet - `- Fix login redirect loop`",
-    "- a bullet with an indented body paragraph (indent the body two spaces)",
-    "- plain prose with no bullet - rendered as-is",
-    "",
-    "Do **not** assume a leading `- ` is required; only add one if you actually want a bullet.",
+    CUSTOM_START,
+    options?.custom_section ?? DEFAULT_CUSTOM_SECTION,
+    CUSTOM_END,
     "",
     "## Verify",
     "",
@@ -102,7 +146,7 @@ export const generate_skill = create_command({
   schema: {
     force: {
       type: "boolean",
-      description: "Overwrite an existing SKILL.md",
+      description: "Reset the customisable section to its default instead of preserving it",
     },
     config: {
       type: "string",
@@ -129,20 +173,23 @@ export const generate_skill = create_command({
     const skill_dir = join(target_dir, SKILL_NAME);
     const skill_path = join(skill_dir, SKILL_FILENAME);
 
-    if ((await exists(skill_path)) && !args.force) {
-      return {
-        status: "error" as const,
-        error: `${relative(root, skill_path)} already exists. Pass --force to overwrite.`,
-      };
-    }
+    const existing = await read_file(skill_path);
+    // Regenerating in place is the normal path: the config-derived sections are refreshed and
+    // the hand-maintained region is carried over. `--force` opts out and restores the default.
+    const custom_section = existing && !args.force ? extract_custom_section(existing) : null;
 
-    const source = generate_skill_source(config);
+    const source = generate_skill_source(config, { custom_section });
 
     try {
       await write_file(skill_path, source);
+      const path = relative(root, skill_path);
       return {
         status: "success" as const,
-        message: `Generated skill: ${relative(root, skill_path)}`,
+        message: existing
+          ? custom_section
+            ? `Updated skill: ${path} (kept your customised change-file format section)`
+            : `Updated skill: ${path}`
+          : `Generated skill: ${path}`,
       };
     } catch (error: any) {
       return {

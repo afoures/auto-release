@@ -177,15 +177,32 @@ copy-pasteable `record-change` commands instead of placeholders.
 
 The target directory is passed as a positional argument (the skill is written to a
 `auto-release/` subfolder inside it, per the Claude Code convention that each skill lives in
-its own folder). `--output/-o` is accepted as an alias.
-
-**Options:**
-
-- `--force`: Overwrite an existing `SKILL.md` (by default the command errors if one is
-  already present).
+its own folder).
 
 The generated file includes an editable **Change file format** section: it ships with a
 neutral default (change content is copied into the changelog verbatim; a single bullet, a
 bullet with an indented body, or plain prose are all valid - no leading `- ` is required).
 Edit that section in place to describe your repo's preferred house style, and agents using
 the skill will follow it.
+
+### Updating in place
+
+Re-run the command any time your config changes (new project, new change types, moved
+`changes_dir`). It **updates an existing `SKILL.md` in place**: the config-derived sections are
+regenerated, while your edits inside the marker block are carried over verbatim.
+
+```markdown
+## Change file format
+
+<!-- auto-release:custom:start -->
+Anything you write here survives a regeneration.
+<!-- auto-release:custom:end -->
+```
+
+Skills generated before these markers existed are migrated automatically - the body of their
+`## Change file format` section is moved inside the markers on the next run.
+
+**Options:**
+
+- `--force`: Reset the customisable section back to the shipped default instead of preserving
+  your edits.
