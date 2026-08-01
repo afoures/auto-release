@@ -4,3 +4,4 @@ dist
 .DS_Store
 .changes/.preferences.json
 changelogs
+.claude/settings.local.json

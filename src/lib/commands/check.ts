@@ -2,9 +2,45 @@ import { create_logger } from "../utils/logger.ts";
 import { create_command } from "../cli.ts";
 import { find_nearest_config } from "../config.ts";
 import type { ManagedProject } from "../types.ts";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import * as fs from "../utils/fs.ts";
 import { find_change_files } from "../change-file.ts";
+import {
+  compute_skill_drift,
+  describe_skill_drift,
+  find_generated_skills,
+  skill_file_path,
+  style_file_path,
+} from "./generate-skill.ts";
+import type { InternalConfig } from "../config.ts";
+
+/**
+ * Treat a generated `SKILL.md` like a lockfile: it is derived from the config, so a config change
+ * leaves it stale until it is regenerated. Only skills sitting in a conventional location are
+ * found; anywhere else, run `generate-skill --check <dir>` explicitly.
+ */
+async function validate_generated_skills(config: InternalConfig, roots: string[]) {
+  const errors: string[] = [];
+
+  for (const skill_dir of await find_generated_skills(roots)) {
+    const skill_path = skill_file_path(skill_dir);
+    const [skill, style] = await Promise.all([
+      fs.read_file(skill_path),
+      fs.read_file(style_file_path(skill_dir)),
+    ]);
+    const { status } = compute_skill_drift(config, { skill, style });
+    // Report whichever root gives the tidiest path - the skill may live above the config folder.
+    const display_path =
+      roots.map((root) => relative(root, skill_path)).sort((a, b) => a.length - b.length)[0] ||
+      skill_path;
+    const problem = describe_skill_drift(status, display_path);
+    if (problem) {
+      errors.push(problem);
+    }
+  }
+
+  return errors;
+}
 
 async function verify_component_version_consistency(
   project: ManagedProject,
@@ -116,11 +152,11 @@ export const check = create_command({
     },
   },
   get_context: async ({ args, cwd }) => {
-    const { config } = await find_nearest_config({
+    const { config, git_root } = await find_nearest_config({
       config_path: args.config,
       cwd,
     });
-    return { config };
+    return { config, roots: [config.folder, git_root].filter((root) => !!root) as string[] };
   },
   run: async ({ context }) => {
     const logger = create_logger();
@@ -145,6 +181,8 @@ export const check = create_command({
         errors.push(...changes_validation.errors);
       }
     }
+
+    errors.push(...(await validate_generated_skills(config, context.roots)));
 
     const valid = errors.length === 0;
 

@@ -25,6 +25,8 @@ auto-release check
 - Group name conflicts (group names cannot match project names)
 - Similar group names (case-insensitive)
 - Group name special characters
+- Generated skill freshness, if a [generated skill](#generate-skill) is found in a conventional
+  location (`.claude/skills/`, `.agents/skills/`, or `skills/`)
 
 Use in CI to ensure everything is valid before merging.
 
@@ -164,45 +166,53 @@ Typically run in a build/publish workflow, then publish under a matching dist-ta
 
 ## `generate-skill`
 
-Generate an Agent Skill (`SKILL.md`) that teaches AI agents how to record change files for **this** repository:
+Generate an Agent Skill that teaches AI agents how to record change files for **this** repository:
 
 ```bash
-# Writes <dir>/auto-release/SKILL.md
 auto-release generate-skill ./.claude/skills
 ```
 
-The skill is **project-aware** - it reads your config and embeds the real project names, the
+The target directory is passed as a positional argument. Two files are written to an
+`auto-release/` subfolder inside it (per the Claude Code convention that each skill lives in its
+own folder):
+
+```
+.claude/skills/auto-release/
+  SKILL.md                 generated in full, overwritten on every run
+  change-file-format.md    yours - written once, never overwritten
+```
+
+`SKILL.md` is **project-aware**: it reads your config and embeds the real project names, the
 valid change types for each project, and your `changes_dir`, so an agent gets concrete,
 copy-pasteable `record-change` commands instead of placeholders.
 
-The target directory is passed as a positional argument (the skill is written to a
-`auto-release/` subfolder inside it, per the Claude Code convention that each skill lives in
-its own folder).
+`change-file-format.md` is where your repo's house style lives. It ships with an opinionated
+default - imperative title, indented body paragraph, no change-type prefix (the changelog already
+groups by type) - plus the underlying rule that content is copied into the changelog verbatim.
+Edit it freely: `SKILL.md` points agents at it, and regenerating never touches it.
 
-The generated file includes an editable **Change file format** section: it ships with a
-neutral default (change content is copied into the changelog verbatim; a single bullet, a
-bullet with an indented body, or plain prose are all valid - no leading `- ` is required).
-Edit that section in place to describe your repo's preferred house style, and agents using
-the skill will follow it.
+### Keeping it up to date
 
-### Updating in place
+`SKILL.md` is derived from your config, so a config change (new project, new change types, moved
+`changes_dir`) leaves it stale. Re-run the command to refresh it - your `change-file-format.md`
+is left alone.
 
-Re-run the command any time your config changes (new project, new change types, moved
-`changes_dir`). It **updates an existing `SKILL.md` in place**: the config-derived sections are
-regenerated, while your edits inside the marker block are carried over verbatim.
+To catch staleness in CI, `--check` reports drift without writing anything, exiting non-zero if
+the skill is missing, out of date, or has lost its `change-file-format.md`:
 
-```markdown
-## Change file format
-
-<!-- auto-release:custom:start -->
-Anything you write here survives a regeneration.
-<!-- auto-release:custom:end -->
+```bash
+auto-release generate-skill --check ./.claude/skills
 ```
 
-Skills generated before these markers existed are migrated automatically - the body of their
-`## Change file format` section is moved inside the markers on the next run.
+`auto-release check` runs the same validation automatically for skills in a conventional
+location - `.claude/skills/`, `.agents/skills/`, or `skills/`, relative to your config folder or
+git root. Anywhere else, wire `generate-skill --check <dir>` into CI explicitly.
+
+Because `SKILL.md` is regenerated in full, edits to it are reported as drift and overwritten on
+the next run - put anything you want to keep in `change-file-format.md`.
 
 **Options:**
 
-- `--force`: Reset the customisable section back to the shipped default instead of preserving
-  your edits.
+- `--check`: Report whether the skill is up to date instead of writing it. Exits non-zero on
+  drift. Cannot be combined with `--force`.
+- `--force`: Reset `change-file-format.md` back to the shipped default, discarding your edits.
