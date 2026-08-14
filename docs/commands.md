@@ -86,6 +86,54 @@ Group: api-service (1 project)
     ./services/api/Cargo.toml
 ```
 
+## `current-version`
+
+Print the current version of registered projects, as raw output meant for scripts and CI steps:
+
+```bash
+# Every project, one per line
+auto-release current-version
+
+# A single project - prints just the version
+auto-release current-version --project my-app
+
+# Machine readable
+auto-release current-version --json
+```
+
+Without `--project` the format is `<name> <version>`, one line per project:
+
+```
+web-app 1.2.3
+api 0.5.0
+```
+
+With `--project` the output is the bare version (`1.2.3`), and `--json` always emits an **array**,
+even for one project, so the shape is stable:
+
+```json
+[{ "project": "web-app", "version": "1.2.3" }]
+```
+
+The output carries no decoration and no trailing summary line, so it works directly in command
+substitution:
+
+```bash
+VERSION=$(auto-release current-version --project my-app)
+VERSION=$(auto-release current-version --json | jq -r '.[0].version')
+```
+
+This reports the version currently written in the component files, **not** the next version your
+pending change files would produce - use `generate-release-pr --dry-run` for that. When a project
+spans several components, the highest version wins (use [`check`](#check) to catch components that
+have drifted apart). A project with no readable component file is an error rather than a fallback to
+the initial version.
+
+**Options:**
+
+- `--project <name>`: Only report this project, printing the bare version.
+- `--json`: Output a JSON array of `{ project, version }` instead of plain text.
+
 ## `generate-release-pr`
 
 Create or update release PRs based on change files:

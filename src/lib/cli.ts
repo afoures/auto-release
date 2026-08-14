@@ -66,10 +66,15 @@ export interface Command<
 
   /**
    * Run the command with parsed arguments and config
+   *
+   * Set `silent` on a successful result to skip the closing outro, for commands
+   * whose stdout must stay undecorated (e.g. usable in command substitution).
    */
   run: (
     args: CommandRunContext<NoInfer<args>, NoInfer<context>>,
-  ) => Promise<{ status: "success"; message?: string } | { status: "error"; error: string }>;
+  ) => Promise<
+    { status: "success"; message?: string; silent?: boolean } | { status: "error"; error: string }
+  >;
   /**
    * Build the execution context (loads config, resolves root, etc.)
    */
@@ -275,7 +280,7 @@ export function create_cli(options: CreateCliOptions) {
         process.exit(1);
       }
 
-      if (result.status === "success") {
+      if (result.status === "success" && result.silent !== true) {
         // Success - command completed successfully
         // Message is already displayed by the command if needed
         outro(result.message ?? "Command completed successfully");

@@ -7,6 +7,7 @@ import { generate_release_pr } from "./lib/commands/generate-release-pr.ts";
 import { tag_release_commit } from "./lib/commands/tag-release-commit.ts";
 import { init } from "./lib/commands/init.ts";
 import { list } from "./lib/commands/list.ts";
+import { current_version } from "./lib/commands/current-version.ts";
 import { manual_release } from "./lib/commands/manual-release.ts";
 import { apply_prerelease } from "./lib/commands/apply-prerelease.ts";
 import { generate_skill } from "./lib/commands/generate-skill.ts";
@@ -18,6 +19,7 @@ const run = create_cli({
     init,
     check,
     list,
+    "current-version": current_version,
     "record-change": record_change,
     "generate-release-pr": generate_release_pr,
     "tag-release-commit": tag_release_commit,
