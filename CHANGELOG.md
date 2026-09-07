@@ -2,6 +2,10 @@
 
 This is the changelog for `auto-release`.
 
+## 0.9.2
+
+No changes in this release.
+
 ## 0.9.1
 
 ### Bug Fixes
