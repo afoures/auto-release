@@ -1,4 +1,4 @@
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { create_logger } from "../utils/logger.ts";
 import { create_command } from "../cli.ts";
 import { find_nearest_config } from "../config.ts";
@@ -146,18 +146,18 @@ async function release_group(
 
     logger.note(`Release ${project.name} ${next_version}`, message_lines.join("\n"));
 
-    if (dry_run) {
-      continue;
-    }
-
-    // Collect file operations for this project
-    const file_operations = await collect_project_file_operations(project, {
-      changes_dir,
-      changes: changes_result.list,
-      current_version,
-      next_version,
-      root,
-    });
+    // Collect file operations for this project - a dry run touches no file, but
+    // the project still counts as part of the release so the group is not
+    // reported as skipped
+    const file_operations = dry_run
+      ? []
+      : await collect_project_file_operations(project, {
+          changes_dir,
+          changes: changes_result.list,
+          current_version,
+          next_version,
+          root,
+        });
 
     project_releases.push({
       project,
@@ -227,8 +227,13 @@ async function collect_project_file_operations(
     root: string;
   },
 ): Promise<git.GitFileOperation[]> {
+  // Every path this project writes to, so the diff below only ever looks at
+  // files belonging to this project
+  const touched_paths: string[] = [];
+
   // Delete change files
-  await fs.delete_all_files_from_folder(changes_dir);
+  const deleted_change_files = await fs.delete_all_files_from_folder(changes_dir);
+  touched_paths.push(...deleted_change_files);
 
   // Update component files
   for (const component of project.components) {
@@ -239,6 +244,7 @@ async function collect_project_file_operations(
       }
       const updated_content = part.update_version(initial_content, next_version);
       await fs.write_file(part.file, updated_content);
+      touched_paths.push(part.file);
       // TODO: implement component "after" hooks
     }
   }
@@ -246,6 +252,7 @@ async function collect_project_file_operations(
   // Update changelog
   const formatter = project.versioning.formatter;
   const initial_changelog_content = await fs.read_file(project.changelog);
+  touched_paths.push(project.changelog);
   const changelog_as_mdast = mdast.parse_markdown(initial_changelog_content ?? "");
   const changelog = formatter.transform_markdown(
     changelog_as_mdast,
@@ -265,7 +272,13 @@ async function collect_project_file_operations(
   );
   await fs.write_file(project.changelog, updated_changelog_content);
 
-  const file_operations = await git.diff(root);
+  // Absolute pathspecs, so git resolves them against the worktree itself
+  // (`root` and `process.cwd()` can disagree on symlinked paths)
+  const file_operations = await git.diff(
+    root,
+    touched_paths.map((path) => resolve(path)),
+  );
+
   await git.reset(root);
 
   return file_operations;

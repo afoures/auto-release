@@ -25,16 +25,30 @@ export type GitFileOperation =
     };
 
 /**
- * Get all file changes in the working directory
+ * Get file changes in the working directory
+ *
+ * When `paths` is provided, only those paths are inspected. Anything else in the
+ * working directory is ignored, so unrelated changes never leak into the result.
  *
  * Returns an array of file operations (create, delete, move, update)
  */
-export async function diff(cwd?: string): Promise<Array<GitFileOperation>> {
+export async function diff(cwd?: string, paths?: string[]): Promise<Array<GitFileOperation>> {
   const options = cwd ? { cwd } : undefined;
+
+  if (paths && paths.length === 0) {
+    return [];
+  }
+
+  // `--untracked-files=all` lists untracked files individually instead of
+  // collapsing them into their parent directory, so pathspecs always match.
+  const pathspec = paths ? ` -- ${paths.map((path) => JSON.stringify(path)).join(" ")}` : "";
 
   // Get git status in porcelain format
   // Format: XY path (X = index status, Y = working tree status)
-  const { stdout: status_output } = await exec("git status --porcelain", options);
+  const { stdout: status_output } = await exec(
+    `git status --porcelain --untracked-files=all${pathspec}`,
+    options,
+  );
 
   if (!status_output.trim()) {
     return [];
@@ -141,11 +155,14 @@ export async function diff(cwd?: string): Promise<Array<GitFileOperation>> {
 /**
  * Reset all changes in the working directory
  *
- * Discards all uncommitted changes
+ * Discards all uncommitted changes, untracked files included - `git reset
+ * --hard` leaves those behind, so files created since HEAD would otherwise
+ * survive the reset. Ignored files are kept.
  */
 export async function reset(cwd?: string): Promise<void> {
   const options = cwd ? { cwd } : undefined;
   await exec("git reset --hard HEAD", options);
+  await exec("git clean --force -d --quiet", options);
 }
 
 /**
